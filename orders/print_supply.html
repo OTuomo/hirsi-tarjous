@@ -69,7 +69,7 @@
 <body>
 
 <button class="btn-print no-print" onclick="window.print()">🖨 Tulosta</button>
-<div id="root" class="loading">Ladataan tarvikelistaa...</div>
+<div id="root" class="loading" style="text-align:left">Ladataan tarvikelistaa...</div>
 
 <script>
 const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
@@ -128,7 +128,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  document.getElementById('root').innerHTML = `
+  const root = document.getElementById('root');
+  root.className = '';
+  root.style.textAlign = 'left';
+  root.innerHTML = `
   <div class="page-wrap">
 
     <div class="doc-header">
