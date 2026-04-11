@@ -136,6 +136,61 @@
   }
 
   /* TABLE */
+  /* ── MOBIILIKORTTI ───────────────────────────────────── */
+  .card-list { display: none; }
+
+  @media (max-width: 640px) {
+    .table-wrap table, .table-wrap thead, .table-wrap tbody { display: none; }
+    .card-list { display: block; }
+
+    .product-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+    }
+    .product-card:active { background: var(--input-bg); }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .card-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      flex: 1;
+    }
+    .card-price {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .card-bottom {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .card-code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .card-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 6px;
+    }
+    .pagination { flex-direction: column; gap: 8px; align-items: flex-start; }
+  }
+
   .table-wrap {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 6px; overflow: hidden;
@@ -331,6 +386,7 @@
         <tr><td colspan="8" class="empty-state">Ladataan…</td></tr>
       </tbody>
     </table>
+    <div class="card-list" id="cardList"></div>
     <div class="pagination">
       <span id="paginationInfo"></span>
       <div class="pagination-btns">
@@ -596,9 +652,11 @@ function applyFilters() {
 function renderTable() {
   const start = page * PAGE_SIZE;
   const slice = filtered.slice(start, start + PAGE_SIZE);
+  const cardList = document.getElementById('cardList');
 
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Ei tuloksia</td></tr>';
+    cardList.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text-dim);font-size:13px;">Ei tuloksia</div>';
     pInfo.textContent = '';
     document.getElementById('prevPage').disabled = true;
     document.getElementById('nextPage').disabled = true;
@@ -625,6 +683,24 @@ function renderTable() {
       </td>
     </tr>`;
   }).join('');
+
+  cardList.innerHTML = slice.map(p => `
+    <div class="product-card">
+      <div class="card-top">
+        <div class="card-name">${esc(p.name || '—')}</div>
+        <div class="card-price">${p.price != null ? fmtPrice(p.price) + ' €' : '—'}</div>
+      </div>
+      <div class="card-bottom">
+        <span class="card-code">${esc(p.code || '—')}</span>
+        ${p.category ? `<span class="cat">${esc(p.category)}</span>` : ''}
+        <span class="mono" style="font-size:11px;color:var(--text-dim)">${esc(p.unit || '')}</span>
+        <span class="badge ${p.active !== false ? 'badge-active' : 'badge-inactive'}" style="font-size:10px;">${p.active !== false ? 'aktiivinen' : 'piilotettu'}</span>
+        <div class="card-actions">
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="openEdit('${p.id}')">✎</button>
+          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteProduct('${p.id}', '${esc(p.name || p.code || '')}')">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
 
   pInfo.textContent = `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} / ${filtered.length} tuotetta`;
   document.getElementById('prevPage').disabled = page === 0;
