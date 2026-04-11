@@ -62,14 +62,21 @@
   /* VAKIOTEKSTI */
   .footer-text { font-size: 8.5pt; color: #333; line-height: 1.5; white-space: pre-wrap; border-top: 1px solid #ccc; padding-top: 5mm; margin-bottom: 6mm; text-align: left; }
 
+  /* SIVUN RAKENNE */
+  @page {
+    size: A4;
+    margin: 18mm 15mm 10mm 15mm;
+  }
+  .page-wrap { max-width: 180mm; margin: 0 auto; }
+
   /* ALATUNNISTE — aina sivun alalaidassa */
   .doc-footer {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    height: 22mm;
-    padding: 3mm 15mm 3mm;
+    height: 18mm;
+    padding: 2mm 15mm 2mm;
     border-top: 1px solid #bbb;
-    display: flex; justify-content: space-between; align-items: flex-start;
+    display: flex; justify-content: space-between; align-items: center;
     font-size: 7.5pt; color: #444; background: #fff;
   }
   .doc-footer .col { display: flex; flex-direction: column; gap: 1px; line-height: 1.45; }
@@ -78,7 +85,7 @@
   .doc-footer .quote-num { font-size: 8.5pt; font-weight: 700; color: #111; margin-top: 2px; }
 
   /* Sisältö ei mene alatunnisteen alle */
-  .page-wrap { padding-bottom: 26mm; }
+  .page-wrap { padding-bottom: 22mm; }
 
   /* TULOSTUS */
   @media print {
@@ -87,7 +94,7 @@
   }
   @media screen {
     body { background: #eee; padding: 20px; }
-    .page-wrap { background: #fff; padding: 18mm 15mm 32mm; box-shadow: 0 2px 16px rgba(0,0,0,0.15); }
+    .page-wrap { background: #fff; padding: 18mm 15mm 26mm; box-shadow: 0 2px 16px rgba(0,0,0,0.15); }
     .doc-footer { position: static; border-top: 1px solid #bbb; margin-top: 16mm; }
   }
 
