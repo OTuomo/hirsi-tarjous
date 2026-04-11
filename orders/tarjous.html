@@ -393,7 +393,8 @@ async function loadCustomers() {
 }
 
 async function loadProducts() {
-  const data = await sbGet('products', '?active=eq.true&order=name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,kate_percent');
+  // Haetaan kaikki tuotteet joilla active ei ole false (eli true tai null molemmat käyvät)
+  const data = await sbGet('products', '?active=neq.false&order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,kate_percent');
   products = Array.isArray(data) ? data : [];
   products.forEach(p => {
     if (p.pricing_model === 'cubic' && p.kuutiohinta != null && p.leveys && p.mitta) {
