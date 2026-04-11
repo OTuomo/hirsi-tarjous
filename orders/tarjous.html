@@ -70,7 +70,7 @@
 
   /* NIMIKEHAKU */
   .nimike-wrap { position: relative; }
-  .nimike-dropdown { display: none; position: absolute; top: calc(100% + 2px); left: 0; min-width: 320px; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 60; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  .nimike-dropdown { display: none; position: fixed; min-width: 320px; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 500; max-height: 220px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
   .nimike-dropdown.open { display: block; }
   .nimike-option { padding: 6px 10px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nimike-option:hover { background: var(--accent-glow); color: var(--accent); }
@@ -89,7 +89,7 @@
   .move-btn:hover { background: var(--accent-glow); color: var(--accent); }
   .section-subtotal { padding: 6px 12px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); text-align: right; }
   .section-subtotal span { color: var(--accent); font-weight: 600; }
-  .product-rows { overflow-x: auto; }
+  .product-rows { overflow-x: auto; overflow-y: visible; }
   table.product-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 640px; }
   table.product-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; }
   table.product-table th.right { text-align: right; }
@@ -643,7 +643,18 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot
 // =============================================
 // NIMIKEHAKU (teksti)
 // =============================================
+function positionNimikeDropdown(secId, rowId) {
+  const input = document.getElementById(`nimike-${secId}-${rowId}`);
+  const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
+  if (!input || !dd) return;
+  const rect = input.getBoundingClientRect();
+  dd.style.top = (rect.bottom + 2) + 'px';
+  dd.style.left = rect.left + 'px';
+  dd.style.width = Math.max(rect.width, 320) + 'px';
+}
+
 function onNimikeFocus(secId, rowId) {
+  positionNimikeDropdown(secId, rowId);
   onNimikeInput(secId, rowId, document.getElementById(`nimike-${secId}-${rowId}`).value);
 }
 
@@ -654,6 +665,7 @@ function onNimikeInput(secId, rowId, val) {
   row.nimikeTeksti = val;
   const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
   if (!dd) return;
+  positionNimikeDropdown(secId, rowId);
   if (!products.length) {
     dd.innerHTML = '<div class="nimike-option" style="color:var(--text-dim)">Hinnastoa ei löydy — tarkista yhteys</div>';
     dd.classList.add('open');
