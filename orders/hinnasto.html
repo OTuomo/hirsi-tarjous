@@ -344,34 +344,109 @@
 
 <!-- MODAL: uusi / muokkaa -->
 <div class="modal-backdrop" id="modal">
-  <div class="modal">
+  <div class="modal" style="width:580px;">
     <div class="modal-title" id="modalTitle">Uusi tuote</div>
     <div class="form-grid">
+
+      <!-- Perustiedot -->
       <div class="form-group">
-        <label>Koodi</label>
-        <input type="text" id="fCode" placeholder="esim. HR-001">
+        <label>Tuotekoodi</label>
+        <input type="text" id="fCode" placeholder="esim. 2004">
       </div>
       <div class="form-group">
         <label>Yksikkö</label>
-        <input type="text" id="fUnit" placeholder="esim. m³, kpl, m²">
+        <input type="text" id="fUnit" placeholder="jm / kpl / m² / h">
       </div>
       <div class="form-group full">
         <label>Nimike</label>
         <input type="text" id="fName" placeholder="Tuotteen nimi">
       </div>
       <div class="form-group">
-        <label>Hinta (€, alv 0%)</label>
-        <input type="number" id="fPrice" step="0.01" min="0" placeholder="0.00">
-      </div>
-      <div class="form-group">
-        <label>ALV%</label>
-        <input type="number" id="fVat" step="0.1" value="25.5" min="0" max="100">
-      </div>
-      <div class="form-group full">
         <label>Kategoria</label>
-        <input type="text" id="fCategory" list="catList" placeholder="esim. Hirsi, Listat, Työ">
+        <input type="text" id="fCategory" list="catList" placeholder="esim. Hirret">
         <datalist id="catList"></datalist>
       </div>
+      <div class="form-group">
+        <label>ALV %</label>
+        <input type="number" id="fVat" step="0.1" value="25.5" min="0" max="100">
+      </div>
+
+      <!-- Hinnoittelumalli -->
+      <div class="form-group full" style="margin-top:4px;">
+        <label>Hinnoittelumalli</label>
+        <select id="fPricingModel" onchange="togglePricingFields()">
+          <option value="simple">Yksinkertainen — ostohinta + kate%</option>
+          <option value="cubic">Kuutiohinnoittelu — hirsi / sahatavara</option>
+        </select>
+      </div>
+
+      <!-- YKSINKERTAINEN (simple) -->
+      <div id="simpleFields" class="form-group full">
+        <div class="form-grid" style="width:100%;">
+          <div class="form-group">
+            <label>Ostohinta (€, alv 0%)</label>
+            <input type="number" id="fOstohinta" step="0.0001" min="0" placeholder="0.0000" oninput="laskeMyynnin()">
+          </div>
+          <div class="form-group">
+            <label>Kate %</label>
+            <input type="number" id="fKate" step="0.1" min="0" max="999" placeholder="0" oninput="laskeMyynnin()">
+          </div>
+          <div class="form-group">
+            <label>Pakkauskoko (kpl)</label>
+            <input type="number" id="fKpl" step="1" min="1" value="1" oninput="laskeMyynnin()">
+          </div>
+          <div class="form-group">
+            <label>Myyntihinta alv 0% <span style="color:var(--accent)">(laskettu)</span></label>
+            <input type="number" id="fPrice" step="0.0001" min="0" placeholder="—" style="color:var(--accent);">
+          </div>
+        </div>
+      </div>
+
+      <!-- KUUTIOHINNOITTELU (cubic) -->
+      <div id="cubicFields" class="form-group full" style="display:none;">
+        <div class="form-grid" style="width:100%;">
+          <div class="form-group">
+            <label>Leveys (mm)</label>
+            <input type="number" id="fLeveys" step="1" min="0" placeholder="esim. 135" oninput="laskeMyynnin()">
+          </div>
+          <div class="form-group">
+            <label>Mitta / paksuus (mm)</label>
+            <input type="number" id="fMitta" step="1" min="0" placeholder="esim. 50" oninput="laskeMyynnin()">
+          </div>
+          <div class="form-group">
+            <label>Kuutiohinta (€/m³, alv 0%)</label>
+            <input type="number" id="fKuutiohinta" step="0.01" min="0" placeholder="0.00" oninput="laskeMyynnin()">
+          </div>
+          <div class="form-group">
+            <label>Työstö (€/m³)</label>
+            <input type="number" id="fTyosto" step="0.01" min="0" placeholder="0.00" oninput="laskeMyynnin()">
+          </div>
+          <div class="form-group">
+            <label>Salvostus (€/m³)</label>
+            <input type="number" id="fSalvostus" step="0.01" min="0" placeholder="0.00" oninput="laskeMyynnin()">
+          </div>
+          <div class="form-group">
+            <label>Kate %</label>
+            <input type="number" id="fKateCubic" step="0.1" min="0" max="999" placeholder="0" oninput="laskeMyynnin()">
+          </div>
+          <div class="form-group full" style="background:rgba(217,119,6,0.07);border:1px solid rgba(217,119,6,0.2);border-radius:4px;padding:10px;">
+            <label style="color:var(--accent);">Laskettu myyntihinta (alv 0%)</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+              <div>
+                <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">€/m³</div>
+                <div id="calcKuutio" style="font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--accent);">—</div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">€/jm (tallennetaan)</div>
+                <div id="calcJm" style="font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--accent);">—</div>
+              </div>
+            </div>
+            <input type="hidden" id="fPrice">
+          </div>
+        </div>
+      </div>
+
+      <!-- Tila -->
       <div class="form-group full">
         <label>Tila</label>
         <select id="fActive">
@@ -379,6 +454,7 @@
           <option value="false">Piilotettu</option>
         </select>
       </div>
+
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" id="cancelBtn">Peruuta</button>
@@ -457,6 +533,40 @@ async function loadProducts() {
   updateStats();
 }
 
+// ── Hinnoittelulogiikka ────────────────────────────────────
+
+function togglePricingFields() {
+  const model = document.getElementById('fPricingModel').value;
+  document.getElementById('simpleFields').style.display = model === 'simple' ? '' : 'none';
+  document.getElementById('cubicFields').style.display  = model === 'cubic'  ? '' : 'none';
+  laskeMyynnin();
+}
+
+function laskeMyynnin() {
+  const model = document.getElementById('fPricingModel').value;
+  if (model === 'simple') {
+    const osto  = parseFloat(document.getElementById('fOstohinta').value) || 0;
+    const kate  = (parseFloat(document.getElementById('fKate').value) || 0) / 100;
+    const kpl   = parseFloat(document.getElementById('fKpl').value) || 1;
+    const tulos = osto * (1 + kate) * kpl;
+    document.getElementById('fPrice').value = tulos > 0 ? tulos.toFixed(4) : '';
+  } else {
+    const kuutio    = parseFloat(document.getElementById('fKuutiohinta').value) || 0;
+    const tyosto    = parseFloat(document.getElementById('fTyosto').value)      || 0;
+    const salvostus = parseFloat(document.getElementById('fSalvostus').value)   || 0;
+    const kate      = (parseFloat(document.getElementById('fKateCubic').value)  || 0) / 100;
+    const leveys    = parseFloat(document.getElementById('fLeveys').value)      || 0;
+    const mitta     = parseFloat(document.getElementById('fMitta').value)       || 0;
+    const myyntiKuutio = (kuutio + tyosto + salvostus) * (1 + kate);
+    const jmHinta = (leveys > 0 && mitta > 0) ? myyntiKuutio * leveys * mitta / 1000000 : 0;
+    document.getElementById('calcKuutio').textContent = myyntiKuutio > 0
+      ? myyntiKuutio.toLocaleString('fi-FI', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €' : '—';
+    document.getElementById('calcJm').textContent = jmHinta > 0
+      ? jmHinta.toLocaleString('fi-FI', {minimumFractionDigits:4, maximumFractionDigits:4}) + ' €' : '—';
+    document.getElementById('fPrice').value = jmHinta > 0 ? jmHinta.toFixed(4) : '';
+  }
+}
+
 // ── Filters & sort ─────────────────────────────────────────
 function applyFilters() {
   const q   = searchInput.value.trim().toLowerCase();
@@ -495,21 +605,26 @@ function renderTable() {
     return;
   }
 
-  tbody.innerHTML = slice.map(p => `
+  tbody.innerHTML = slice.map(p => {
+    const isCubic = p.pricing_model === 'cubic';
+    const priceTooltip = isCubic
+      ? `Kuutio: ${fmtPrice(p.kuutiohinta||0)} + T:${fmtPrice(p.tyosto_kuutio||0)} + S:${fmtPrice(p.salvostus_kuutio||0)} | Kate: ${((p.kate_percent||0)*100).toFixed(1)}%`
+      : `Osto: ${fmtPrice(p.ostohinta||0)} | Kate: ${((p.kate_percent||0)*100).toFixed(1)}%${p.kpl > 1 ? ' | Kpl: '+p.kpl : ''}`;
+    return `
     <tr>
       <td class="mono">${esc(p.code || '—')}</td>
       <td>${esc(p.name || '')}</td>
       <td>${p.category ? `<span class="cat">${esc(p.category)}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
       <td class="mono">${esc(p.unit || '—')}</td>
-      <td class="price">${p.price != null ? fmtPrice(p.price) : '—'}</td>
+      <td class="price" title="${esc(priceTooltip)}">${p.price != null ? fmtPrice(p.price) : '—'}</td>
       <td class="mono" style="color:var(--text-dim)">${p.vat_percent != null ? p.vat_percent + ' %' : '—'}</td>
       <td><span class="badge ${p.active !== false ? 'badge-active' : 'badge-inactive'}">${p.active !== false ? 'aktiivinen' : 'piilotettu'}</span></td>
       <td class="actions">
         <button class="btn btn-ghost btn-sm btn-icon" onclick="openEdit('${p.id}')" title="Muokkaa">✎</button>
         <button class="btn btn-danger btn-sm btn-icon" onclick="deleteProduct('${p.id}', '${esc(p.name || p.code || '')}')" title="Poista">✕</button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 
   pInfo.textContent = `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} / ${filtered.length} tuotetta`;
   document.getElementById('prevPage').disabled = page === 0;
@@ -569,13 +684,30 @@ function openEdit(id) {
   if (!p) return;
   editingId = id;
   document.getElementById('modalTitle').textContent = 'Muokkaa tuotetta';
-  document.getElementById('fCode').value     = p.code      || '';
-  document.getElementById('fName').value     = p.name      || '';
-  document.getElementById('fUnit').value     = p.unit      || '';
-  document.getElementById('fPrice').value    = p.price     ?? '';
-  document.getElementById('fVat').value      = p.vat_percent ?? 25.5;
-  document.getElementById('fCategory').value = p.category  || '';
-  document.getElementById('fActive').value   = String(p.active !== false);
+
+  document.getElementById('fCode').value         = p.code        || '';
+  document.getElementById('fName').value         = p.name        || '';
+  document.getElementById('fUnit').value         = p.unit        || '';
+  document.getElementById('fCategory').value     = p.category    || '';
+  document.getElementById('fVat').value          = p.vat_percent ?? 25.5;
+  document.getElementById('fActive').value       = String(p.active !== false);
+  document.getElementById('fPricingModel').value = p.pricing_model || 'simple';
+
+  if (p.pricing_model === 'cubic') {
+    document.getElementById('fLeveys').value      = p.leveys           ?? '';
+    document.getElementById('fMitta').value       = p.mitta            ?? '';
+    document.getElementById('fKuutiohinta').value = p.kuutiohinta      ?? '';
+    document.getElementById('fTyosto').value      = p.tyosto_kuutio    ?? '';
+    document.getElementById('fSalvostus').value   = p.salvostus_kuutio ?? '';
+    document.getElementById('fKateCubic').value   = p.kate_percent != null ? (p.kate_percent * 100).toFixed(1) : '';
+  } else {
+    document.getElementById('fOstohinta').value   = p.ostohinta    ?? '';
+    document.getElementById('fKate').value        = p.kate_percent != null ? (p.kate_percent * 100).toFixed(1) : '';
+    document.getElementById('fKpl').value         = p.kpl          ?? 1;
+  }
+
+  document.getElementById('fPrice').value = p.price ?? '';
+  togglePricingFields();
   modal.classList.add('open');
 }
 
@@ -586,15 +718,40 @@ modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 document.getElementById('saveBtn').addEventListener('click', saveProduct);
 
 async function saveProduct() {
+  const model = document.getElementById('fPricingModel').value;
+  const kate  = parseFloat(model === 'cubic'
+    ? document.getElementById('fKateCubic').value
+    : document.getElementById('fKate').value) || 0;
+
   const payload = {
-    code:        document.getElementById('fCode').value.trim()  || null,
-    name:        document.getElementById('fName').value.trim()  || null,
-    unit:        document.getElementById('fUnit').value.trim()  || null,
-    price:       parseFloat(document.getElementById('fPrice').value) || null,
-    vat_percent: parseFloat(document.getElementById('fVat').value)   || 25.5,
-    category:    document.getElementById('fCategory').value.trim() || null,
-    active:      document.getElementById('fActive').value === 'true',
+    code:         document.getElementById('fCode').value.trim()     || null,
+    name:         document.getElementById('fName').value.trim()     || null,
+    unit:         document.getElementById('fUnit').value.trim()     || null,
+    category:     document.getElementById('fCategory').value.trim() || null,
+    vat_percent:  parseFloat(document.getElementById('fVat').value) || 25.5,
+    active:       document.getElementById('fActive').value === 'true',
+    pricing_model: model,
+    kate_percent:  kate / 100,
+    price:        parseFloat(document.getElementById('fPrice').value) || null,
   };
+
+  if (model === 'cubic') {
+    payload.kuutiohinta      = parseFloat(document.getElementById('fKuutiohinta').value) || null;
+    payload.tyosto_kuutio    = parseFloat(document.getElementById('fTyosto').value)      || 0;
+    payload.salvostus_kuutio = parseFloat(document.getElementById('fSalvostus').value)   || 0;
+    payload.leveys           = parseFloat(document.getElementById('fLeveys').value)      || null;
+    payload.mitta            = parseFloat(document.getElementById('fMitta').value)       || null;
+    payload.ostohinta        = null;
+    payload.kpl              = 1;
+  } else {
+    payload.ostohinta        = parseFloat(document.getElementById('fOstohinta').value)   || null;
+    payload.kpl              = parseFloat(document.getElementById('fKpl').value)         || 1;
+    payload.kuutiohinta      = null;
+    payload.tyosto_kuutio    = null;
+    payload.salvostus_kuutio = null;
+    payload.leveys           = null;
+    payload.mitta            = null;
+  }
 
   if (!payload.name) { showToast('Nimike on pakollinen', 'error'); return; }
 
@@ -656,11 +813,13 @@ function readCsv(file) {
 
 function parseCsv(text, filename) {
   const sep     = text.includes(';') ? ';' : ',';
-  const lines   = text.trim().split(/\r?\n/);
+  const lines   = text.trim().split(/
+?
+/);
   const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
 
-  if (!headers.includes('name')) {
-    showToast('CSV:stä puuttuu pakollinen sarake: name', 'error');
+  if (!headers.includes('name') && !headers.includes('tuote')) {
+    showToast('CSV:stä puuttuu pakollinen sarake: name tai tuote', 'error');
     return;
   }
 
@@ -668,20 +827,25 @@ function parseCsv(text, filename) {
     const vals = line.split(sep).map(v => v.trim().replace(/^["']|["']$/g, ''));
     const obj  = {};
     headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+    const name = obj.name || obj.tuote || null;
+    if (!name) return null;
     return {
-      code:        obj.code       || null,
-      name:        obj.name       || null,
-      unit:        obj.unit       || null,
-      price:       parseFloat(obj.price) || null,
-      vat_percent: parseFloat(obj.vat_percent || obj.alv || obj['alv%']) || 25.5,
-      category:    obj.category   || obj.kategoria || null,
-      active:      true,
+      code:         obj.code || obj.tuotekoodi || null,
+      name,
+      unit:         obj.unit || obj.yksikko || null,
+      price:        parseFloat(obj.price || obj.varastohinta) || null,
+      vat_percent:  parseFloat(obj.vat_percent || obj.alvprosh) * (parseFloat(obj.alvprosh) < 1 ? 100 : 1) || 25.5,
+      category:     obj.category || obj.tuoteryhma || null,
+      pricing_model: obj.pricing_model || 'simple',
+      ostohinta:    parseFloat(obj.ostohinta) || null,
+      kate_percent: parseFloat(obj.kateprosentti) || null,
+      active:       true,
     };
-  }).filter(r => r.name);
+  }).filter(Boolean);
 
   document.getElementById('dropLabel').textContent = '✓ ' + filename;
   document.getElementById('csvPreview').style.display = 'block';
-  document.getElementById('csvInfo').textContent = `Löydettiin ${csvRows.length} tuoteriviä. Tuo lisää tai korvaa olemassa olevat saman koodin tuotteet.`;
+  document.getElementById('csvInfo').textContent = `Löydettiin ${csvRows.length} tuoteriviä. Tuo lisää tai korvaa olemassa olevat saman koodin tuotteet.`;
   document.getElementById('csvImportBtn').disabled = csvRows.length === 0;
 }
 
@@ -715,10 +879,19 @@ document.getElementById('csvImportBtn').addEventListener('click', async () => {
 
 // ── Helpers ────────────────────────────────────────────────
 function clearForm() {
-  ['fCode','fName','fUnit','fCategory'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('fPrice').value  = '';
-  document.getElementById('fVat').value    = '25.5';
-  document.getElementById('fActive').value = 'true';
+  ['fCode','fName','fUnit','fCategory','fOstohinta','fKate','fKuutiohinta',
+   'fTyosto','fSalvostus','fKateCubic','fLeveys','fMitta'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('fKpl').value         = '1';
+  document.getElementById('fVat').value         = '25.5';
+  document.getElementById('fActive').value      = 'true';
+  document.getElementById('fPricingModel').value = 'simple';
+  document.getElementById('fPrice').value       = '';
+  if (document.getElementById('calcKuutio')) document.getElementById('calcKuutio').textContent = '—';
+  if (document.getElementById('calcJm'))     document.getElementById('calcJm').textContent     = '—';
+  togglePricingFields();
 }
 
 function fmtPrice(n) {
