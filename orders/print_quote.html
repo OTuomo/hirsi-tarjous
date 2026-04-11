@@ -20,7 +20,7 @@
   .logo-area { display: flex; align-items: center; gap: 10px; }
   .logo-area img { height: 36px; width: auto; }
   .logo-area .company-name { font-size: 13pt; font-weight: 700; line-height: 1.15; }
-  .doc-title { font-size: 13pt; font-weight: 700; letter-spacing: 0.08em; text-align: center; flex: 1; padding-top: 6px; }
+  .doc-title { font-size: 11pt; font-weight: 700; letter-spacing: 0.08em; text-align: center; flex: 1; padding-top: 6px; }
   .doc-meta { text-align: right; font-size: 9pt; min-width: 55mm; }
   .doc-meta table { margin-left: auto; border-collapse: collapse; }
   .doc-meta td { padding: 2px 4px; }
@@ -75,7 +75,7 @@
   .doc-footer .col { display: flex; flex-direction: column; gap: 1px; line-height: 1.45; }
   .doc-footer .col.center { text-align: center; }
   .doc-footer .col.right { text-align: right; }
-  .doc-footer .quote-num { font-size: 10pt; font-weight: 700; color: #111; margin-top: 2px; }
+  .doc-footer .quote-num { font-size: 8.5pt; font-weight: 700; color: #111; margin-top: 2px; }
 
   /* Sisältö ei mene alatunnisteen alle */
   .page-wrap { padding-bottom: 26mm; }
@@ -125,6 +125,7 @@ function fmtDate(s) {
 window.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
+  const showPrices = params.get('prices') !== '0'; // oletus: näytetään
   if (!id) { document.getElementById('root').textContent = 'Tarjousnumero puuttuu URL:sta.'; return; }
 
   const [quoteArr, custArr] = await Promise.all([
@@ -149,32 +150,54 @@ window.addEventListener('DOMContentLoaded', async () => {
   const vat = noTax * 0.255;
   const total = noTax + vat;
 
-  // Rakenna HTML
+  // Sarakkeet riippuen showPrices-valinnasta
+  // Ilman hintoja: Rakennus | Tuote ja lisätiedot | jm/m² tai m³ | Määrä | Yht m | Yksikkö
+  // Hintojen kanssa: + Alv0 | Rivihinta
+  const colspanSec = showPrices ? 6 : 4;
+
   let rowsHTML = '';
   sections.forEach(sec => {
     if (!sec.active) return;
-    rowsHTML += `<tr class="section-hdr"><td colspan="7">${sec.name}</td></tr>`;
+    rowsHTML += `<tr class="section-hdr"><td colspan="${colspanSec}">${sec.name}</td></tr>`;
     sec.rows.forEach(row => {
       const rs = (parseFloat(row.qty)||0) * (parseFloat(row.price)||0);
-      rowsHTML += `
-        <tr>
-          <td>${row.nimikeTeksti || ''}</td>
-          <td>${row.desc || ''}</td>
-          <td class="right">${row.qty || ''}</td>
-          <td></td>
-          <td>${row.qty ? (row.qty+' ') : ''}${row.unit || ''}</td>
-          <td class="right">${row.price ? fmt(row.price) + ' €' : ''}</td>
-          <td class="right">${rs ? fmt(rs) + ' €' : ''}</td>
-        </tr>`;
+      if (showPrices) {
+        rowsHTML += `
+          <tr>
+            <td>${row.desc || ''}</td>
+            <td class="right">${row.qty || ''}</td>
+            <td>${row.unit || ''}</td>
+            <td class="right">${row.price ? fmt(row.price) + ' €' : ''}</td>
+            <td class="right">${rs ? fmt(rs) + ' €' : ''}</td>
+          </tr>`;
+      } else {
+        rowsHTML += `
+          <tr>
+            <td>${row.desc || ''}</td>
+            <td class="right">${row.qty || ''}</td>
+            <td>${row.unit || ''}</td>
+          </tr>`;
+      }
     });
   });
 
+  const theadHTML = showPrices ? `
+    <tr>
+      <th>Tuote ja lisätiedot</th>
+      <th class="right" style="width:10%">Määrä</th>
+      <th style="width:8%">Yksikkö</th>
+      <th class="right" style="width:12%">Alv 0%</th>
+      <th class="right" style="width:12%">Rivihinta</th>
+    </tr>` : `
+    <tr>
+      <th>Tuote ja lisätiedot</th>
+      <th class="right" style="width:12%">Määrä</th>
+      <th style="width:10%">Yksikkö</th>
+    </tr>`;
+
   const deliveryLabels = {
-    hirsirunko: 'Hirsirunko',
-    puuosat: 'Hirsirunko + puuosat',
-    avaimet: 'Avaimet käteen',
-    nouto: 'Nouto tehtaalta',
-    toimitettu: 'Toimitettu'
+    hirsirunko: 'Hirsirunko', puuosat: 'Hirsirunko + puuosat',
+    avaimet: 'Avaimet käteen', nouto: 'Nouto tehtaalta', toimitettu: 'Toimitettu'
   };
   const delivLabel = deliveryLabels[q.delivery_type] || q.delivery_type || '';
 
@@ -200,10 +223,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         <div class="name">${custName}</div>
         ${cust && cust.address ? `<div>${cust.address}</div>` : ''}
         ${cust && cust.city ? `<div>${cust.city}</div>` : ''}
-        ${q.notes ? `<div style="margin-top:4px;color:#555;">${q.notes}</div>` : ''}
-        ${delivLabel ? `<div style="margin-top:2px;color:#555;">Toimitusaste: ${delivLabel}</div>` : ''}
       </div>
       <div class="summary-top">
+        ${q.notes ? `<div style="font-size:9pt;color:#333;margin-bottom:4px;">${q.notes}</div>` : ''}
         <table>
           <tr><td>Alv 0%:</td><td><b>${fmt(noTax)} €</b></td></tr>
           <tr><td>Alv:</td><td><b>${fmt(vat)} €</b></td></tr>
@@ -215,41 +237,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     <div class="intro-text">Kiitämme tarjouspyynnöstänne. Tarjoamme tuotteitamme teille seuraavasti:</div>
 
     <table class="product-table">
-      <thead>
-        <tr>
-          <th style="width:28%">Rakennus</th>
-          <th>Tuote ja lisätiedot</th>
-          <th class="right" style="width:8%">jm, m²<br>tai m³</th>
-          <th class="right" style="width:7%">Määrä</th>
-          <th style="width:8%">Yht m</th>
-          <th class="right" style="width:10%">Alv0</th>
-          <th class="right" style="width:11%">Rivihinta</th>
-        </tr>
-      </thead>
+      <thead>${theadHTML}</thead>
       <tbody>${rowsHTML}</tbody>
     </table>
 
-    ${adj !== 0 ? `
     <div class="summary-bottom">
       <div class="summary-box">
         <table>
+          ${adj !== 0 ? `
           <tr><td class="lbl">Välisumma</td><td class="val">${fmt(sub)} €</td></tr>
-          <tr><td class="lbl">Pyöristys / alennus</td><td class="val">${fmt(adj)} €</td></tr>
-          <tr><td class="lbl">Veroton yhteensä</td><td class="val">${fmt(noTax)} €</td></tr>
-          <tr><td class="lbl">ALV 25,5 %</td><td class="val">${fmt(vat)} €</td></tr>
-          <tr class="total"><td class="lbl">YHT:</td><td class="val">${fmt(total)} €</td></tr>
-        </table>
-      </div>
-    </div>` : `
-    <div class="summary-bottom">
-      <div class="summary-box">
-        <table>
+          <tr><td class="lbl">Pyöristys / alennus</td><td class="val">${fmt(adj)} €</td></tr>` : ''}
           <tr><td class="lbl">Alv 0%:</td><td class="val">${fmt(noTax)} €</td></tr>
-          <tr><td class="lbl">Alv:</td><td class="val">${fmt(vat)} €</td></tr>
+          <tr><td class="lbl">Alv 25,5%:</td><td class="val">${fmt(vat)} €</td></tr>
           <tr class="total"><td class="lbl">YHT:</td><td class="val">${fmt(total)} €</td></tr>
         </table>
       </div>
-    </div>`}
+    </div>
 
     ${q.footer_text ? `<div class="footer-text">${q.footer_text}</div>` : ''}
 
@@ -267,7 +270,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       <div class="col right">
         <span>Y-Tunnus: 3579911-5</span>
         <div class="quote-num">Tarjousnumero ${q.quote_number || ''}</div>
-        <span id="pageNum">Sivu 1</span>
+        <span>Sivu 1</span>
       </div>
     </div>
 
