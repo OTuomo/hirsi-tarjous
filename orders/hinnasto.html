@@ -411,7 +411,14 @@
       </div>
       <div class="form-group">
         <label>Yksikkö</label>
-        <input type="text" id="fUnit" placeholder="jm / kpl / m² / h">
+        <select id="fUnit">
+          <option value="">— valitse —</option>
+          <option value="jm">jm — juoksumetri</option>
+          <option value="Kpl">Kpl — kappale</option>
+          <option value="m²">m² — neliömetri</option>
+          <option value="m³">m³ — kuutiometri</option>
+          <option value="h">h — tunti</option>
+        </select>
       </div>
       <div class="form-group full">
         <label>Nimike</label>
@@ -419,8 +426,19 @@
       </div>
       <div class="form-group">
         <label>Kategoria</label>
-        <input type="text" id="fCategory" list="catList" placeholder="esim. Hirret">
-        <datalist id="catList"></datalist>
+        <select id="fCategory" onchange="onCategoryChange()">
+          <option value="">— valitse —</option>
+          <option value="Hirret">Hirret</option>
+          <option value="Sahatavara">Sahatavara</option>
+          <option value="Höylätty">Höylätty</option>
+          <option value="Pienrauta">Pienrauta</option>
+          <option value="Tarvikkeet">Tarvikkeet</option>
+          <option value="Ovet ja ikkunat">Ovet ja ikkunat</option>
+          <option value="Kattotarvikkeet">Kattotarvikkeet</option>
+          <option value="Vakiomallit">Vakiomallit</option>
+          <option value="Työ">Työ</option>
+          <option value="Työ, Rakennustyö">Työ, Rakennustyö</option>
+        </select>
       </div>
       <div class="form-group">
         <label>ALV %</label>
@@ -591,6 +609,51 @@ async function loadProducts() {
 
 // ── Hinnoittelulogiikka ────────────────────────────────────
 
+
+const CODE_RANGES = {
+  'Työ':              [0,    99],
+  'Työ, Rakennustyö': [100,  199],
+  'Sahatavara':       [1000, 1999],
+  'Hirret':           [2000, 2999],
+  'Höylätty':         [3000, 3999],
+  'Pienrauta':        [4000, 4999],
+  'Tarvikkeet':       [5000, 5999],
+  'Ovet ja ikkunat':  [6000, 6999],
+  'Kattotarvikkeet':  [7000, 7999],
+  'Vakiomallit':      [9000, 9999],
+};
+
+function onCategoryChange() {
+  // Aseta hinnoittelumalli automaattisesti kategorian mukaan
+  const cat = document.getElementById('fCategory').value;
+  const cubicCats = ['Hirret', 'Sahatavara', 'Höylätty'];
+  if (cat && !document.getElementById('fPricingModel').dataset.userChanged) {
+    document.getElementById('fPricingModel').value = cubicCats.includes(cat) ? 'cubic' : 'simple';
+    togglePricingFields();
+  }
+  // Laske seuraava vapaa koodi vain uutta tuotetta tehdessä
+  if (!editingId) autoFillCode(cat);
+}
+
+async function autoFillCode(cat) {
+  if (!cat || !CODE_RANGES[cat]) return;
+  const [min, max] = CODE_RANGES[cat];
+  // Hae kaikki olemassaolevat koodit tältä väliltä
+  const existing = allProducts
+    .map(p => parseInt(p.code))
+    .filter(n => !isNaN(n) && n >= min && n <= max)
+    .sort((a, b) => a - b);
+  // Etsi ensimmäinen vapaa
+  let next = min;
+  for (const code of existing) {
+    if (code === next) next++;
+    else break;
+  }
+  if (next <= max) {
+    document.getElementById('fCode').value = String(next);
+  }
+}
+
 function togglePricingFields() {
   const model = document.getElementById('fPricingModel').value;
   document.getElementById('simpleFields').style.display = model === 'simple' ? '' : 'none';
@@ -720,8 +783,7 @@ function buildCategoryFilter() {
   const cur = filterCat.value;
   filterCat.innerHTML = '<option value="">Kaikki kategoriat</option>' +
     cats.map(c => `<option value="${esc(c)}" ${c === cur ? 'selected' : ''}>${esc(c)}</option>`).join('');
-  const dl = document.getElementById('catList');
-  if (dl) dl.innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
+  // kategoriavalikko lomakkeessa päivitetään dynaamisesti tarvittaessa
 }
 
 // ── Sorting ────────────────────────────────────────────────
@@ -765,6 +827,7 @@ function openEdit(id) {
   document.getElementById('fName').value         = p.name        || '';
   document.getElementById('fUnit').value         = p.unit        || '';
   document.getElementById('fCategory').value     = p.category    || '';
+  document.getElementById('fPricingModel').dataset.userChanged = '1';
   document.getElementById('fVat').value          = p.vat_percent ?? 25.5;
   document.getElementById('fActive').value       = String(p.active !== false);
   document.getElementById('fPricingModel').value = p.pricing_model || 'simple';
@@ -953,6 +1016,7 @@ document.getElementById('csvImportBtn').addEventListener('click', async () => {
 
 // ── Helpers ────────────────────────────────────────────────
 function clearForm() {
+  document.getElementById('fPricingModel').dataset.userChanged = '';
   ['fCode','fName','fUnit','fCategory','fOstohinta','fKate','fKuutiohinta',
    'fTyosto','fSalvostus','fKateCubic','fLeveys','fMitta'].forEach(id => {
     const el = document.getElementById(id);
