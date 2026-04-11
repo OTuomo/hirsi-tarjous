@@ -393,9 +393,9 @@ async function loadCustomers() {
 }
 
 async function loadProducts() {
-  // Haetaan kaikki tuotteet joilla active ei ole false (eli true tai null molemmat käyvät)
-  const data = await sbGet('products', '?active=neq.false&order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,kate_percent');
+  const data = await sbGet('products', '?order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,kate_percent');
   products = Array.isArray(data) ? data : [];
+  console.log('Tuotteet ladattu:', products.length, 'kpl');
   products.forEach(p => {
     if (p.pricing_model === 'cubic' && p.kuutiohinta != null && p.leveys && p.mitta) {
       const kate = 1 + (parseFloat(p.kate_percent) || 0) / 100;
@@ -654,15 +654,24 @@ function onNimikeInput(secId, rowId, val) {
   row.nimikeTeksti = val;
   const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
   if (!dd) return;
+  if (!products.length) {
+    dd.innerHTML = '<div class="nimike-option" style="color:var(--text-dim)">Hinnastoa ei löydy — tarkista yhteys</div>';
+    dd.classList.add('open');
+    return;
+  }
   const q = val.toLowerCase().trim();
   const hits = q.length >= 1
     ? products.filter(p =>
         (p.name||'').toLowerCase().includes(q) ||
         (p.code||'').toLowerCase().includes(q) ||
         (p.category||'').toLowerCase().includes(q)
-      ).slice(0,20)
-    : products.slice(0,20);
-  if (!hits.length) { dd.classList.remove('open'); return; }
+      ).slice(0, 25)
+    : products.slice(0, 25);
+  if (!hits.length) {
+    dd.innerHTML = '<div class="nimike-option" style="color:var(--text-dim)">Ei tuloksia</div>';
+    dd.classList.add('open');
+    return;
+  }
   dd.innerHTML = hits.map(p =>
     `<div class="nimike-option" onclick="selectNimike(${secId},${rowId},'${p.id}')">
       <span class="nimike-code">${p.code||''}</span>${p.name}
