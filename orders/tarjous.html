@@ -291,13 +291,13 @@
     <button class="nav-btn" onclick="toggleNav(event)">☰ Valikko</button>
     <div class="nav-dropdown" id="navDropdown">
       <div class="nav-section-label">Sivut</div>
-      <a class="nav-item" href="orders/asiakkaat.html">👤 Asiakkaat</a>
-      <a class="nav-item" href="orders/hinnasto.html">📦 Hinnasto</a>
-      <a class="nav-item" href="orders/tarjoukset.html">📋 Tarjoukset</a>
+      <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
+      <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
+      <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
       <a class="nav-item current" href="tarjous.html">✏️ Uusi tarjous</a>
     </div>
   </div>
-  <img src="orders/okkonenlogopuu.svg" alt="Okkosen Puutuote" class="logo">
+  <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote" class="logo">
   <h1>Tarjous</h1>
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
@@ -391,9 +391,15 @@
 
   <!-- VAKIOTEKSTI -->
   <div class="panel">
-    <div class="panel-header">Vakioteksti / huomiot</div>
+    <div class="panel-header">
+      Vakioteksti / huomiot
+      <span style="margin-left:auto;font-weight:400;font-size:11px;color:var(--text-dim);">Pohja:</span>
+      <select id="textTemplateSelect" onchange="applyTextTemplate(this.value)" style="font-size:11px;padding:3px 6px;width:auto;margin-left:6px;">
+        <option value="">— valitse pohja —</option>
+      </select>
+    </div>
     <div class="panel-body default-text-wrap">
-      <textarea id="defaultText">Tarjous on voimassa merkittyyn päivämäärään saakka. Hinnat ovat ilman arvonlisäveroa, ellei toisin mainita. Toimitusaika sovitaan tilauksen yhteydessä. Pidätämme oikeuden hinnanmuutoksiin.</textarea>
+      <textarea id="defaultText"></textarea>
     </div>
   </div>
 
@@ -413,8 +419,8 @@
 // =============================================
 // SUPABASE
 // =============================================
-const SUPABASE_URL = 'https://lttxmtebhoqfzlxrgpry.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0dHhtdGViaG9xZnpseHJncHJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwMzM5OTAsImV4cCI6MjA1NzYwOTk5MH0.GGERjFqUblMfVZJpWZFkJmXdlfzPq-oMYD5FQ-NjPTw';
+const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
 
 async function sbGet(table, query = '') {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
@@ -457,47 +463,79 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Päivämäärät
   const today = new Date();
   document.getElementById('quoteDate').value = today.toISOString().slice(0, 10);
-  const valid = new Date(today); valid.setDate(today.getDate() + 30);
+  const valid = new Date(today); valid.setDate(today.getDate() + 14);
   document.getElementById('quoteValid').value = valid.toISOString().slice(0, 10);
 
-  // Lataa data
-  await Promise.all([loadCustomers(), loadProducts()]);
+  // Lataa data rinnakkain
+  await Promise.all([loadCustomers(), loadProducts(), loadDefaultText()]);
 
-  // Tarkista localStorage – avataanko vanha / uusi / kopio
-  const openId = localStorage.getItem('openOrderId');
-  const newCustId = localStorage.getItem('newOrderCustomerId');
-  const copyId = localStorage.getItem('copyOrderId');
+  // URL-parametrit: ?id=123 avaa vanhan, ?copy=123 kopioi, ?customer=uuid&name=Nimi
+  const params = new URLSearchParams(window.location.search);
+  const openId = params.get('id');
+  const copyId = params.get('copy');
+  const custId = params.get('customer');
+  const custName = params.get('name');
 
   if (openId) {
-    localStorage.removeItem('openOrderId');
     await loadQuote(openId);
   } else if (copyId) {
-    const keepCust = localStorage.getItem('copyKeepCustomer') === 'true';
-    localStorage.removeItem('copyOrderId');
-    localStorage.removeItem('copyKeepCustomer');
-    await copyQuoteFrom(copyId, keepCust);
+    const keepPrices = params.get('keepPrices') === '1';
+    await copyQuoteFrom(copyId, keepPrices);
+    fetchNextQuoteNumber();
   } else {
-    if (newCustId) {
-      const custName = localStorage.getItem('newOrderCustomerName') || '';
-      localStorage.removeItem('newOrderCustomerId');
-      localStorage.removeItem('newOrderCustomerName');
-      setCustomer(newCustId, custName);
-    }
-    addSection('Perustuotteet');
+    if (custId) setCustomer(custId, decodeURIComponent(custName || ''));
+    addSection('Hirsikehikko');
+    fetchNextQuoteNumber();
   }
-
-  // Hae tarjousnumero
-  fetchNextQuoteNumber();
 });
 
+let textTemplates = [];
+
+async function loadDefaultText() {
+  try {
+    const data = await sbGet('quote_text_templates', '?order=name.asc&select=id,name,content,is_default');
+    if (Array.isArray(data)) {
+      textTemplates = data;
+      const sel = document.getElementById('textTemplateSelect');
+      data.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        sel.appendChild(opt);
+      });
+      const def = data.find(t => t.is_default);
+      if (def) {
+        document.getElementById('defaultText').value = def.content;
+        document.getElementById('textTemplateSelect').value = def.id;
+      }
+    }
+  } catch(e) {}
+}
+
+function applyTextTemplate(id) {
+  if (!id) return;
+  const t = textTemplates.find(x => String(x.id) === String(id));
+  if (t && confirm('Korvataanko nykyinen vakioteksti valitulla pohjalla?')) {
+    document.getElementById('defaultText').value = t.content;
+  }
+}
+
 async function loadCustomers() {
-  customers = await sbGet('customers', '?is_active=eq.true&order=name.asc&select=id,name,customer_number');
-  if (!Array.isArray(customers)) customers = [];
+  const data = await sbGet('customers', '?is_active=eq.true&order=name.asc&select=id,name,customer_number');
+  customers = Array.isArray(data) ? data : [];
 }
 
 async function loadProducts() {
-  products = await sbGet('products', '?is_active=eq.true&order=name.asc&select=id,code,name,unit,price,category');
-  if (!Array.isArray(products)) products = [];
+  const data = await sbGet('products', '?active=eq.true&order=name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,kate_percent');
+  products = Array.isArray(data) ? data : [];
+  // Laske myyntihinta kuutiohinnoittelun tuotteille
+  products.forEach(p => {
+    if (p.pricing_model === 'cubic' && p.kuutiohinta != null && p.leveys && p.mitta) {
+      const kate = 1 + (parseFloat(p.kate_percent) || 0) / 100;
+      const myyntiKuutio = (parseFloat(p.kuutiohinta) + parseFloat(p.tyosto_kuutio||0) + parseFloat(p.salvostus_kuutio||0)) * kate;
+      p.price = myyntiKuutio * parseFloat(p.leveys) * parseFloat(p.mitta) / 1000000;
+    }
+  });
 }
 
 async function fetchNextQuoteNumber() {
@@ -794,17 +832,25 @@ function fmt(n) {
 // TALLENNUS
 // =============================================
 function buildQuoteData(status) {
+  const sub = sections.reduce((a, s) => a + sectionSum(s), 0);
+  const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
+  const noTax = sub + adj;
+  const vat = noTax * 0.255;
+  // Tallennetaan kaikki tarjousdata quotes-tauluun
   return {
     customer_id: document.getElementById('customerId').value || null,
     quote_number: document.getElementById('quoteNumber').value || null,
-    order_date: document.getElementById('quoteDate').value || null,
     valid_until: document.getElementById('quoteValid').value || null,
-    delivery_type: document.getElementById('deliveryType').value || null,
-    kohde: document.getElementById('quoteRef').value || null,
-    notes: document.getElementById('defaultText').value || null,
     status: status || currentStatus,
+    notes: document.getElementById('quoteRef').value || null,
+    footer_text: document.getElementById('defaultText').value || null,
+    discount_amount: adj,
     sections_json: JSON.stringify(sections),
-    adjustment: parseFloat(document.getElementById('adjAmount').value) || 0,
+    delivery_type: document.getElementById('deliveryType').value || null,
+    is_template: false,
+    total_net: Math.round(noTax * 100) / 100,
+    total_vat: Math.round(vat * 100) / 100,
+    total_gross: Math.round((noTax + vat) * 100) / 100,
   };
 }
 
@@ -858,12 +904,12 @@ async function loadQuote(id) {
   currentQuoteId = q.id;
   currentStatus = q.status || 'DRAFT';
   document.getElementById('quoteNumber').value = q.quote_number || '';
-  document.getElementById('quoteDate').value = (q.order_date || '').slice(0, 10);
+  document.getElementById('quoteDate').value = (q.created_at || '').slice(0, 10);
   document.getElementById('quoteValid').value = (q.valid_until || '').slice(0, 10);
   document.getElementById('deliveryType').value = q.delivery_type || '';
-  document.getElementById('quoteRef').value = q.kohde || '';
-  document.getElementById('defaultText').value = q.notes || '';
-  document.getElementById('adjAmount').value = q.adjustment || 0;
+  document.getElementById('quoteRef').value = q.notes || '';
+  document.getElementById('defaultText').value = q.footer_text || '';
+  document.getElementById('adjAmount').value = q.discount_amount || 0;
   if (q.customer_id) {
     const cust = customers.find(c => c.id === q.customer_id);
     if (cust) setCustomer(cust.id, cust.name);
@@ -871,16 +917,15 @@ async function loadQuote(id) {
   if (q.sections_json) {
     try {
       sections = JSON.parse(q.sections_json);
-      // Palauta rowIdCounter
       sections.forEach(s => s.rows.forEach(r => { if (r.id > rowIdCounter) rowIdCounter = r.id; }));
       sections.forEach(s => { if (s.id > sectionIdCounter) sectionIdCounter = s.id; });
-    } catch(e) { sections = []; addSection(); }
+    } catch(e) { sections = []; addSection('Hirsikehikko'); }
   }
   renderSections();
   updateStatusBadge();
 }
 
-async function copyQuoteFrom(id, keepCustomer) {
+async function copyQuoteFrom(id, keepPrices) {
   const data = await sbGet('quotes', `?id=eq.${id}&select=*`);
   const q = Array.isArray(data) ? data[0] : null;
   if (!q) return;
@@ -888,17 +933,27 @@ async function copyQuoteFrom(id, keepCustomer) {
   document.getElementById('quoteRef').value = q.kohde || '';
   document.getElementById('defaultText').value = q.notes || '';
   document.getElementById('adjAmount').value = q.adjustment || 0;
-  if (keepCustomer && q.customer_id) {
-    const cust = customers.find(c => c.id === q.customer_id);
-    if (cust) setCustomer(cust.id, cust.name);
-  }
+  // Ei kopioida asiakasta — uusi tarjous uudelle asiakkaalle
   if (q.sections_json) {
     try {
       sections = JSON.parse(q.sections_json);
-      // Resetoi ID:t uusiksi
       sectionIdCounter = 0; rowIdCounter = 0;
-      sections.forEach(s => { s.id = ++sectionIdCounter; s.rows.forEach(r => r.id = ++rowIdCounter); });
-    } catch(e) { sections = []; addSection(); }
+      sections.forEach(s => {
+        s.id = ++sectionIdCounter;
+        s.rows.forEach(r => {
+          r.id = ++rowIdCounter;
+          if (!keepPrices) {
+            // Hae tuore hinta hinnastosta
+            const prod = products.find(p => p.id === r.productId);
+            if (prod) {
+              r.basePrice = prod.price || null;
+              r.price = prod.price || '';
+              r.priceManual = false;
+            }
+          }
+        });
+      });
+    } catch(e) { sections = []; addSection('Hirsikehikko'); }
   }
   renderSections();
 }
@@ -933,9 +988,9 @@ function printSupply() {
 }
 async function copyQuote() {
   if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
-  localStorage.setItem('copyOrderId', currentQuoteId);
-  localStorage.setItem('copyKeepCustomer', 'false');
-  window.open('tarjous.html', '_blank');
+  const keepPrices = confirm('Kopioidaanko hinnat sellaisenaan?\n\nOK = Säilytä vanhat hinnat\nPeruuta = Hae uudet hinnat hinnastosta');
+  const url = `tarjous.html?copy=${currentQuoteId}&keepPrices=${keepPrices ? '1' : '0'}`;
+  window.open(url, '_blank');
 }
 
 // =============================================
