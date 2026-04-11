@@ -309,6 +309,10 @@
         <option value="MODEL">Malli</option>
       </select>
     </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:4px;">
+      <input type="checkbox" id="showPrices" checked style="width:auto;cursor:pointer;">
+      <label for="showPrices" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä rivihinnat tulosteessa</label>
+    </div>
     <div class="spacer"></div>
     <button class="btn btn-ghost" onclick="printQuote()">🖨 Tulosta tarjous</button>
     <button class="btn btn-ghost" onclick="printSupply()">📋 Tulosta tarvikkelista</button>
@@ -875,27 +879,13 @@ async function changeStatus(newStatus) {
   currentStatus = newStatus;
   updateStatusBadge();
   if (currentQuoteId) {
-    try {
-      await sbPatch('quotes', currentQuoteId, { status: newStatus });
-    } catch(e) {}
+    try { await sbPatch('quotes', currentQuoteId, { status: newStatus }); } catch(e) {}
   }
 }
 
-function updateStatusBadge() {
-  const badge = document.getElementById('statusBadge');
-  const sel = document.getElementById('statusSelect');
-  const map = {
-    DRAFT:       ['draft',    'Luonnos'],
-    IN_PROGRESS: ['progress', 'Kesken'],
-    QUOTED:      ['sent',     'Tarjottu'],
-    ARCHIVED:    ['archived', 'Arkisto'],
-    MODEL:       ['model',    'Malli'],
-  };
-  const [cls, label] = map[currentStatus] || ['draft', currentStatus];
-  badge.className = `status-badge ${cls}`;
-  badge.textContent = label;
-  if (sel) sel.value = currentStatus;
-}
+// =============================================
+// LATAUS
+// =============================================
 async function loadQuote(id) {
   const data = await sbGet('quotes', `?id=eq.${id}&select=*`);
   const q = Array.isArray(data) ? data[0] : null;
@@ -963,13 +953,18 @@ async function copyQuote() {
 
 function updateStatusBadge() {
   const badge = document.getElementById('statusBadge');
+  const sel = document.getElementById('statusSelect');
   const map = {
-    DRAFT: ['draft','Luonnos'], QUOTED: ['sent','Tarjottu'],
-    ORDERED: ['ordered','Tilattu'], ARCHIVED: ['draft','Arkisto']
+    DRAFT:       ['draft',    'Luonnos'],
+    IN_PROGRESS: ['progress', 'Kesken'],
+    QUOTED:      ['sent',     'Tarjottu'],
+    ARCHIVED:    ['archived', 'Arkisto'],
+    MODEL:       ['model',    'Malli'],
   };
   const [cls, label] = map[currentStatus] || ['draft', currentStatus];
   badge.className = `status-badge ${cls}`;
   badge.textContent = label;
+  if (sel) sel.value = currentStatus;
 }
 
 // =============================================
@@ -977,7 +972,8 @@ function updateStatusBadge() {
 // =============================================
 function printQuote() {
   if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
-  window.open(`print_quote.html?id=${currentQuoteId}`, '_blank');
+  const showPrices = document.getElementById('showPrices').checked ? '1' : '0';
+  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}`, '_blank');
 }
 
 function printSupply() {
