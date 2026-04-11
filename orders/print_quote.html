@@ -16,43 +16,42 @@
   .page-wrap { max-width: 180mm; margin: 0 auto; }
 
   /* YLÄTUNNISTE */
-  .doc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12mm; }
+  .doc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8mm; border-bottom: 1px solid #ccc; padding-bottom: 5mm; }
   .logo-area { display: flex; align-items: center; gap: 10px; }
-  .logo-area img { height: 40px; width: auto; }
-  .logo-area .company-name { font-size: 15pt; font-weight: 700; line-height: 1.15; }
-  .doc-title { font-size: 18pt; font-weight: 700; letter-spacing: 0.06em; text-align: center; flex: 1; padding-top: 4px; }
+  .logo-area img { height: 36px; width: auto; }
+  .logo-area .company-name { font-size: 13pt; font-weight: 700; line-height: 1.15; }
+  .doc-title { font-size: 13pt; font-weight: 700; letter-spacing: 0.08em; text-align: center; flex: 1; padding-top: 6px; }
   .doc-meta { text-align: right; font-size: 9pt; min-width: 55mm; }
   .doc-meta table { margin-left: auto; border-collapse: collapse; }
   .doc-meta td { padding: 2px 4px; }
   .doc-meta td:first-child { color: #555; white-space: nowrap; }
   .doc-meta td:last-child { font-weight: 600; }
 
-  /* ASIAKAS */
-  .customer-block { margin-bottom: 8mm; }
-  .customer-block .name { font-size: 13pt; font-weight: 700; }
+  /* ASIAKAS + YHTEENVETO RIVI */
+  .info-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6mm; }
+  .customer-block { font-size: 9.5pt; line-height: 1.5; }
+  .customer-block .name { font-size: 11pt; font-weight: 700; }
 
   /* YHTEENVETO YLHÄÄLLÄ */
-  .summary-top { float: right; text-align: right; margin-bottom: 4mm; font-size: 9pt; }
-  .summary-top .total-row { font-size: 12pt; font-weight: 700; }
-  .summary-top table { border-collapse: collapse; }
+  .summary-top { text-align: right; font-size: 9pt; }
+  .summary-top table { border-collapse: collapse; margin-left: auto; }
   .summary-top td { padding: 1px 4px; }
   .summary-top td:first-child { color: #555; }
+  .summary-top .total-line { font-size: 12pt; font-weight: 700; margin-top: 3px; }
 
   /* INTRO TEKSTI */
-  .intro-text { margin-bottom: 8mm; font-size: 9.5pt; clear: both; }
+  .intro-text { margin-bottom: 5mm; font-size: 9.5pt; text-align: left; }
 
   /* TUOTETAULUKKO */
-  .product-table { width: 100%; border-collapse: collapse; margin-bottom: 8mm; font-size: 9pt; }
+  .product-table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; font-size: 9pt; }
   .product-table th { border-bottom: 1.5px solid #222; padding: 4px 6px; text-align: left; font-weight: 600; font-size: 8.5pt; }
   .product-table th.right { text-align: right; }
-  .product-table td { padding: 4px 6px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  .product-table td { padding: 4px 6px; border-bottom: 1px solid #ddd; vertical-align: top; text-align: left; }
   .product-table td.right { text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 8.5pt; }
   .product-table .section-hdr td { background: #f0f0f0; font-weight: 700; font-size: 9pt; border-bottom: 1px solid #bbb; border-top: 3px solid #555; padding: 5px 6px; }
-  .product-table .inactive-row td { color: #aaa; }
-  .product-table tr.total-row td { border-top: 2px solid #222; border-bottom: none; font-weight: 700; padding-top: 5px; }
 
   /* YHTEENVETO ALHAALLA */
-  .summary-bottom { display: flex; justify-content: flex-end; margin-bottom: 8mm; }
+  .summary-bottom { display: flex; justify-content: flex-end; margin-bottom: 6mm; }
   .summary-box { width: 80mm; border-top: 1.5px solid #222; padding-top: 4px; }
   .summary-box table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
   .summary-box td { padding: 2px 4px; }
@@ -61,20 +60,25 @@
   .summary-box .total td { font-size: 12pt; font-weight: 700; border-top: 1px solid #bbb; padding-top: 4px; }
 
   /* VAKIOTEKSTI */
-  .footer-text { font-size: 8.5pt; color: #333; line-height: 1.5; white-space: pre-wrap; border-top: 1px solid #ccc; padding-top: 5mm; margin-bottom: 6mm; }
+  .footer-text { font-size: 8.5pt; color: #333; line-height: 1.5; white-space: pre-wrap; border-top: 1px solid #ccc; padding-top: 5mm; margin-bottom: 6mm; text-align: left; }
 
-  /* ALATUNNISTE */
+  /* ALATUNNISTE — aina sivun alalaidassa */
   .doc-footer {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    height: 24mm; padding: 4mm 15mm 3mm;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 22mm;
+    padding: 3mm 15mm 3mm;
     border-top: 1px solid #bbb;
     display: flex; justify-content: space-between; align-items: flex-start;
-    font-size: 8pt; color: #444; background: #fff;
+    font-size: 7.5pt; color: #444; background: #fff;
   }
-  .doc-footer .col { display: flex; flex-direction: column; gap: 1px; line-height: 1.4; }
+  .doc-footer .col { display: flex; flex-direction: column; gap: 1px; line-height: 1.45; }
   .doc-footer .col.center { text-align: center; }
   .doc-footer .col.right { text-align: right; }
-  .doc-footer .quote-num { font-size: 11pt; font-weight: 700; color: #111; margin-top: 2px; }
+  .doc-footer .quote-num { font-size: 10pt; font-weight: 700; color: #111; margin-top: 2px; }
+
+  /* Sisältö ei mene alatunnisteen alle */
+  .page-wrap { padding-bottom: 26mm; }
 
   /* TULOSTUS */
   @media print {
@@ -125,7 +129,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const [quoteArr, custArr] = await Promise.all([
     sbGet('quotes', `?id=eq.${id}&select=*`),
-    sbGet('customers', '?select=id,name,address,city')
+    sbGet('customers', '?select=id,name,address,city,billing_address,billing_city')
   ]);
   const q = Array.isArray(quoteArr) ? quoteArr[0] : null;
   if (!q) { document.getElementById('root').textContent = 'Tarjousta ei löydy.'; return; }
@@ -188,18 +192,24 @@ window.addEventListener('DOMContentLoaded', async () => {
           <tr><td>Tarjouksen antopäivä</td><td>${fmtDate(q.created_at)}</td></tr>
           <tr><td>Tarjous voimassa</td><td>${fmtDate(q.valid_until)}</td></tr>
         </table>
-        <div style="margin-top:8px;text-align:right;">
-          <div style="font-size:9pt;color:#555;">Alv 0%: <b>${fmt(noTax)} €</b></div>
-          <div style="font-size:9pt;color:#555;">Alv: <b>${fmt(vat)} €</b></div>
-          <div style="font-size:12pt;font-weight:700;">YHT ${fmt(total)} €</div>
-        </div>
       </div>
     </div>
 
-    <div class="customer-block">
-      <div class="name">${custName}</div>
-      ${q.notes ? `<div style="font-size:9.5pt;color:#555;margin-top:2px;">${q.notes}</div>` : ''}
-      ${delivLabel ? `<div style="font-size:9pt;color:#555;margin-top:2px;">Toimitusaste: ${delivLabel}</div>` : ''}
+    <div class="info-row">
+      <div class="customer-block">
+        <div class="name">${custName}</div>
+        ${cust && cust.address ? `<div>${cust.address}</div>` : ''}
+        ${cust && cust.city ? `<div>${cust.city}</div>` : ''}
+        ${q.notes ? `<div style="margin-top:4px;color:#555;">${q.notes}</div>` : ''}
+        ${delivLabel ? `<div style="margin-top:2px;color:#555;">Toimitusaste: ${delivLabel}</div>` : ''}
+      </div>
+      <div class="summary-top">
+        <table>
+          <tr><td>Alv 0%:</td><td><b>${fmt(noTax)} €</b></td></tr>
+          <tr><td>Alv:</td><td><b>${fmt(vat)} €</b></td></tr>
+        </table>
+        <div class="total-line">YHT ${fmt(total)} €</div>
+      </div>
     </div>
 
     <div class="intro-text">Kiitämme tarjouspyynnöstänne. Tarjoamme tuotteitamme teille seuraavasti:</div>
