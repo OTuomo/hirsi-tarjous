@@ -115,9 +115,11 @@
   .action-bar { display: flex; gap: 10px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
   .action-bar .spacer { flex: 1; }
   .status-badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 3px; letter-spacing: 0.06em; }
-  .status-badge.draft { background: #44444f; color: var(--text-dim); }
-  .status-badge.sent { background: #1e3d2e; color: var(--success); }
-  .status-badge.ordered { background: #1e2d3d; color: #5aabee; }
+  .status-badge.draft    { background: #44444f; color: var(--text-dim); }
+  .status-badge.progress { background: #3d2e1e; color: var(--warn); }
+  .status-badge.sent     { background: #1e3d2e; color: var(--success); }
+  .status-badge.model    { background: #2a1e3d; color: #c084fc; }
+  .status-badge.archived { background: #2a2a2a; color: #666; }
 
   /* MODAL */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center; }
@@ -295,8 +297,18 @@
 
   <!-- TOIMINTOPAINIKKEET -->
   <div class="action-bar">
-    <button class="btn btn-secondary" onclick="saveDraft()">💾 Tallenna luonnos</button>
-    <button class="btn btn-warn" onclick="markSent()">📤 Merkitse lähetetyksi</button>
+    <button class="btn btn-secondary" onclick="saveDraft()">💾 Tallenna</button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;">Status:</label>
+      <select id="statusSelect" onchange="changeStatus(this.value)"
+        style="font-size:12px;padding:6px 10px;width:auto;font-family:'IBM Plex Mono',monospace;">
+        <option value="DRAFT">Luonnos</option>
+        <option value="IN_PROGRESS">Kesken</option>
+        <option value="QUOTED">Tarjottu</option>
+        <option value="ARCHIVED">Arkisto</option>
+        <option value="MODEL">Malli</option>
+      </select>
+    </div>
     <div class="spacer"></div>
     <button class="btn btn-ghost" onclick="printQuote()">🖨 Tulosta tarjous</button>
     <button class="btn btn-ghost" onclick="printSupply()">📋 Tulosta tarvikkelista</button>
@@ -844,7 +856,7 @@ async function saveDraft() {
   const el = document.getElementById('saveStatus');
   el.className = 'saving'; el.textContent = 'Tallennetaan...';
   try {
-    const data = buildQuoteData('DRAFT');
+    const data = buildQuoteData(currentStatus);
     let result;
     if (currentQuoteId) {
       result = await sbPatch('quotes', currentQuoteId, data);
@@ -859,25 +871,31 @@ async function saveDraft() {
   }
 }
 
-async function markSent() {
-  if (!currentQuoteId) await saveDraft();
-  if (!currentQuoteId) return;
-  const el = document.getElementById('saveStatus');
-  el.className = 'saving'; el.textContent = 'Merkitään...';
-  try {
-    await sbPatch('quotes', currentQuoteId, { status: 'QUOTED' });
-    currentStatus = 'QUOTED';
-    updateStatusBadge();
-    el.className = 'saving ok'; el.textContent = '✓ Merkitty lähetetyksi';
-    setTimeout(() => el.textContent = '', 2500);
-  } catch(e) {
-    el.className = 'saving err'; el.textContent = 'Virhe';
+async function changeStatus(newStatus) {
+  currentStatus = newStatus;
+  updateStatusBadge();
+  if (currentQuoteId) {
+    try {
+      await sbPatch('quotes', currentQuoteId, { status: newStatus });
+    } catch(e) {}
   }
 }
 
-// =============================================
-// LATAUS
-// =============================================
+function updateStatusBadge() {
+  const badge = document.getElementById('statusBadge');
+  const sel = document.getElementById('statusSelect');
+  const map = {
+    DRAFT:       ['draft',    'Luonnos'],
+    IN_PROGRESS: ['progress', 'Kesken'],
+    QUOTED:      ['sent',     'Tarjottu'],
+    ARCHIVED:    ['archived', 'Arkisto'],
+    MODEL:       ['model',    'Malli'],
+  };
+  const [cls, label] = map[currentStatus] || ['draft', currentStatus];
+  badge.className = `status-badge ${cls}`;
+  badge.textContent = label;
+  if (sel) sel.value = currentStatus;
+}
 async function loadQuote(id) {
   const data = await sbGet('quotes', `?id=eq.${id}&select=*`);
   const q = Array.isArray(data) ? data[0] : null;
