@@ -813,9 +813,7 @@ function readCsv(file) {
 
 function parseCsv(text, filename) {
   const sep     = text.includes(';') ? ';' : ',';
-  const lines   = text.trim().split(/
-?
-/);
+  const lines   = text.trim().split('\n');
   const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
 
   if (!headers.includes('name') && !headers.includes('tuote')) {
