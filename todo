@@ -1,0 +1,170 @@
+# Okkosen Puutuote — Tarjousjärjestelmä
+**Projektipäällikkö:** Claude  
+**Yrittäjä:** Tuomo (otuomo @ GitHub)  
+**Päivitetty:** 2025-04-11
+
+---
+
+## Tekninen stack
+| Asia | Ratkaisu |
+|------|----------|
+| Tietokanta | Supabase (ilmainen) |
+| Frontend | GitHub Pages (ilmainen) |
+| Kustannus | ~0 €/kk |
+
+### Supabase
+- **Project URL:** `https://iofjnoxvksbaqorqaydh.supabase.co`
+- **Anon key:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo`
+
+### GitHub
+- **Repo:** `https://github.com/otuomo/hirsi-tarjous`
+- **GitHub Pages:** `https://otuomo.github.io/hirsi-tarjous/`
+- **Sivut sijaitsevat:** `/orders/`-kansiossa
+- **Tiedostojen paivitys:** vedä uusi tiedosto suoraan GitHubin `/orders/`-kansioon — ei copy-pastea, ei avaamista valissa
+
+---
+
+## Tietokantarakenne (Supabase)
+
+### `customers` VALMIS
+- id, created_at, name, email, phone, address, city, notes
+- customer_number, contact_person, business_id
+- billing_address, billing_postal_code, billing_city, billing_country
+- email2, ovt_number, is_active
+- Funktio `next_customer_number()` luotu
+
+### `products` VALMIS
+- id, created_at, code, name, unit, price, vat_percent, category, active
+- pricing_model, ostohinta, kate_percent, kuutiohinta
+- tyosto_kuutio, salvostus_kuutio, leveys, mitta, kpl
+- 121 tuotetta siirretty Accessista
+- Unique constraint: products_code_unique (code-sarake)
+- ALV 25.5% kaikilla
+- Hinnoittelumallit: simple / cubic
+
+### `quotes` LUOTU (tyhja)
+- id, created_at, customer_id, quote_number, valid_until
+- status, notes, total_net, total_vat, total_gross
+
+### `quote_items` LUOTU (tyhja)
+- id, quote_id, product_id, row_order, code, name
+- quantity, unit, unit_price, vat_percent, total_net
+
+### Tulevat taulut (ei vielä luotu)
+- quote_templates, orders, time_tracking, maintenance_log
+
+---
+
+## Sivut
+
+### VALMIIT
+| Sivu | URL | Kuvaus |
+|------|-----|--------|
+| asiakkaat.html | /orders/asiakkaat.html | Asiakashallinta |
+| hinnasto.html | /orders/hinnasto.html | Tuotteiden hallinta |
+
+**hinnasto.html sisaltaa:**
+- Tuotelista hauilla, suodatuksilla ja lajittelulla
+- Mobiilikorttinakoyma (alle 640px) + taulukkonakoyma (desktop)
+- Kaksi hinnoittelumallia: simple / cubic — lomake vaihtuu automaattisesti
+- Reaalaikainen hintalaskuri lomakkeessa
+- Kategoria-valikko — tuotekoodi tayttyy automaattisesti (ensimmainen vapaa numero koodivaelista)
+- Yksikko-pudotusvalikko: jm, Kpl, m2, m3, h
+- Muokkaa / poista per tuote
+- CSV-tuonti
+
+### SEURAAVANA: tarjous.html
+Rakenne:
+1. Asiakasvalinta — hae customers-taulusta
+2. Perustiedot — numero (automaattinen), paivamaaera, voimassaolo, toimitusaste
+3. Tuoterivit — hae hinnastosta, muokkaa maaraa/hintaa, lisaa riveja
+4. Yhteenveto — rivit, alv, yhteensa
+5. Toiminnot — tallenna, tulosta PDF, kopioi tarjous
+
+Toimitusasteet:
+- Hirsirunko — pelkka runko
+- Puuosat — runko + puuosat
+- Avaimet kateen — taeysi toimitus
+
+### TULOSSA
+- tarjoukset.html — Tarjouslistaus ja hallinta
+
+---
+
+## Tuotekoodivalit kategorioittain
+| Kategoria | Vali |
+|-----------|------|
+| Tyo | 0-99 |
+| Tyo, Rakennustyo | 100-199 |
+| Sahatavara | 1000-1999 |
+| Hirret | 2000-2999 |
+| Hoylatty | 3000-3999 |
+| Pienrauta | 4000-4999 |
+| Tarvikkeet | 5000-5999 |
+| Ovet ja ikkunat | 6000-6999 |
+| Kattotarvikkeet | 7000-7999 |
+| Vakiomallit | 9000-9999 |
+
+---
+
+## Hinnoittelulogiikka
+
+Malli A: Kuutiohinnoittelu (hirret, sahatavara, hoylatty)
+  myynti_kuutio = (kuutiohinta + tyosto_kuutio + salvostus_kuutio) * (1 + kate%)
+  hinta_jm = myynti_kuutio * leveys * mitta / 1 000 000
+
+Malli B: Yksinkertainen (kaikki muu)
+  hinta = ostohinta * (1 + kate%) * kpl
+
+---
+
+## Kadso-integraatio
+- Kadso on hirsirakennusten suunnitteluohjelma
+- Kadsosta saa osaluettelon CSV:na
+- Tarjouslomakkeessa "Tuo Kadsosta" -nappi — tayttaa rivit automaattisesti
+- Avoin kysymys: taesmaavatko Kadson koodit hinnastoon?
+- Avoin kysymys: minkan muotoista CSV:ta Kadso tuottaa?
+
+---
+
+## Tyyli ja Ulkoasu
+- Vaerit: tumma puun ruskea/amber (#d97706 paavaeri)
+- Fontit: IBM Plex Sans + IBM Plex Mono
+- Ulkoasun viimeistely: tehdaan erillisessa ulkoasu-chatissa
+
+---
+
+## Avoimet kysymykset Tuomolle
+1. Taesmaavatko Kadson koodit/nimikkeet hinnastoon?
+2. Minkan muotoista CSV:ta Kadso tuottaa osaluettelosta?
+3. Mika on tarjousnumerointi? (esim. 2025-001)
+
+---
+
+## TODO-lista
+
+### Seuraavana — tarjous.html
+- [ ] Luo next_quote_number() funktio Supabaseen
+- [ ] Rakenna tarjous.html — asiakasvalinta + tuoterivit + yhteenveto
+- [ ] PDF-tulostus / tulostusystaevalllinen nakyma
+- [ ] Kopioi tarjous -toiminto
+
+### Pian
+- [ ] tarjoukset.html — tarjouslistaus
+- [ ] Kadso CSV-tuonti tarjouslomakkeelle (kun saadaan esimerkkitiedosto)
+- [ ] Vakiomallit (valmiit pohjat yleisimmille saunamalleille)
+
+### Myohemmin
+- [ ] Salvostushinnan tarpeellisuus — kysytaan Tuomolta
+- [ ] Ulkoasun viimeistely (erillinen chat)
+- [ ] orders, time_tracking, maintenance_log -taulut
+- [ ] Tilausmuutos hyvaksynnan jalkeen
+
+---
+
+## Muistiinpanot
+- Supabase ilmainen taso: 500MB tietokanta, 2GB kaistaa/kk
+- GitHub Pages ilmainen julkisille repoille
+- Tiedostot GitHubiin: aina drag and drop — ei copy-paste (enkoodaus menee rikki)
+- Ei Retool-riippuvuutta, kaikki oma koodi
+- Hinnasto siirretty Accessista: 121 tuotetta, 11 kategoriaa
