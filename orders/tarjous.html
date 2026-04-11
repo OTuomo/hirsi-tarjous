@@ -7,260 +7,125 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
   :root {
-    --bg: #1c1a14;
-    --panel: #2a2720;
-    --border: #4a4535;
-    --accent: #d97706;
-    --accent-dim: #b45309;
-    --accent-glow: rgba(217,119,6,0.15);
-    --text: #ededf0;
-    --text-dim: #9595a0;
-    --input-bg: #333028;
-    --success: #3dba6e;
-    --danger: #e84040;
-    --warn: #e8a020;
-    --section-header: #222018;
+    --bg: #1c1a14; --panel: #2a2720; --border: #4a4535;
+    --accent: #d97706; --accent-dim: #b45309; --accent-glow: rgba(217,119,6,0.15);
+    --text: #ededf0; --text-dim: #9595a0; --input-bg: #333028;
+    --success: #3dba6e; --danger: #e84040; --warn: #e8a020; --section-header: #222018;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; }
-
-  /* HEADER */
-  header {
-    background: #141210;
-    border-bottom: 2px solid var(--accent);
-    padding: 10px 24px;
-    display: flex; align-items: center; gap: 16px;
-    position: sticky; top: 0; z-index: 100;
-  }
+  header { background: #141210; border-bottom: 2px solid var(--accent); padding: 10px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
   header .logo { height: 32px; width: auto; }
   header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
   .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-
-  /* NAV MENU */
   .nav-menu-wrap { position: relative; }
-  .nav-btn {
-    background: #3a3545; border: 1px solid #585568;
-    color: var(--text); font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px; font-weight: 600; padding: 6px 12px;
-    border-radius: 4px; cursor: pointer; letter-spacing: 0.04em;
-  }
+  .nav-btn { background: #3a3545; border: 1px solid #585568; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 4px; cursor: pointer; letter-spacing: 0.04em; }
   .nav-btn:hover { background: #4a4558; }
-  .nav-dropdown {
-    display: none; position: absolute; top: calc(100% + 6px); left: 0;
-    background: #3a3545; border: 1px solid var(--border);
-    border-radius: 6px; min-width: 200px; z-index: 999;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4); overflow: hidden;
-  }
+  .nav-dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; background: #3a3545; border: 1px solid var(--border); border-radius: 6px; min-width: 200px; z-index: 999; box-shadow: 0 4px 16px rgba(0,0,0,0.4); overflow: hidden; }
   .nav-dropdown.open { display: block; }
-  .nav-section-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
-    font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--text-dim); padding: 8px 14px 4px;
-  }
-  .nav-item {
-    display: block; width: 100%; text-align: left;
-    padding: 8px 14px; font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px; color: var(--text); background: none;
-    border: none; cursor: pointer; text-decoration: none;
-    transition: background 0.1s;
-  }
+  .nav-section-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); padding: 8px 14px 4px; }
+  .nav-item { display: block; width: 100%; text-align: left; padding: 8px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text); background: none; border: none; cursor: pointer; text-decoration: none; transition: background 0.1s; }
   .nav-item:hover { background: var(--accent-glow); color: var(--accent); }
   .nav-item.current { color: var(--accent); font-weight: 600; }
   .nav-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
-
-  /* NAPIT */
-  .btn {
-    padding: 8px 14px; border: none; border-radius: 4px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px; font-weight: 600;
-    cursor: pointer; letter-spacing: 0.04em;
-  }
+  .btn { padding: 8px 14px; border: none; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; cursor: pointer; letter-spacing: 0.04em; transition: background 0.15s; }
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-primary:hover { background: var(--accent-dim); }
   .btn-secondary { background: var(--border); color: var(--text); }
   .btn-secondary:hover { background: #686578; }
   .btn-danger { background: var(--danger); color: #fff; }
-  .btn-danger:hover { background: #ff5555; }
-  .btn-warn { background: var(--warn); color: #1a1a1a; }
-  .btn-warn:hover { background: #f0b030; }
   .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
   .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-warn { background: var(--warn); color: #1a1a1a; }
+  .btn-warn:hover { background: #f0b030; }
   .btn-sm { padding: 5px 10px; font-size: 11px; }
   .btn-xs { padding: 3px 7px; font-size: 10px; }
-
-  /* SAVING */
   .saving { font-size: 11px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
   .saving.ok { color: var(--success); }
   .saving.err { color: var(--danger); }
-
-  /* PAGE */
   .page { max-width: 1100px; margin: 0 auto; padding: 20px 24px 60px; display: flex; flex-direction: column; gap: 16px; }
-
-  /* PANEL */
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-  }
-  .panel-header {
-    background: var(--section-header);
-    border-bottom: 1px solid var(--border);
-    border-radius: 6px 6px 0 0;
-    padding: 10px 16px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; font-weight: 600;
-    color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
-    display: flex; align-items: center; gap: 10px;
-  }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
+  .panel-header { background: var(--section-header); border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; padding: 10px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
   .panel-body { padding: 16px; }
-
-  /* PERUSTIEDOT GRID */
-  .basics-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr;
-    gap: 12px;
-  }
+  .basics-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr; gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 3px; }
-  label {
-    font-size: 11px; color: var(--text-dim);
-    font-family: 'IBM Plex Mono', monospace;
-  }
-  input, select, textarea {
-    background: var(--input-bg); border: 1px solid var(--border);
-    color: var(--text); font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px; padding: 7px 9px; border-radius: 4px; width: 100%;
-  }
+  label { font-size: 11px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
+  input, select, textarea { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 7px 9px; border-radius: 4px; width: 100%; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
-  input[readonly] {
-    color: var(--text-dim); cursor: default;
-    background: #252218; border-color: transparent;
-  }
+  input[readonly] { color: var(--text-dim); cursor: default; background: #252218; border-color: transparent; }
   input::placeholder, textarea::placeholder { color: var(--text-dim); }
   select option { background: var(--panel); }
-  textarea { resize: vertical; min-height: 80px; }
+  textarea { resize: vertical; min-height: 100px; }
 
   /* ASIAKASHAKU */
+  .customer-row { display: flex; gap: 8px; align-items: flex-end; }
+  .customer-row .customer-search-wrap { flex: 1; }
   .customer-search-wrap { position: relative; }
-  .customer-dropdown {
-    display: none; position: absolute; top: calc(100% + 2px); left: 0; right: 0;
-    background: #3a3530; border: 1px solid var(--border);
-    border-radius: 4px; z-index: 50; max-height: 240px; overflow-y: auto;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  }
+  .customer-dropdown { display: none; position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 50; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   .customer-dropdown.open { display: block; }
-  .cust-option {
-    padding: 8px 12px; cursor: pointer;
-    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
-    border-bottom: 1px solid var(--border);
-  }
+  .cust-option { padding: 8px 12px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-bottom: 1px solid var(--border); }
   .cust-option:last-child { border-bottom: none; }
   .cust-option:hover { background: var(--accent-glow); color: var(--accent); }
   .cust-option .cust-num { font-size: 10px; color: var(--text-dim); margin-left: 8px; }
 
+  /* NIMIKEHAKU */
+  .nimike-wrap { position: relative; }
+  .nimike-dropdown { display: none; position: absolute; top: calc(100% + 2px); left: 0; min-width: 320px; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 60; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  .nimike-dropdown.open { display: block; }
+  .nimike-option { padding: 6px 10px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nimike-option:hover { background: var(--accent-glow); color: var(--accent); }
+  .nimike-option .nimike-code { color: var(--text-dim); margin-right: 6px; font-size: 10px; }
+
   /* SECTION ROW */
-  .section-row {
-    background: #222018;
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    margin-bottom: 4px;
-  }
+  .section-row { background: #222018; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 4px; }
   .section-row.inactive { opacity: 0.45; }
-  .section-row-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .section-row-header input[type="text"] {
-    background: transparent; border: none;
-    color: var(--text); font-weight: 600; font-size: 13px;
-    padding: 0; width: auto; flex: 1;
-  }
-  .section-row-header input[type="text"]:focus { border-bottom: 1px solid var(--accent); }
-  .section-toggle {
-    width: 16px; height: 16px; border-radius: 3px;
-    border: 1.5px solid var(--accent); background: none;
-    cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    padding: 0;
-  }
+  .section-row-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .section-row-header input[type="text"] { background: transparent; border: none; color: var(--text); font-weight: 600; font-size: 13px; padding: 0; width: auto; flex: 1; }
+  .section-row-header input[type="text"]:focus { border-bottom: 1px solid var(--accent); outline: none; }
+  .section-toggle { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid var(--accent); background: none; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0; }
   .section-toggle.on { background: var(--accent); }
   .section-toggle.on::after { content: '✓'; color: #fff; font-size: 10px; line-height: 1; }
-  .move-btn {
-    background: none; border: none; color: var(--text-dim);
-    cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 3px;
-  }
+  .move-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 3px; }
   .move-btn:hover { background: var(--accent-glow); color: var(--accent); }
-  .section-subtotal {
-    padding: 6px 12px 8px;
-    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
-    color: var(--text-dim); text-align: right;
-  }
+  .section-subtotal { padding: 6px 12px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); text-align: right; }
   .section-subtotal span { color: var(--accent); font-weight: 600; }
-
-  /* TUOTERIVIT */
   .product-rows { overflow-x: auto; }
-  table.product-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 620px; }
-  table.product-table th {
-    font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;
-    color: var(--text-dim); letter-spacing: 0.06em; text-transform: uppercase;
-    padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left;
-  }
+  table.product-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 640px; }
+  table.product-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; }
   table.product-table th.right { text-align: right; }
   table.product-table td { padding: 3px 4px; vertical-align: middle; border-bottom: 1px solid #33302a; }
   table.product-table tr:last-child td { border-bottom: none; }
-  table.product-table input, table.product-table select {
-    padding: 5px 7px; font-size: 12px;
-  }
+  table.product-table input, table.product-table select { padding: 5px 7px; font-size: 12px; }
   .price-manual { background: rgba(217,119,6,0.18) !important; }
-  .restore-btn {
-    background: none; border: none; color: var(--text-dim);
-    cursor: pointer; font-size: 11px; padding: 2px 4px;
-  }
+  .restore-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 11px; padding: 2px 4px; }
   .restore-btn:hover { color: var(--accent); }
-  .del-btn {
-    background: none; border: none; color: var(--danger);
-    cursor: pointer; font-size: 14px; padding: 2px 5px; border-radius: 3px;
-  }
+  .del-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 14px; padding: 2px 5px; border-radius: 3px; }
   .del-btn:hover { background: rgba(232,64,64,0.15); }
   .add-row-wrap { padding: 6px 12px 10px; }
 
   /* YHTEENVETO */
-  .summary-panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 16px 20px;
-    display: flex; justify-content: flex-end;
-  }
+  .summary-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; display: flex; justify-content: flex-end; }
   .summary-table { font-family: 'IBM Plex Mono', monospace; font-size: 13px; width: 320px; }
   .summary-table tr td { padding: 4px 0; }
   .summary-table .label { color: var(--text-dim); padding-right: 16px; }
   .summary-table .value { text-align: right; color: var(--text); }
   .summary-table .big td { font-size: 16px; font-weight: 600; color: var(--accent); padding-top: 8px; border-top: 1px solid var(--border); }
-  .summary-table input.adj {
-    width: 90px; text-align: right; padding: 4px 7px; font-size: 12px;
-  }
-
-  /* VAKIOTEKSTI */
+  .summary-table input.adj { width: 90px; text-align: right; padding: 4px 7px; font-size: 12px; }
   .default-text-wrap textarea { width: 100%; min-height: 100px; font-size: 12px; }
-
-  /* TOIMINTO-NAPIT */
-  .action-bar {
-    display: flex; gap: 10px; flex-wrap: wrap;
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 6px; padding: 14px 16px;
-  }
+  .action-bar { display: flex; gap: 10px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
   .action-bar .spacer { flex: 1; }
-
-  /* STATUS BADGE */
-  .status-badge {
-    display: inline-block;
-    font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;
-    padding: 3px 9px; border-radius: 3px; letter-spacing: 0.06em;
-    background: #44444f; color: var(--text-dim);
-  }
+  .status-badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 3px; letter-spacing: 0.06em; }
   .status-badge.draft { background: #44444f; color: var(--text-dim); }
   .status-badge.sent { background: #1e3d2e; color: var(--success); }
   .status-badge.ordered { background: #1e2d3d; color: #5aabee; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 24px; width: 480px; max-width: 96vw; display: flex; flex-direction: column; gap: 14px; }
+  .modal h2 { font-size: 15px; font-weight: 600; color: var(--accent); font-family: 'IBM Plex Mono', monospace; }
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 
   /* MOBIILI */
   @media (max-width: 640px) {
@@ -271,14 +136,8 @@
     .summary-table { width: 100%; }
     .action-bar { flex-direction: column; }
   }
-
-  /* TUOTERIVI KORTTEINA (mobiili) */
   .product-card-list { display: none; }
-  .product-card {
-    background: var(--input-bg); border: 1px solid var(--border);
-    border-radius: 5px; padding: 10px 12px; margin-bottom: 8px;
-    display: flex; flex-direction: column; gap: 6px;
-  }
+  .product-card { background: var(--input-bg); border: 1px solid var(--border); border-radius: 5px; padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
   .product-card .card-row { display: flex; gap: 8px; align-items: center; }
   .product-card label { min-width: 60px; }
 </style>
@@ -305,6 +164,43 @@
   </div>
 </header>
 
+<!-- LISÄÄ ASIAKAS MODAL -->
+<div class="modal-overlay" id="newCustModal">
+  <div class="modal">
+    <h2>Uusi asiakas</h2>
+    <div class="modal-grid">
+      <div class="field" style="grid-column:1/-1">
+        <label>Nimi *</label>
+        <input type="text" id="nc_name" placeholder="Yritys tai henkilö">
+      </div>
+      <div class="field">
+        <label>Puhelin</label>
+        <input type="text" id="nc_phone" placeholder="0400 000 000">
+      </div>
+      <div class="field">
+        <label>Sähköposti</label>
+        <input type="text" id="nc_email" placeholder="email@example.com">
+      </div>
+      <div class="field">
+        <label>Osoite</label>
+        <input type="text" id="nc_address" placeholder="Katuosoite">
+      </div>
+      <div class="field">
+        <label>Kaupunki</label>
+        <input type="text" id="nc_city" placeholder="Kaupunki">
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label>Y-tunnus</label>
+        <input type="text" id="nc_business_id" placeholder="1234567-8">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeNewCustModal()">Peruuta</button>
+      <button class="btn btn-primary btn-sm" onclick="saveNewCustomer()">Tallenna asiakas</button>
+    </div>
+  </div>
+</div>
+
 <div class="page">
 
   <!-- PERUSTIEDOT -->
@@ -314,9 +210,13 @@
       <div class="basics-grid">
         <div class="field">
           <label>Asiakas *</label>
-          <div class="customer-search-wrap">
-            <input type="text" id="customerSearch" placeholder="Hae asiakasta..." autocomplete="off" oninput="searchCustomers(this.value)" onfocus="searchCustomers(this.value)">
-            <div class="customer-dropdown" id="customerDropdown"></div>
+          <div class="customer-row">
+            <div class="customer-search-wrap">
+              <input type="text" id="customerSearch" placeholder="Hae nimellä..." autocomplete="off"
+                oninput="searchCustomers(this.value)" onfocus="searchCustomers(this.value)">
+              <div class="customer-dropdown" id="customerDropdown"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="openNewCustModal()" title="Lisää uusi asiakas">+ Asiakas</button>
           </div>
           <input type="hidden" id="customerId">
         </div>
@@ -336,11 +236,11 @@
           <label>Toimitusaste</label>
           <select id="deliveryType">
             <option value="">— valitse —</option>
-            <option value="EXW">EXW – Noudettavissa</option>
-            <option value="DAP">DAP – Toimitettu</option>
-            <option value="DDP">DDP – Tullaus maksettu</option>
-            <option value="FCA">FCA – Rahdinantajan tiloissa</option>
-            <option value="sopimus">Sopimuksen mukaan</option>
+            <option value="hirsirunko">Hirsirunko</option>
+            <option value="puuosat">Hirsirunko + puuosat</option>
+            <option value="avaimet">Avaimet käteen</option>
+            <option value="nouto">Nouto tehtaalta</option>
+            <option value="toimitettu">Toimitettu</option>
           </select>
         </div>
       </div>
@@ -366,26 +266,14 @@
   <!-- YHTEENVETO -->
   <div class="summary-panel">
     <table class="summary-table">
-      <tr>
-        <td class="label">Välisumma</td>
-        <td class="value" id="sumSubtotal">0,00 €</td>
-      </tr>
+      <tr><td class="label">Välisumma</td><td class="value" id="sumSubtotal">0,00 €</td></tr>
       <tr>
         <td class="label">Pyöristys / alennus</td>
         <td class="value"><input class="adj" type="number" id="adjAmount" value="0" step="0.01" oninput="recalcTotals()"></td>
       </tr>
-      <tr>
-        <td class="label">Veroton yhteensä</td>
-        <td class="value" id="sumNoTax">0,00 €</td>
-      </tr>
-      <tr>
-        <td class="label">ALV 25,5%</td>
-        <td class="value" id="sumVat">0,00 €</td>
-      </tr>
-      <tr class="big">
-        <td class="label">YHT</td>
-        <td class="value" id="sumTotal">0,00 €</td>
-      </tr>
+      <tr><td class="label">Veroton yhteensä</td><td class="value" id="sumNoTax">0,00 €</td></tr>
+      <tr><td class="label">ALV 25,5%</td><td class="value" id="sumVat">0,00 €</td></tr>
+      <tr class="big"><td class="label">YHT</td><td class="value" id="sumTotal">0,00 €</td></tr>
     </table>
   </div>
 
@@ -394,12 +282,14 @@
     <div class="panel-header">
       Vakioteksti / huomiot
       <span style="margin-left:auto;font-weight:400;font-size:11px;color:var(--text-dim);">Pohja:</span>
-      <select id="textTemplateSelect" onchange="applyTextTemplate(this.value)" style="font-size:11px;padding:3px 6px;width:auto;margin-left:6px;">
+      <select id="textTemplateSelect" onchange="applyTextTemplate(this.value)"
+        style="font-size:11px;padding:3px 6px;width:auto;margin-left:6px;text-transform:none;letter-spacing:0;">
         <option value="">— valitse pohja —</option>
+        <option value="__none__">Ei tekstiä</option>
       </select>
     </div>
     <div class="panel-body default-text-wrap">
-      <textarea id="defaultText"></textarea>
+      <textarea id="defaultText" placeholder="Vakioteksti tai toimitushuomiot..."></textarea>
     </div>
   </div>
 
@@ -422,7 +312,7 @@
 const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
 
-async function sbGet(table, query = '') {
+async function sbGet(table, query='') {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
   });
@@ -446,30 +336,38 @@ async function sbPatch(table, id, data) {
   });
   return r.json();
 }
+async function sbRpc(fn, params={}) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  return r.json();
+}
 
 // =============================================
 // STATE
 // =============================================
 let customers = [];
 let products = [];
-let sections = [];   // [{id, name, active, rows:[{...}]}]
+let textTemplates = [];
+let sections = [];
 let currentQuoteId = null;
 let currentStatus = 'DRAFT';
+let sectionIdCounter = 0;
+let rowIdCounter = 0;
 
 // =============================================
 // INIT
 // =============================================
 window.addEventListener('DOMContentLoaded', async () => {
-  // Päivämäärät
   const today = new Date();
-  document.getElementById('quoteDate').value = today.toISOString().slice(0, 10);
+  document.getElementById('quoteDate').value = today.toISOString().slice(0,10);
   const valid = new Date(today); valid.setDate(today.getDate() + 14);
-  document.getElementById('quoteValid').value = valid.toISOString().slice(0, 10);
+  document.getElementById('quoteValid').value = valid.toISOString().slice(0,10);
 
-  // Lataa data rinnakkain
-  await Promise.all([loadCustomers(), loadProducts(), loadDefaultText()]);
+  await Promise.all([loadCustomers(), loadProducts(), loadTextTemplates()]);
 
-  // URL-parametrit: ?id=123 avaa vanhan, ?copy=123 kopioi, ?customer=uuid&name=Nimi
   const params = new URLSearchParams(window.location.search);
   const openId = params.get('id');
   const copyId = params.get('copy');
@@ -489,37 +387,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-let textTemplates = [];
-
-async function loadDefaultText() {
-  try {
-    const data = await sbGet('quote_text_templates', '?order=name.asc&select=id,name,content,is_default');
-    if (Array.isArray(data)) {
-      textTemplates = data;
-      const sel = document.getElementById('textTemplateSelect');
-      data.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.id;
-        opt.textContent = t.name;
-        sel.appendChild(opt);
-      });
-      const def = data.find(t => t.is_default);
-      if (def) {
-        document.getElementById('defaultText').value = def.content;
-        document.getElementById('textTemplateSelect').value = def.id;
-      }
-    }
-  } catch(e) {}
-}
-
-function applyTextTemplate(id) {
-  if (!id) return;
-  const t = textTemplates.find(x => String(x.id) === String(id));
-  if (t && confirm('Korvataanko nykyinen vakioteksti valitulla pohjalla?')) {
-    document.getElementById('defaultText').value = t.content;
-  }
-}
-
 async function loadCustomers() {
   const data = await sbGet('customers', '?is_active=eq.true&order=name.asc&select=id,name,customer_number');
   customers = Array.isArray(data) ? data : [];
@@ -528,24 +395,51 @@ async function loadCustomers() {
 async function loadProducts() {
   const data = await sbGet('products', '?active=eq.true&order=name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,kate_percent');
   products = Array.isArray(data) ? data : [];
-  // Laske myyntihinta kuutiohinnoittelun tuotteille
   products.forEach(p => {
     if (p.pricing_model === 'cubic' && p.kuutiohinta != null && p.leveys && p.mitta) {
       const kate = 1 + (parseFloat(p.kate_percent) || 0) / 100;
-      const myyntiKuutio = (parseFloat(p.kuutiohinta) + parseFloat(p.tyosto_kuutio||0) + parseFloat(p.salvostus_kuutio||0)) * kate;
-      p.price = myyntiKuutio * parseFloat(p.leveys) * parseFloat(p.mitta) / 1000000;
+      const mv = (parseFloat(p.kuutiohinta) + parseFloat(p.tyosto_kuutio||0) + parseFloat(p.salvostus_kuutio||0)) * kate;
+      p.price = mv * parseFloat(p.leveys) * parseFloat(p.mitta) / 1000000;
     }
   });
 }
 
+async function loadTextTemplates() {
+  try {
+    const data = await sbGet('quote_text_templates', '?order=name.asc&select=id,name,content,is_default');
+    if (!Array.isArray(data)) return;
+    textTemplates = data;
+    const sel = document.getElementById('textTemplateSelect');
+    data.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      sel.appendChild(opt);
+    });
+    const def = data.find(t => t.is_default);
+    if (def) {
+      document.getElementById('defaultText').value = def.content;
+      document.getElementById('textTemplateSelect').value = def.id;
+    }
+  } catch(e) {}
+}
+
+function applyTextTemplate(val) {
+  if (val === '__none__') {
+    document.getElementById('defaultText').value = '';
+    return;
+  }
+  if (!val) return;
+  const t = textTemplates.find(x => String(x.id) === String(val));
+  if (t) {
+    if (document.getElementById('defaultText').value && !confirm('Korvataanko nykyinen teksti valitulla pohjalla?')) return;
+    document.getElementById('defaultText').value = t.content;
+  }
+}
+
 async function fetchNextQuoteNumber() {
   try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/next_quote_number`, {
-      method: 'POST',
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    });
-    const num = await r.json();
+    const num = await sbRpc('next_quote_number');
     if (num) document.getElementById('quoteNumber').value = num;
   } catch(e) {}
 }
@@ -556,17 +450,17 @@ async function fetchNextQuoteNumber() {
 function searchCustomers(val) {
   const dd = document.getElementById('customerDropdown');
   const q = val.toLowerCase().trim();
-  const filtered = q ? customers.filter(c =>
-    c.name.toLowerCase().includes(q) ||
-    (c.customer_number || '').includes(q)
-  ) : customers.slice(0, 20);
-
-  if (!filtered.length) { dd.innerHTML = '<div class="cust-option" style="color:var(--text-dim)">Ei tuloksia</div>'; }
-  else {
-    dd.innerHTML = filtered.slice(0, 30).map(c => `
-      <div class="cust-option" onclick="setCustomer('${c.id}', '${c.name.replace(/'/g,"\\'")}')">
-        ${c.name}<span class="cust-num">#${c.customer_number || '—'}</span>
-      </div>`).join('');
+  const filtered = q
+    ? customers.filter(c => c.name.toLowerCase().includes(q) || (c.customer_number||'').includes(q))
+    : customers.slice(0, 20);
+  if (!filtered.length) {
+    dd.innerHTML = '<div class="cust-option" style="color:var(--text-dim)">Ei tuloksia</div>';
+  } else {
+    dd.innerHTML = filtered.slice(0,30).map(c =>
+      `<div class="cust-option" onclick="setCustomer('${c.id}','${c.name.replace(/'/g,"\\'")}')">
+        ${c.name}<span class="cust-num">#${c.customer_number||'—'}</span>
+      </div>`
+    ).join('');
   }
   dd.classList.add('open');
 }
@@ -578,21 +472,62 @@ function setCustomer(id, name) {
 }
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('.customer-search-wrap')) {
-    document.getElementById('customerDropdown').classList.remove('open');
-  }
+  if (!e.target.closest('.customer-search-wrap')) document.getElementById('customerDropdown').classList.remove('open');
+  if (!e.target.closest('.nimike-wrap')) document.querySelectorAll('.nimike-dropdown').forEach(d => d.classList.remove('open'));
+  if (!e.target.closest('.nav-menu-wrap')) document.getElementById('navDropdown').classList.remove('open');
 });
+
+// =============================================
+// UUSI ASIAKAS MODAL
+// =============================================
+function openNewCustModal() {
+  ['nc_name','nc_phone','nc_email','nc_address','nc_city','nc_business_id'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('newCustModal').classList.add('open');
+  setTimeout(() => document.getElementById('nc_name').focus(), 100);
+}
+
+function closeNewCustModal() {
+  document.getElementById('newCustModal').classList.remove('open');
+}
+
+async function saveNewCustomer() {
+  const name = document.getElementById('nc_name').value.trim();
+  if (!name) { alert('Nimi on pakollinen.'); return; }
+  const btn = document.querySelector('#newCustModal .btn-primary');
+  btn.textContent = 'Tallennetaan...'; btn.disabled = true;
+  try {
+    const result = await sbPost('customers', {
+      name,
+      phone: document.getElementById('nc_phone').value.trim() || null,
+      email: document.getElementById('nc_email').value.trim() || null,
+      address: document.getElementById('nc_address').value.trim() || null,
+      city: document.getElementById('nc_city').value.trim() || null,
+      business_id: document.getElementById('nc_business_id').value.trim() || null,
+      is_active: true
+    });
+    if (Array.isArray(result) && result[0]) {
+      const c = result[0];
+      customers.push(c);
+      setCustomer(c.id, c.name);
+      closeNewCustModal();
+    } else {
+      alert('Tallentaminen epäonnistui.');
+    }
+  } catch(e) {
+    alert('Verkkovirhe.');
+  }
+  btn.textContent = 'Tallenna asiakas'; btn.disabled = false;
+}
 
 // =============================================
 // OSIOT
 // =============================================
-let sectionIdCounter = 0;
-
-function addSection(name = '') {
+function addSection(name='') {
   const id = ++sectionIdCounter;
   sections.push({ id, name: name || `Osio ${id}`, active: true, rows: [] });
   renderSections();
-  // Lisää automaattisesti yksi tyhjä rivi uuteen osioon
   addRow(id);
 }
 
@@ -605,25 +540,24 @@ function renderSections() {
     div.id = `section-${sec.id}`;
     div.innerHTML = `
       <div class="section-row-header">
-        <button class="section-toggle ${sec.active ? 'on' : ''}" onclick="toggleSection(${sec.id})" title="Aktiivinen/pois"></button>
-        <input type="text" value="${sec.name}" oninput="renameSection(${sec.id}, this.value)" style="font-weight:600;font-size:13px;background:transparent;border:none;color:var(--text);flex:1;padding:0;">
-        <button class="move-btn" onclick="moveSection(${sec.id}, -1)" ${idx === 0 ? 'disabled style="opacity:0.3"' : ''} title="Siirrä ylös">↑</button>
-        <button class="move-btn" onclick="moveSection(${sec.id}, 1)" ${idx === sections.length - 1 ? 'disabled style="opacity:0.3"' : ''} title="Siirrä alas">↓</button>
+        <button class="section-toggle ${sec.active?'on':''}" onclick="toggleSection(${sec.id})" title="Aktiivinen/pois"></button>
+        <input type="text" value="${esc(sec.name)}" oninput="renameSection(${sec.id},this.value)"
+          style="font-weight:600;font-size:13px;background:transparent;border:none;color:var(--text);flex:1;padding:0;">
+        <button class="move-btn" onclick="moveSection(${sec.id},-1)" ${idx===0?'disabled style="opacity:0.3"':''} title="Siirrä ylös">↑</button>
+        <button class="move-btn" onclick="moveSection(${sec.id},1)" ${idx===sections.length-1?'disabled style="opacity:0.3"':''} title="Siirrä alas">↓</button>
         <button class="btn btn-danger btn-xs" onclick="removeSection(${sec.id})" style="margin-left:4px;">✕</button>
       </div>
       <div class="product-rows">
         <table class="product-table">
-          <thead>
-            <tr>
-              <th style="width:130px">Nimike</th>
-              <th>Kuvaus</th>
-              <th style="width:60px" class="right">Määrä</th>
-              <th style="width:60px">Yks</th>
-              <th style="width:90px" class="right">à-hinta</th>
-              <th style="width:90px" class="right">Yhteensä</th>
-              <th style="width:32px"></th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th style="width:200px">Nimike</th>
+            <th>Kuvaus / lisätiedot</th>
+            <th style="width:60px" class="right">Määrä</th>
+            <th style="width:55px">Yks</th>
+            <th style="width:95px" class="right">à-hinta</th>
+            <th style="width:90px" class="right">Yhteensä</th>
+            <th style="width:32px"></th>
+          </tr></thead>
           <tbody id="tbody-${sec.id}">
             ${sec.rows.map(row => renderRowHTML(sec.id, row)).join('')}
           </tbody>
@@ -643,33 +577,35 @@ function renderSections() {
 }
 
 function renderRowHTML(secId, row) {
-  const opts = products.map(p =>
-    `<option value="${p.id}" ${row.productId === p.id ? 'selected' : ''}>${p.code ? p.code + ' – ' : ''}${p.name}</option>`
-  ).join('');
   return `
     <tr id="row-${secId}-${row.id}">
       <td>
-        <select onchange="onProductSelect(${secId}, ${row.id}, this.value)" style="min-width:120px;">
-          <option value="">— valitse —</option>
-          ${opts}
-        </select>
+        <div class="nimike-wrap">
+          <input type="text" id="nimike-${secId}-${row.id}"
+            value="${esc(row.nimikeTeksti||'')}"
+            oninput="onNimikeInput(${secId},${row.id},this.value)"
+            onfocus="onNimikeFocus(${secId},${row.id})"
+            placeholder="Hae nimikettä..."
+            style="min-width:180px;">
+          <div class="nimike-dropdown" id="nimike-dd-${secId}-${row.id}"></div>
+        </div>
       </td>
-      <td><input type="text" value="${row.desc || ''}" oninput="onRowInput(${secId}, ${row.id}, 'desc', this.value)" placeholder="Kuvaus"></td>
-      <td><input type="number" value="${row.qty || ''}" oninput="onRowInput(${secId}, ${row.id}, 'qty', this.value)" min="0" step="0.01" style="text-align:right;"></td>
-      <td><input type="text" value="${row.unit || ''}" oninput="onRowInput(${secId}, ${row.id}, 'unit', this.value)" placeholder="kpl"></td>
+      <td><input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" placeholder="Kuvaus"></td>
+      <td><input type="number" value="${row.qty||''}" oninput="onRowInput(${secId},${row.id},'qty',this.value)" min="0" step="0.01" style="text-align:right;"></td>
+      <td><input type="text" value="${esc(row.unit||'')}" oninput="onRowInput(${secId},${row.id},'unit',this.value)" placeholder="kpl"></td>
       <td>
         <div style="display:flex;align-items:center;gap:2px;">
-          <input type="number" id="price-${secId}-${row.id}" value="${row.price || ''}"
-            oninput="onPriceInput(${secId}, ${row.id}, this.value)"
-            class="${row.priceManual ? 'price-manual' : ''}"
+          <input type="number" id="price-${secId}-${row.id}" value="${row.price||''}"
+            oninput="onPriceInput(${secId},${row.id},this.value)"
+            class="${row.priceManual?'price-manual':''}"
             step="0.01" min="0" style="text-align:right;">
-          ${row.priceManual ? `<button class="restore-btn" onclick="restorePrice(${secId}, ${row.id})" title="Palauta laskettu hinta">↺</button>` : ''}
+          ${row.priceManual?`<button class="restore-btn" onclick="restorePrice(${secId},${row.id})" title="Palauta laskettu hinta">↺</button>`:''}
         </div>
       </td>
       <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;" id="rowsum-${secId}-${row.id}">
         ${fmt(rowSum(row))} €
       </td>
-      <td><button class="del-btn" onclick="removeRow(${secId}, ${row.id})">✕</button></td>
+      <td><button class="del-btn" onclick="removeRow(${secId},${row.id})">✕</button></td>
     </tr>
   `;
 }
@@ -679,38 +615,84 @@ function renderCardHTML(secId, row) {
     <div class="product-card">
       <div class="card-row">
         <label>Nimike</label>
-        <select onchange="onProductSelect(${secId}, ${row.id}, this.value)" style="flex:1;">
-          <option value="">— valitse —</option>
-          ${products.map(p => `<option value="${p.id}" ${row.productId === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
-        </select>
+        <input type="text" value="${esc(row.nimikeTeksti||'')}" style="flex:1;"
+          oninput="onNimikeInput(${secId},${row.id},this.value)" placeholder="Hae...">
       </div>
-      <div class="card-row">
-        <label>Kuvaus</label>
-        <input type="text" value="${row.desc || ''}" oninput="onRowInput(${secId}, ${row.id}, 'desc', this.value)" style="flex:1;">
-      </div>
+      <div class="card-row"><label>Kuvaus</label>
+        <input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" style="flex:1;"></div>
       <div class="card-row">
         <label>Määrä</label>
-        <input type="number" value="${row.qty || ''}" oninput="onRowInput(${secId}, ${row.id}, 'qty', this.value)" style="width:80px;">
+        <input type="number" value="${row.qty||''}" oninput="onRowInput(${secId},${row.id},'qty',this.value)" style="width:80px;">
         <label style="margin-left:8px;">Yks</label>
-        <input type="text" value="${row.unit || ''}" oninput="onRowInput(${secId}, ${row.id}, 'unit', this.value)" style="width:60px;">
+        <input type="text" value="${esc(row.unit||'')}" oninput="onRowInput(${secId},${row.id},'unit',this.value)" style="width:60px;">
       </div>
       <div class="card-row">
         <label>à-hinta</label>
-        <input type="number" value="${row.price || ''}" oninput="onPriceInput(${secId}, ${row.id}, this.value)"
-          class="${row.priceManual ? 'price-manual' : ''}" style="width:100px;">
+        <input type="number" value="${row.price||''}" oninput="onPriceInput(${secId},${row.id},this.value)"
+          class="${row.priceManual?'price-manual':''}" style="width:100px;">
         <label style="margin-left:8px;">= ${fmt(rowSum(row))} €</label>
-        <button class="del-btn" onclick="removeRow(${secId}, ${row.id})" style="margin-left:auto;">✕</button>
+        <button class="del-btn" onclick="removeRow(${secId},${row.id})" style="margin-left:auto;">✕</button>
       </div>
     </div>
   `;
 }
 
-let rowIdCounter = 0;
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// =============================================
+// NIMIKEHAKU (teksti)
+// =============================================
+function onNimikeFocus(secId, rowId) {
+  onNimikeInput(secId, rowId, document.getElementById(`nimike-${secId}-${rowId}`).value);
+}
+
+function onNimikeInput(secId, rowId, val) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  row.nimikeTeksti = val;
+  const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
+  if (!dd) return;
+  const q = val.toLowerCase().trim();
+  const hits = q.length >= 1
+    ? products.filter(p =>
+        (p.name||'').toLowerCase().includes(q) ||
+        (p.code||'').toLowerCase().includes(q) ||
+        (p.category||'').toLowerCase().includes(q)
+      ).slice(0,20)
+    : products.slice(0,20);
+  if (!hits.length) { dd.classList.remove('open'); return; }
+  dd.innerHTML = hits.map(p =>
+    `<div class="nimike-option" onclick="selectNimike(${secId},${rowId},'${p.id}')">
+      <span class="nimike-code">${p.code||''}</span>${p.name}
+      <span style="color:var(--text-dim);font-size:10px;margin-left:6px;">${p.unit||''}</span>
+    </div>`
+  ).join('');
+  dd.classList.add('open');
+}
+
+function selectNimike(secId, rowId, productId) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  const prod = products.find(p => p.id === productId || String(p.id) === String(productId));
+  if (prod) {
+    row.productId = prod.id;
+    row.nimikeTeksti = (prod.code ? prod.code + ' – ' : '') + prod.name;
+    if (!row.desc) row.desc = prod.name;
+    row.unit = prod.unit || row.unit;
+    row.basePrice = prod.price != null ? parseFloat(prod.price) : null;
+    if (!row.priceManual && row.basePrice !== null) row.price = row.basePrice;
+  }
+  const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
+  if (dd) dd.classList.remove('open');
+  renderSections();
+}
 
 function addRow(secId) {
   const sec = sections.find(s => s.id === secId);
   if (!sec) return;
-  sec.rows.push({ id: ++rowIdCounter, productId: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null });
+  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null });
   renderSections();
 }
 
@@ -740,25 +722,14 @@ function renameSection(id, val) {
 
 function moveSection(id, dir) {
   const idx = sections.findIndex(s => s.id === id);
-  const newIdx = idx + dir;
-  if (newIdx < 0 || newIdx >= sections.length) return;
-  [sections[idx], sections[newIdx]] = [sections[newIdx], sections[idx]];
+  const nIdx = idx + dir;
+  if (nIdx < 0 || nIdx >= sections.length) return;
+  [sections[idx], sections[nIdx]] = [sections[nIdx], sections[idx]];
   renderSections();
 }
 
 function onProductSelect(secId, rowId, productId) {
-  const sec = sections.find(s => s.id === secId);
-  const row = sec && sec.rows.find(r => r.id === rowId);
-  if (!row) return;
-  row.productId = productId;
-  const prod = products.find(p => p.id === productId);
-  if (prod) {
-    if (!row.desc) row.desc = prod.name;
-    if (!row.unit) row.unit = prod.unit || '';
-    row.basePrice = prod.price || null;
-    if (!row.priceManual) row.price = prod.price || '';
-  }
-  renderSections();
+  selectNimike(secId, rowId, productId);
 }
 
 function onRowInput(secId, rowId, field, val) {
@@ -791,33 +762,27 @@ function updateRowSum(secId, rowId) {
   if (!row) return;
   const el = document.getElementById(`rowsum-${secId}-${rowId}`);
   if (el) el.textContent = fmt(rowSum(row)) + ' €';
-  const subsub = document.getElementById(`subsub-${secId}`);
-  if (subsub) subsub.textContent = fmt(sectionSum(sec));
+  const ss = document.getElementById(`subsub-${secId}`);
+  if (ss) ss.textContent = fmt(sectionSum(sec));
   recalcTotals();
 }
 
-function rowSum(row) {
-  const q = parseFloat(row.qty) || 0;
-  const p = parseFloat(row.price) || 0;
-  return q * p;
-}
+function rowSum(row) { return (parseFloat(row.qty)||0) * (parseFloat(row.price)||0); }
 
 function sectionSum(sec) {
   if (!sec.active) return 0;
-  return sec.rows.reduce((a, r) => a + rowSum(r), 0);
+  return sec.rows.reduce((a,r) => a + rowSum(r), 0);
 }
 
 function recalcTotals() {
-  const sub = sections.reduce((a, s) => a + sectionSum(s), 0);
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
   const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
   const noTax = sub + adj;
   const vat = noTax * 0.255;
-  const total = noTax + vat;
   document.getElementById('sumSubtotal').textContent = fmt(sub) + ' €';
   document.getElementById('sumNoTax').textContent = fmt(noTax) + ' €';
   document.getElementById('sumVat').textContent = fmt(vat) + ' €';
-  document.getElementById('sumTotal').textContent = fmt(total) + ' €';
-  // Päivitä osiokohtaiset summat
+  document.getElementById('sumTotal').textContent = fmt(noTax + vat) + ' €';
   sections.forEach(sec => {
     const el = document.getElementById(`subsub-${sec.id}`);
     if (el) el.textContent = fmt(sectionSum(sec));
@@ -832,11 +797,10 @@ function fmt(n) {
 // TALLENNUS
 // =============================================
 function buildQuoteData(status) {
-  const sub = sections.reduce((a, s) => a + sectionSum(s), 0);
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
   const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
   const noTax = sub + adj;
   const vat = noTax * 0.255;
-  // Tallennetaan kaikki tarjousdata quotes-tauluun
   return {
     customer_id: document.getElementById('customerId').value || null,
     quote_number: document.getElementById('quoteNumber').value || null,
@@ -866,27 +830,22 @@ async function saveDraft() {
       result = await sbPost('quotes', data);
       if (result && result[0]) currentQuoteId = result[0].id;
     }
-    if (result && (result[0] || result.id)) {
-      el.className = 'saving ok'; el.textContent = '✓ Tallennettu';
-      setTimeout(() => el.textContent = '', 2500);
-    } else {
-      el.className = 'saving err'; el.textContent = 'Virhe tallennuksessa';
-    }
+    el.className = 'saving ok'; el.textContent = '✓ Tallennettu';
+    setTimeout(() => el.textContent = '', 2500);
   } catch(e) {
-    el.className = 'saving err'; el.textContent = 'Verkkovirhe';
+    el.className = 'saving err'; el.textContent = 'Virhe tallennuksessa';
   }
 }
 
 async function markSent() {
-  if (!currentQuoteId) { await saveDraft(); }
+  if (!currentQuoteId) await saveDraft();
   if (!currentQuoteId) return;
   const el = document.getElementById('saveStatus');
   el.className = 'saving'; el.textContent = 'Merkitään...';
   try {
     await sbPatch('quotes', currentQuoteId, { status: 'QUOTED' });
     currentStatus = 'QUOTED';
-    const badge = document.getElementById('statusBadge');
-    badge.className = 'status-badge sent'; badge.textContent = 'Tarjottu';
+    updateStatusBadge();
     el.className = 'saving ok'; el.textContent = '✓ Merkitty lähetetyksi';
     setTimeout(() => el.textContent = '', 2500);
   } catch(e) {
@@ -904,8 +863,8 @@ async function loadQuote(id) {
   currentQuoteId = q.id;
   currentStatus = q.status || 'DRAFT';
   document.getElementById('quoteNumber').value = q.quote_number || '';
-  document.getElementById('quoteDate').value = (q.created_at || '').slice(0, 10);
-  document.getElementById('quoteValid').value = (q.valid_until || '').slice(0, 10);
+  document.getElementById('quoteDate').value = (q.created_at||'').slice(0,10);
+  document.getElementById('quoteValid').value = (q.valid_until||'').slice(0,10);
   document.getElementById('deliveryType').value = q.delivery_type || '';
   document.getElementById('quoteRef').value = q.notes || '';
   document.getElementById('defaultText').value = q.footer_text || '';
@@ -930,10 +889,9 @@ async function copyQuoteFrom(id, keepPrices) {
   const q = Array.isArray(data) ? data[0] : null;
   if (!q) return;
   document.getElementById('deliveryType').value = q.delivery_type || '';
-  document.getElementById('quoteRef').value = q.kohde || '';
-  document.getElementById('defaultText').value = q.notes || '';
-  document.getElementById('adjAmount').value = q.adjustment || 0;
-  // Ei kopioida asiakasta — uusi tarjous uudelle asiakkaalle
+  document.getElementById('quoteRef').value = q.notes || '';
+  document.getElementById('defaultText').value = q.footer_text || '';
+  document.getElementById('adjAmount').value = q.discount_amount || 0;
   if (q.sections_json) {
     try {
       sections = JSON.parse(q.sections_json);
@@ -943,11 +901,10 @@ async function copyQuoteFrom(id, keepPrices) {
         s.rows.forEach(r => {
           r.id = ++rowIdCounter;
           if (!keepPrices) {
-            // Hae tuore hinta hinnastosta
-            const prod = products.find(p => p.id === r.productId);
+            const prod = products.find(p => p.id === r.productId || String(p.id) === String(r.productId));
             if (prod) {
-              r.basePrice = prod.price || null;
-              r.price = prod.price || '';
+              r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
+              r.price = r.basePrice || '';
               r.priceManual = false;
             }
           }
@@ -958,17 +915,17 @@ async function copyQuoteFrom(id, keepPrices) {
   renderSections();
 }
 
+async function copyQuote() {
+  if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
+  const keepPrices = confirm('Kopioidaanko hinnat sellaisenaan?\n\nOK = Säilytä vanhat hinnat\nPeruuta = Hae uudet hinnat hinnastosta');
+  window.open(`tarjous.html?copy=${currentQuoteId}&keepPrices=${keepPrices?'1':'0'}`, '_blank');
+}
+
 function updateStatusBadge() {
   const badge = document.getElementById('statusBadge');
   const map = {
-    DRAFT: ['draft', 'Luonnos'],
-    IN_PROGRESS: ['draft', 'Kesken'],
-    QUOTED: ['sent', 'Tarjottu'],
-    ORDERED: ['ordered', 'Tilattu'],
-    IN_PRODUCTION: ['ordered', 'Työn alla'],
-    COMPLETED: ['ordered', 'Valmis'],
-    INVOICED: ['ordered', 'Laskutettu'],
-    ARCHIVED: ['draft', 'Arkisto'],
+    DRAFT: ['draft','Luonnos'], QUOTED: ['sent','Tarjottu'],
+    ORDERED: ['ordered','Tilattu'], ARCHIVED: ['draft','Arkisto']
   };
   const [cls, label] = map[currentStatus] || ['draft', currentStatus];
   badge.className = `status-badge ${cls}`;
@@ -976,33 +933,25 @@ function updateStatusBadge() {
 }
 
 // =============================================
-// TULOSTUS / KOPIOINTI
+// TULOSTUS
 // =============================================
 function printQuote() {
   if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
   window.open(`print_quote.html?id=${currentQuoteId}`, '_blank');
 }
+
 function printSupply() {
   if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
   window.open(`print_supply.html?id=${currentQuoteId}`, '_blank');
 }
-async function copyQuote() {
-  if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
-  const keepPrices = confirm('Kopioidaanko hinnat sellaisenaan?\n\nOK = Säilytä vanhat hinnat\nPeruuta = Hae uudet hinnat hinnastosta');
-  const url = `tarjous.html?copy=${currentQuoteId}&keepPrices=${keepPrices ? '1' : '0'}`;
-  window.open(url, '_blank');
-}
 
 // =============================================
-// NAVIGAATIO
+// NAV
 // =============================================
 function toggleNav(e) {
   e.stopPropagation();
   document.getElementById('navDropdown').classList.toggle('open');
 }
-document.addEventListener('click', function() {
-  document.getElementById('navDropdown').classList.remove('open');
-});
 </script>
 </body>
 </html>
