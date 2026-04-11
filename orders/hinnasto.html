@@ -816,7 +816,7 @@ function parseCsv(text, filename) {
   const lines   = text.trim().split(/
 ?
 /);
-  const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+  const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
 
   if (!headers.includes('name') && !headers.includes('tuote')) {
     showToast('CSV:stä puuttuu pakollinen sarake: name tai tuote', 'error');
