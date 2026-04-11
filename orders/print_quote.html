@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Tarjous — Okkosen Puutuote</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 10pt; color: #111; background: #fff; }
+
+  /* SIVUN RAKENNE */
+  @page {
+    size: A4;
+    margin: 18mm 15mm 28mm 15mm;
+  }
+  .page-wrap { max-width: 180mm; margin: 0 auto; }
+
+  /* YLÄTUNNISTE */
+  .doc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12mm; }
+  .logo-area { display: flex; align-items: center; gap: 10px; }
+  .logo-area img { height: 40px; width: auto; }
+  .logo-area .company-name { font-size: 15pt; font-weight: 700; line-height: 1.15; }
+  .doc-title { font-size: 18pt; font-weight: 700; letter-spacing: 0.06em; text-align: center; flex: 1; padding-top: 4px; }
+  .doc-meta { text-align: right; font-size: 9pt; min-width: 55mm; }
+  .doc-meta table { margin-left: auto; border-collapse: collapse; }
+  .doc-meta td { padding: 2px 4px; }
+  .doc-meta td:first-child { color: #555; white-space: nowrap; }
+  .doc-meta td:last-child { font-weight: 600; }
+
+  /* ASIAKAS */
+  .customer-block { margin-bottom: 8mm; }
+  .customer-block .name { font-size: 13pt; font-weight: 700; }
+
+  /* YHTEENVETO YLHÄÄLLÄ */
+  .summary-top { float: right; text-align: right; margin-bottom: 4mm; font-size: 9pt; }
+  .summary-top .total-row { font-size: 12pt; font-weight: 700; }
+  .summary-top table { border-collapse: collapse; }
+  .summary-top td { padding: 1px 4px; }
+  .summary-top td:first-child { color: #555; }
+
+  /* INTRO TEKSTI */
+  .intro-text { margin-bottom: 8mm; font-size: 9.5pt; clear: both; }
+
+  /* TUOTETAULUKKO */
+  .product-table { width: 100%; border-collapse: collapse; margin-bottom: 8mm; font-size: 9pt; }
+  .product-table th { border-bottom: 1.5px solid #222; padding: 4px 6px; text-align: left; font-weight: 600; font-size: 8.5pt; }
+  .product-table th.right { text-align: right; }
+  .product-table td { padding: 4px 6px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  .product-table td.right { text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 8.5pt; }
+  .product-table .section-hdr td { background: #f0f0f0; font-weight: 700; font-size: 9pt; border-bottom: 1px solid #bbb; border-top: 3px solid #555; padding: 5px 6px; }
+  .product-table .inactive-row td { color: #aaa; }
+  .product-table tr.total-row td { border-top: 2px solid #222; border-bottom: none; font-weight: 700; padding-top: 5px; }
+
+  /* YHTEENVETO ALHAALLA */
+  .summary-bottom { display: flex; justify-content: flex-end; margin-bottom: 8mm; }
+  .summary-box { width: 80mm; border-top: 1.5px solid #222; padding-top: 4px; }
+  .summary-box table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  .summary-box td { padding: 2px 4px; }
+  .summary-box .lbl { color: #555; }
+  .summary-box .val { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  .summary-box .total td { font-size: 12pt; font-weight: 700; border-top: 1px solid #bbb; padding-top: 4px; }
+
+  /* VAKIOTEKSTI */
+  .footer-text { font-size: 8.5pt; color: #333; line-height: 1.5; white-space: pre-wrap; border-top: 1px solid #ccc; padding-top: 5mm; margin-bottom: 6mm; }
+
+  /* ALATUNNISTE */
+  .doc-footer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 24mm; padding: 4mm 15mm 3mm;
+    border-top: 1px solid #bbb;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    font-size: 8pt; color: #444; background: #fff;
+  }
+  .doc-footer .col { display: flex; flex-direction: column; gap: 1px; line-height: 1.4; }
+  .doc-footer .col.center { text-align: center; }
+  .doc-footer .col.right { text-align: right; }
+  .doc-footer .quote-num { font-size: 11pt; font-weight: 700; color: #111; margin-top: 2px; }
+
+  /* TULOSTUS */
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  @media screen {
+    body { background: #eee; padding: 20px; }
+    .page-wrap { background: #fff; padding: 18mm 15mm 32mm; box-shadow: 0 2px 16px rgba(0,0,0,0.15); }
+    .doc-footer { position: static; border-top: 1px solid #bbb; margin-top: 16mm; }
+  }
+
+  .btn-print { position: fixed; top: 12px; right: 12px; background: #d97706; color: #fff; border: none; border-radius: 4px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; z-index: 99; }
+  .btn-print:hover { background: #b45309; }
+  .loading { text-align: center; padding: 40px; font-size: 14px; color: #888; }
+</style>
+</head>
+<body>
+
+<button class="btn-print no-print" onclick="window.print()">🖨 Tulosta</button>
+
+<div id="root" class="loading">Ladataan tarjousta...</div>
+
+<script>
+const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
+
+async function sbGet(table, q='') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${q}`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+  });
+  return r.json();
+}
+
+function fmt(n) {
+  return Number(n||0).toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtDate(s) {
+  if (!s) return '';
+  return s.slice(0,10).split('-').reverse().join('.');
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  if (!id) { document.getElementById('root').textContent = 'Tarjousnumero puuttuu URL:sta.'; return; }
+
+  const [quoteArr, custArr] = await Promise.all([
+    sbGet('quotes', `?id=eq.${id}&select=*`),
+    sbGet('customers', '?select=id,name,address,city')
+  ]);
+  const q = Array.isArray(quoteArr) ? quoteArr[0] : null;
+  if (!q) { document.getElementById('root').textContent = 'Tarjousta ei löydy.'; return; }
+
+  const cust = Array.isArray(custArr) ? custArr.find(c => c.id === q.customer_id) : null;
+  const custName = cust ? cust.name : '—';
+
+  let sections = [];
+  try { sections = JSON.parse(q.sections_json || '[]'); } catch(e) {}
+
+  const adj = parseFloat(q.discount_amount) || 0;
+  const sub = sections.reduce((a,s) => {
+    if (!s.active) return a;
+    return a + s.rows.reduce((b,r) => b + (parseFloat(r.qty)||0)*(parseFloat(r.price)||0), 0);
+  }, 0);
+  const noTax = sub + adj;
+  const vat = noTax * 0.255;
+  const total = noTax + vat;
+
+  // Rakenna HTML
+  let rowsHTML = '';
+  sections.forEach(sec => {
+    if (!sec.active) return;
+    rowsHTML += `<tr class="section-hdr"><td colspan="7">${sec.name}</td></tr>`;
+    sec.rows.forEach(row => {
+      const rs = (parseFloat(row.qty)||0) * (parseFloat(row.price)||0);
+      rowsHTML += `
+        <tr>
+          <td>${row.nimikeTeksti || ''}</td>
+          <td>${row.desc || ''}</td>
+          <td class="right">${row.qty || ''}</td>
+          <td></td>
+          <td>${row.qty ? (row.qty+' ') : ''}${row.unit || ''}</td>
+          <td class="right">${row.price ? fmt(row.price) + ' €' : ''}</td>
+          <td class="right">${rs ? fmt(rs) + ' €' : ''}</td>
+        </tr>`;
+    });
+  });
+
+  const deliveryLabels = {
+    hirsirunko: 'Hirsirunko',
+    puuosat: 'Hirsirunko + puuosat',
+    avaimet: 'Avaimet käteen',
+    nouto: 'Nouto tehtaalta',
+    toimitettu: 'Toimitettu'
+  };
+  const delivLabel = deliveryLabels[q.delivery_type] || q.delivery_type || '';
+
+  document.getElementById('root').innerHTML = `
+  <div class="page-wrap">
+
+    <div class="doc-header">
+      <div class="logo-area">
+        <img src="https://otuomo.github.io/hirsi-tarjous/orders/okkonenlogopuu.svg" alt="Logo">
+        <div class="company-name">OKKOSEN<br>PUUTUOTE</div>
+      </div>
+      <div class="doc-title">TARJOUS</div>
+      <div class="doc-meta">
+        <table>
+          <tr><td>Tarjouksen antopäivä</td><td>${fmtDate(q.created_at)}</td></tr>
+          <tr><td>Tarjous voimassa</td><td>${fmtDate(q.valid_until)}</td></tr>
+        </table>
+        <div style="margin-top:8px;text-align:right;">
+          <div style="font-size:9pt;color:#555;">Alv 0%: <b>${fmt(noTax)} €</b></div>
+          <div style="font-size:9pt;color:#555;">Alv: <b>${fmt(vat)} €</b></div>
+          <div style="font-size:12pt;font-weight:700;">YHT ${fmt(total)} €</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="customer-block">
+      <div class="name">${custName}</div>
+      ${q.notes ? `<div style="font-size:9.5pt;color:#555;margin-top:2px;">${q.notes}</div>` : ''}
+      ${delivLabel ? `<div style="font-size:9pt;color:#555;margin-top:2px;">Toimitusaste: ${delivLabel}</div>` : ''}
+    </div>
+
+    <div class="intro-text">Kiitämme tarjouspyynnöstänne. Tarjoamme tuotteitamme teille seuraavasti:</div>
+
+    <table class="product-table">
+      <thead>
+        <tr>
+          <th style="width:28%">Rakennus</th>
+          <th>Tuote ja lisätiedot</th>
+          <th class="right" style="width:8%">jm, m²<br>tai m³</th>
+          <th class="right" style="width:7%">Määrä</th>
+          <th style="width:8%">Yht m</th>
+          <th class="right" style="width:10%">Alv0</th>
+          <th class="right" style="width:11%">Rivihinta</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHTML}</tbody>
+    </table>
+
+    ${adj !== 0 ? `
+    <div class="summary-bottom">
+      <div class="summary-box">
+        <table>
+          <tr><td class="lbl">Välisumma</td><td class="val">${fmt(sub)} €</td></tr>
+          <tr><td class="lbl">Pyöristys / alennus</td><td class="val">${fmt(adj)} €</td></tr>
+          <tr><td class="lbl">Veroton yhteensä</td><td class="val">${fmt(noTax)} €</td></tr>
+          <tr><td class="lbl">ALV 25,5 %</td><td class="val">${fmt(vat)} €</td></tr>
+          <tr class="total"><td class="lbl">YHT:</td><td class="val">${fmt(total)} €</td></tr>
+        </table>
+      </div>
+    </div>` : `
+    <div class="summary-bottom">
+      <div class="summary-box">
+        <table>
+          <tr><td class="lbl">Alv 0%:</td><td class="val">${fmt(noTax)} €</td></tr>
+          <tr><td class="lbl">Alv:</td><td class="val">${fmt(vat)} €</td></tr>
+          <tr class="total"><td class="lbl">YHT:</td><td class="val">${fmt(total)} €</td></tr>
+        </table>
+      </div>
+    </div>`}
+
+    ${q.footer_text ? `<div class="footer-text">${q.footer_text}</div>` : ''}
+
+    <div class="doc-footer">
+      <div class="col">
+        <span>Okkosen Puutuote Oy</span>
+        <span>Sievintie 149</span>
+        <span>85160 Rautio</span>
+      </div>
+      <div class="col center">
+        <span>Puhelin: 0500-360 741</span>
+        <span>myynti@okkosenpuutuote.com</span>
+        <span>www.okkosenpuutuote.com</span>
+      </div>
+      <div class="col right">
+        <span>Y-Tunnus: 3579911-5</span>
+        <div class="quote-num">Tarjousnumero ${q.quote_number || ''}</div>
+        <span id="pageNum">Sivu 1</span>
+      </div>
+    </div>
+
+  </div>`;
+});
+</script>
+</body>
+</html>
