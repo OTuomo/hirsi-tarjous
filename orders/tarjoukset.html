@@ -80,7 +80,7 @@
   /* SUMMARY CARDS */
   .summary-row {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 10px;
     margin-bottom: 16px;
   }
@@ -180,6 +180,7 @@
 
   /* Row accent by status */
   tr.s-draft td:first-child    { border-left-color: var(--border); }
+  tr.s-progress td:first-child { border-left-color: var(--warn); }
   tr.s-quoted td:first-child   { border-left-color: var(--violet); }
   tr.s-ordered td:first-child  { border-left-color: var(--success); }
   tr.s-archived td:first-child { border-left-color: #444; }
@@ -194,6 +195,7 @@
     white-space: nowrap;
   }
   .badge-draft    { background: #2a2720; color: var(--text-dim); border: 1px solid var(--border); }
+  .badge-progress { background: #2a1f0a; color: var(--warn); }
   .badge-quoted   { background: #22153a; color: var(--violet); }
   .badge-ordered  { background: #1a3028; color: var(--success); }
   .badge-archived { background: #222; color: #666; }
@@ -276,6 +278,10 @@
       <div class="card-label">Avoimet</div>
       <div class="card-number" id="cnt-active">—</div>
     </div>
+    <div class="summary-card" id="card-in_progress" onclick="setFilter('in_progress')">
+      <div class="card-label">Kesken</div>
+      <div class="card-number" id="cnt-in_progress">—</div>
+    </div>
     <div class="summary-card" id="card-quoted" onclick="setFilter('quoted')">
       <div class="card-label">Lähetetty</div>
       <div class="card-number" id="cnt-quoted">—</div>
@@ -304,6 +310,7 @@
     <div class="filter-btns">
       <button class="fbtn active" data-filter="active" onclick="setStatusBtn(this,'active')">Avoimet</button>
       <button class="fbtn" data-filter="draft" onclick="setStatusBtn(this,'draft')">Luonnos</button>
+      <button class="fbtn" data-filter="in_progress" onclick="setStatusBtn(this,'in_progress')">Kesken</button>
       <button class="fbtn" data-filter="quoted" onclick="setStatusBtn(this,'quoted')">Lähetetty</button>
       <button class="fbtn" data-filter="ordered" onclick="setStatusBtn(this,'ordered')">Tilattu</button>
       <button class="fbtn" data-filter="template" onclick="setStatusBtn(this,'template')">Mallit</button>
@@ -344,18 +351,20 @@ const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
 
 const STATUS_FI = {
-  DRAFT: 'Luonnos',
-  QUOTED: 'Lähetetty',
-  ORDERED: 'Tilattu',
-  ARCHIVED: 'Arkisto'
+  DRAFT:       'Luonnos',
+  IN_PROGRESS: 'Kesken',
+  QUOTED:      'Lähetetty',
+  ORDERED:     'Tilattu',
+  ARCHIVED:    'Arkisto'
 };
 const STATUS_CLASS = {
-  DRAFT: 'draft',
-  QUOTED: 'quoted',
-  ORDERED: 'ordered',
-  ARCHIVED: 'archived'
+  DRAFT:       'draft',
+  IN_PROGRESS: 'progress',
+  QUOTED:      'quoted',
+  ORDERED:     'ordered',
+  ARCHIVED:    'archived'
 };
-const ACTIVE_STATUSES = ['DRAFT', 'QUOTED'];
+const ACTIVE_STATUSES = ['DRAFT', 'IN_PROGRESS', 'QUOTED'];
 
 let allQuotes = [];
 let currentFilter = 'active';
@@ -377,17 +386,19 @@ async function loadQuotes() {
 }
 
 function updateCounts() {
-  const active   = allQuotes.filter(q => !q.is_template && ACTIVE_STATUSES.includes(q.status)).length;
-  const quoted   = allQuotes.filter(q => !q.is_template && q.status === 'QUOTED').length;
-  const ordered  = allQuotes.filter(q => !q.is_template && q.status === 'ORDERED').length;
-  const archived = allQuotes.filter(q => !q.is_template && q.status === 'ARCHIVED').length;
-  const template = allQuotes.filter(q => q.is_template).length;
-  document.getElementById('cnt-active').textContent   = active;
-  document.getElementById('cnt-quoted').textContent   = quoted;
-  document.getElementById('cnt-ordered').textContent  = ordered;
-  document.getElementById('cnt-archived').textContent = archived;
-  document.getElementById('cnt-template').textContent = template;
-  document.getElementById('cnt-all').textContent      = allQuotes.length;
+  const active      = allQuotes.filter(q => !q.is_template && ACTIVE_STATUSES.includes(q.status)).length;
+  const in_progress = allQuotes.filter(q => !q.is_template && q.status === 'IN_PROGRESS').length;
+  const quoted      = allQuotes.filter(q => !q.is_template && q.status === 'QUOTED').length;
+  const ordered     = allQuotes.filter(q => !q.is_template && q.status === 'ORDERED').length;
+  const archived    = allQuotes.filter(q => !q.is_template && q.status === 'ARCHIVED').length;
+  const template    = allQuotes.filter(q => q.is_template).length;
+  document.getElementById('cnt-active').textContent      = active;
+  document.getElementById('cnt-in_progress').textContent = in_progress;
+  document.getElementById('cnt-quoted').textContent      = quoted;
+  document.getElementById('cnt-ordered').textContent     = ordered;
+  document.getElementById('cnt-archived').textContent    = archived;
+  document.getElementById('cnt-template').textContent    = template;
+  document.getElementById('cnt-all').textContent         = allQuotes.length;
 }
 
 function setFilter(f) {
@@ -414,13 +425,14 @@ function setStatusBtn(btn, f) {
 function applyFilters() {
   const q = (document.getElementById('searchInput').value || '').toLowerCase();
   let rows = allQuotes.filter(o => {
-    if (currentFilter === 'template') return o.is_template;
-    if (currentFilter === 'active')   return !o.is_template && ACTIVE_STATUSES.includes(o.status);
-    if (currentFilter === 'all')      return true;
-    if (currentFilter === 'draft')    return !o.is_template && o.status === 'DRAFT';
-    if (currentFilter === 'quoted')   return !o.is_template && o.status === 'QUOTED';
-    if (currentFilter === 'ordered')  return !o.is_template && o.status === 'ORDERED';
-    if (currentFilter === 'archived') return !o.is_template && o.status === 'ARCHIVED';
+    if (currentFilter === 'template')    return o.is_template;
+    if (currentFilter === 'active')      return !o.is_template && ACTIVE_STATUSES.includes(o.status);
+    if (currentFilter === 'all')         return true;
+    if (currentFilter === 'draft')       return !o.is_template && o.status === 'DRAFT';
+    if (currentFilter === 'in_progress') return !o.is_template && o.status === 'IN_PROGRESS';
+    if (currentFilter === 'quoted')      return !o.is_template && o.status === 'QUOTED';
+    if (currentFilter === 'ordered')     return !o.is_template && o.status === 'ORDERED';
+    if (currentFilter === 'archived')    return !o.is_template && o.status === 'ARCHIVED';
     return true;
   });
   if (q) {
@@ -489,6 +501,7 @@ function renderTable(rows) {
           <span class="badge badge-${cls}" onclick="toggleMenu('${q.id}',event)">${fi}</span>
           <div class="status-menu" id="menu-${q.id}">
             <div class="status-item" onclick="setStatus('${q.id}','DRAFT',false)">Luonnos</div>
+            <div class="status-item" onclick="setStatus('${q.id}','IN_PROGRESS',false)">Kesken</div>
             <div class="status-item" onclick="setStatus('${q.id}','QUOTED',false)">Lähetetty</div>
             <div class="status-item" onclick="setStatus('${q.id}','ORDERED',false)">Tilattu</div>
             <div class="status-item" onclick="setStatus('${q.id}',null,true)">Malli</div>
