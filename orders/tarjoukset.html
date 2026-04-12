@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarjoukset — Okkosen Puutuote</title>
+
+<style>
+:root {
+  --bg: #1c1a14;
+  --panel: #2a2720;
+  --panel2: #2f2b23;
+  --border: #4a4535;
+
+  --accent: #3a6b7a;
+  --accent-dim: #2d5561;
+  --accent-glow: rgba(58,107,122,0.15);
+
+  --text: #ededf0;
+  --text-dim: #9595a0;
+
+  --success: #3dba6e;
+  --danger: #e84040;
+}
+
+/* perus */
+body {
+  margin:0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: sans-serif;
+}
+
+/* header */
+header {
+  background:#111d20;
+  border-bottom:2px solid var(--accent);
+  padding:10px 20px;
+  display:flex;
+  align-items:center;
+}
+
+.header-right {
+  margin-left:auto;
+}
+
+/* nav */
+.nav a {
+  margin-right:15px;
+  color:var(--text-dim);
+  text-decoration:none;
+}
+
+.nav a.current {
+  color:var(--accent);
+}
+
+/* summary */
+.summary {
+  display:grid;
+  grid-template-columns: repeat(5,1fr);
+  gap:10px;
+  padding:20px;
+}
+
+.card {
+  background:var(--panel2);
+  border:1px solid var(--border);
+  padding:10px;
+  cursor:pointer;
+}
+
+/* table */
+.table-wrap {
+  margin:0 20px 20px;
+  background:var(--panel);
+  border:1px solid var(--border);
+}
+
+table {
+  width:100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding:10px;
+  border-bottom:1px solid var(--border);
+}
+
+th {
+  font-size:11px;
+  color:var(--text-dim);
+  text-transform:uppercase;
+}
+
+/* badge */
+.badge {
+  padding:3px 8px;
+  font-size:11px;
+  cursor:pointer;
+}
+
+.draft { color: var(--text-dim); }
+.quoted { color: var(--accent); }
+.ordered { color: var(--success); }
+.archived { color: #777; }
+
+/* expired */
+.expired {
+  color: var(--danger);
+  font-weight:bold;
+}
+
+.btn {
+  background:var(--accent);
+  border:none;
+  padding:8px 12px;
+  color:#fff;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div>Tarjoukset</div>
+
+  <div class="header-right nav">
+    <a href="asiakkaat.html">Asiakkaat</a>
+    <a href="hinnasto.html">Hinnasto</a>
+    <a href="tarjoukset.html" class="current">Tarjoukset</a>
+    <a href="tarjous.html">Tarjous</a>
+
+    <button class="btn">+ Uusi tarjous</button>
+  </div>
+</header>
+
+<!-- summary -->
+<div class="summary">
+  <div class="card">Aktiiviset<br><b>3</b></div>
+  <div class="card">Lähetetty<br><b>2</b></div>
+  <div class="card">Tilattu<br><b>1</b></div>
+  <div class="card">Arkisto<br><b>4</b></div>
+  <div class="card">Kaikki<br><b>10</b></div>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+  <th>Tarjousnro</th>
+  <th>Pvm</th>
+  <th>Asiakas</th>
+  <th>Toimitus</th>
+  <th>Voimassa</th>
+  <th>Summa €</th>
+  <th>Status</th>
+  <th></th>
+</tr>
+</thead>
+
+<tbody id="rows"></tbody>
+
+</table>
+</div>
+
+<script>
+
+const data = [
+  {
+    id:1,
+    number:"2026-001",
+    date:"1.4.2026",
+    customer:"Matti Meikäläinen",
+    delivery:"Hirsirunko",
+    valid:"10.4.2026",
+    total:"12430 €",
+    status:"QUOTED"
+  },
+  {
+    id:2,
+    number:"2026-002",
+    date:"5.4.2026",
+    customer:"Rakennus Oy",
+    delivery:"Avaimet käteen",
+    valid:"20.4.2026",
+    total:"54300 €",
+    status:"ORDERED"
+  }
+]
+
+function render() {
+  const tbody = document.getElementById("rows")
+  tbody.innerHTML = ""
+
+  const today = new Date()
+
+  data.forEach(row => {
+
+    const validDate = new Date(row.valid.split('.').reverse().join('-'))
+    const expired = validDate < today && row.status === "QUOTED"
+
+    const tr = document.createElement("tr")
+
+    tr.innerHTML = `
+      <td>${row.number}</td>
+      <td>${row.date}</td>
+      <td>${row.customer}</td>
+      <td>${row.delivery}</td>
+      <td class="${expired ? 'expired':''}">${row.valid}</td>
+      <td style="text-align:right">${row.total}</td>
+      <td>
+        <span class="badge ${row.status.toLowerCase()}" onclick="changeStatus(${row.id})">
+          ${row.status}
+        </span>
+      </td>
+      <td>
+        <button onclick="copy(${row.id})">Kopioi</button>
+      </td>
+    `
+
+    tbody.appendChild(tr)
+  })
+}
+
+function changeStatus(id) {
+  const item = data.find(x=>x.id===id)
+
+  const next = {
+    DRAFT:"QUOTED",
+    QUOTED:"ORDERED",
+    ORDERED:"ARCHIVED",
+    ARCHIVED:"DRAFT"
+  }
+
+  item.status = next[item.status]
+  render()
+}
+
+function copy(id) {
+  alert("Kopioidaan tarjous " + id)
+}
+
+render()
+
+</script>
+
+</body>
+</html>
