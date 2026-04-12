@@ -347,15 +347,13 @@ const STATUS_FI = {
   DRAFT: 'Luonnos',
   QUOTED: 'Lähetetty',
   ORDERED: 'Tilattu',
-  ARCHIVED: 'Arkisto',
-  TEMPLATE: 'Malli'
+  ARCHIVED: 'Arkisto'
 };
 const STATUS_CLASS = {
   DRAFT: 'draft',
   QUOTED: 'quoted',
   ORDERED: 'ordered',
-  ARCHIVED: 'archived',
-  TEMPLATE: 'template'
+  ARCHIVED: 'archived'
 };
 const ACTIVE_STATUSES = ['DRAFT', 'QUOTED'];
 
@@ -366,7 +364,7 @@ let sortDir = 'desc';
 
 async function loadQuotes() {
   const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/quotes?select=id,quote_number,created_at,valid_until,status,total_gross,delivery_type,customers(name)&order=created_at.desc`,
+    `${SUPABASE_URL}/rest/v1/quotes?select=id,quote_number,created_at,valid_until,status,total_gross,delivery_type,is_template,template_name,customers(name)&order=created_at.desc`,
     { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
   );
   const data = await r.json();
@@ -379,11 +377,11 @@ async function loadQuotes() {
 }
 
 function updateCounts() {
-  const active   = allQuotes.filter(q => ACTIVE_STATUSES.includes(q.status)).length;
-  const quoted   = allQuotes.filter(q => q.status === 'QUOTED').length;
-  const ordered  = allQuotes.filter(q => q.status === 'ORDERED').length;
-  const archived = allQuotes.filter(q => q.status === 'ARCHIVED').length;
-  const template = allQuotes.filter(q => q.status === 'TEMPLATE').length;
+  const active   = allQuotes.filter(q => !q.is_template && ACTIVE_STATUSES.includes(q.status)).length;
+  const quoted   = allQuotes.filter(q => !q.is_template && q.status === 'QUOTED').length;
+  const ordered  = allQuotes.filter(q => !q.is_template && q.status === 'ORDERED').length;
+  const archived = allQuotes.filter(q => !q.is_template && q.status === 'ARCHIVED').length;
+  const template = allQuotes.filter(q => q.is_template).length;
   document.getElementById('cnt-active').textContent   = active;
   document.getElementById('cnt-quoted').textContent   = quoted;
   document.getElementById('cnt-ordered').textContent  = ordered;
@@ -416,13 +414,13 @@ function setStatusBtn(btn, f) {
 function applyFilters() {
   const q = (document.getElementById('searchInput').value || '').toLowerCase();
   let rows = allQuotes.filter(o => {
-    if (currentFilter === 'active')   return ACTIVE_STATUSES.includes(o.status);
+    if (currentFilter === 'template') return o.is_template;
+    if (currentFilter === 'active')   return !o.is_template && ACTIVE_STATUSES.includes(o.status);
     if (currentFilter === 'all')      return true;
-    if (currentFilter === 'draft')    return o.status === 'DRAFT';
-    if (currentFilter === 'quoted')   return o.status === 'QUOTED';
-    if (currentFilter === 'ordered')  return o.status === 'ORDERED';
-    if (currentFilter === 'archived') return o.status === 'ARCHIVED';
-    if (currentFilter === 'template') return o.status === 'TEMPLATE';
+    if (currentFilter === 'draft')    return !o.is_template && o.status === 'DRAFT';
+    if (currentFilter === 'quoted')   return !o.is_template && o.status === 'QUOTED';
+    if (currentFilter === 'ordered')  return !o.is_template && o.status === 'ORDERED';
+    if (currentFilter === 'archived') return !o.is_template && o.status === 'ARCHIVED';
     return true;
   });
   if (q) {
@@ -468,30 +466,33 @@ function renderTable(rows) {
   const today = new Date(); today.setHours(0,0,0,0);
 
   tbody.innerHTML = rows.map(q => {
-    const cls     = STATUS_CLASS[q.status] || 'draft';
-    const fi      = STATUS_FI[q.status] || q.status;
+    const isTmpl  = q.is_template;
+    const cls     = isTmpl ? 'template' : (STATUS_CLASS[q.status] || 'draft');
+    const fi      = isTmpl ? 'Malli' : (STATUS_FI[q.status] || q.status);
     const date    = (q.created_at || '').slice(0,10).split('-').reverse().join('.');
     const validDt = q.valid_until ? new Date(q.valid_until) : null;
-    const expired = validDt && validDt < today && q.status === 'QUOTED';
+    const expired = validDt && validDt < today && q.status === 'QUOTED' && !isTmpl;
     const validStr = q.valid_until ? q.valid_until.slice(0,10).split('-').reverse().join('.') : '—';
     const gross   = q.total_gross ? q.total_gross.toLocaleString('fi-FI', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+    // Mallilla näytetään template_name tarjousnumeron sijaan
+    const nro     = isTmpl ? (q.template_name || '— malli —') : (q.quote_number || '—');
 
     return `<tr class="s-${cls}" onclick="avaaQuote('${q.id}')">
-      <td class="mono" style="font-size:12px">${q.quote_number || '—'}</td>
+      <td class="mono" style="font-size:12px">${nro}</td>
       <td class="mono dim" style="font-size:12px">${date}</td>
       <td style="font-weight:500">${q.customer}</td>
       <td class="dim" style="font-size:12px">${q.delivery_type || '—'}</td>
-      <td class="mono${expired?' expired':''}" style="font-size:12px">${validStr}</td>
-      <td class="mono" style="text-align:right">${gross}</td>
+      <td class="mono${expired?' expired':''}" style="font-size:12px">${isTmpl ? '—' : validStr}</td>
+      <td class="mono" style="text-align:right">${isTmpl ? '—' : gross}</td>
       <td onclick="event.stopPropagation()">
         <div class="status-wrap">
           <span class="badge badge-${cls}" onclick="toggleMenu('${q.id}',event)">${fi}</span>
           <div class="status-menu" id="menu-${q.id}">
-            <div class="status-item" onclick="setStatus('${q.id}','DRAFT')">Luonnos</div>
-            <div class="status-item" onclick="setStatus('${q.id}','QUOTED')">Lähetetty</div>
-            <div class="status-item" onclick="setStatus('${q.id}','ORDERED')">Tilattu</div>
-            <div class="status-item" onclick="setStatus('${q.id}','TEMPLATE')">Malli</div>
-            <div class="status-item" onclick="setStatus('${q.id}','ARCHIVED')">Arkisto</div>
+            <div class="status-item" onclick="setStatus('${q.id}','DRAFT',false)">Luonnos</div>
+            <div class="status-item" onclick="setStatus('${q.id}','QUOTED',false)">Lähetetty</div>
+            <div class="status-item" onclick="setStatus('${q.id}','ORDERED',false)">Tilattu</div>
+            <div class="status-item" onclick="setStatus('${q.id}',null,true)">Malli</div>
+            <div class="status-item" onclick="setStatus('${q.id}','ARCHIVED',false)">Arkisto</div>
           </div>
         </div>
       </td>
@@ -503,17 +504,20 @@ function renderTable(rows) {
   }).join('');
 }
 
-async function setStatus(id, status) {
+async function setStatus(id, status, isTemplate) {
+  const body = isTemplate
+    ? { is_template: true, status: 'DRAFT' }
+    : { is_template: false, status };
   await fetch(`${SUPABASE_URL}/rest/v1/quotes?id=eq.${id}`, {
     method: 'PATCH',
     headers: {
       apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json', Prefer: 'return=representation'
     },
-    body: JSON.stringify({ status })
+    body: JSON.stringify(body)
   });
   const q = allQuotes.find(x => x.id === id);
-  if (q) q.status = status;
+  if (q) { q.is_template = isTemplate; if (!isTemplate) q.status = status; }
   updateCounts();
   applyFilters();
   document.querySelectorAll('.status-menu').forEach(m => m.classList.remove('open'));
@@ -524,7 +528,19 @@ function toggleMenu(id, e) {
   const menu = document.getElementById('menu-' + id);
   const wasOpen = menu.classList.contains('open');
   document.querySelectorAll('.status-menu').forEach(m => m.classList.remove('open'));
-  if (!wasOpen) menu.classList.add('open');
+  if (!wasOpen) {
+    menu.classList.add('open');
+    // Tarkistetaan mahtuuko dropdown alas vai pitääkö avata ylös
+    const rect = menu.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.top;
+    if (spaceBelow < rect.height + 10) {
+      menu.style.top = 'auto';
+      menu.style.bottom = 'calc(100% + 4px)';
+    } else {
+      menu.style.top = 'calc(100% + 4px)';
+      menu.style.bottom = 'auto';
+    }
+  }
 }
 
 function avaaQuote(id) {
