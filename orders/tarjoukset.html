@@ -4,377 +4,542 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tarjoukset — Okkosen Puutuote</title>
-
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
-:root {
-  --bg:#1c1a14;
-  --panel:#2a2720;
-  --panel2:#2f2b23;
-  --border:#4a4535;
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  :root {
+    --bg: #1c1a14;
+    --panel: #2a2720;
+    --panel2: #2f2b23;
+    --border: #4a4535;
+    --accent: #d97706;
+    --accent-dim: #b45309;
+    --accent-glow: rgba(217,119,6,0.13);
+    --text: #ededf0;
+    --text-dim: #9595a0;
+    --input-bg: #333028;
+    --success: #3dba6e;
+    --danger: #e84040;
+    --warn: #e8a020;
+    --violet: #c084fc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; }
 
-  --accent:#3a6b7a;
-  --accent-dim:#2d5561;
-  --accent-glow:rgba(58,107,122,0.15);
+  /* HEADER */
+  header {
+    background: #141210;
+    border-bottom: 2px solid var(--accent);
+    padding: 10px 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  header img { height: 32px; }
+  .header-title {
+    font-size: 15px; font-weight: 500; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.03em;
+  }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
-  --text:#ededf0;
-  --text-dim:#9595a0;
+  /* NAV DROPDOWN */
+  .nav-menu-wrap { position: relative; }
+  .nav-btn {
+    background: var(--panel2); border: 1px solid var(--border);
+    color: var(--text); font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; font-weight: 600; padding: 6px 12px;
+    border-radius: 4px; cursor: pointer; letter-spacing: 0.04em;
+  }
+  .nav-btn:hover { background: var(--input-bg); border-color: var(--accent); }
+  .nav-dropdown {
+    display: none; position: absolute; top: calc(100% + 6px); right: 0;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 6px; min-width: 180px; z-index: 999;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5); overflow: hidden;
+  }
+  .nav-dropdown.open { display: block; }
+  .nav-item {
+    display: block; padding: 9px 14px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: var(--text); text-decoration: none; transition: background 0.1s;
+  }
+  .nav-item:hover { background: var(--accent-glow); color: var(--accent); }
+  .nav-item.current { color: var(--accent); font-weight: 600; }
+  .nav-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
 
-  --success:#3dba6e;
-  --danger:#e84040;
-}
+  /* BTN */
+  .btn {
+    background: var(--accent); border: none;
+    color: #1c1a14; font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; font-weight: 600; padding: 7px 14px;
+    border-radius: 4px; cursor: pointer; letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--accent-dim); }
 
-*{box-sizing:border-box;margin:0;padding:0}
+  /* PAGE */
+  .page { padding: 20px 24px; max-width: 1400px; }
 
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'IBM Plex Sans';
-}
+  /* SUMMARY CARDS */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .summary-card {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .summary-card:hover { border-color: var(--accent); }
+  .summary-card.active { border-color: var(--accent); background: var(--accent-glow); }
+  .summary-card .card-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 6px;
+  }
+  .summary-card .card-number {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 26px; font-weight: 600; line-height: 1;
+  }
+  .summary-card.active .card-number { color: var(--accent); }
 
-/* HEADER */
-header{
-  background:#111d20;
-  border-bottom:2px solid var(--accent);
-  padding:10px 24px;
-  display:flex;
-  align-items:center;
-  gap:16px;
-}
+  /* FILTER BAR */
+  .filter-bar {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .filter-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: var(--text-dim);
+    letter-spacing: 0.06em; white-space: nowrap;
+  }
+  .filter-btns { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .fbtn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-dim); font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; padding: 4px 10px; border-radius: 3px; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .fbtn:hover { border-color: var(--accent); color: var(--text); }
+  .fbtn.active { background: var(--accent); border-color: var(--accent); color: #1c1a14; font-weight: 600; }
+  .fbtn.arch-btn.active { background: var(--text-dim); border-color: var(--text-dim); color: #1a1a1a; }
+  .filter-search {
+    background: var(--input-bg); border: 1px solid var(--border);
+    color: var(--text); font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; padding: 5px 10px; border-radius: 3px;
+    width: 220px;
+  }
+  .filter-search:focus { outline: none; border-color: var(--accent); }
+  .filter-search::placeholder { color: var(--text-dim); }
 
-header img{height:36px}
+  /* TABLE */
+  .table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead tr { background: var(--panel2); }
+  th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 14px; text-align: left;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; white-space: nowrap; user-select: none;
+  }
+  th:hover { color: var(--text); }
+  th.sorted { color: var(--accent); }
+  .sort-arrow { margin-left: 4px; opacity: 0.6; }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { cursor: pointer; transition: background 0.1s; }
+  tbody tr:hover { background: var(--accent-glow); }
+  tbody tr td:first-child {
+    border-left: 3px solid transparent;
+    padding-left: 11px;
+  }
 
-.header-right{
-  margin-left:auto;
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
+  /* Row accent by status */
+  tr.s-draft td:first-child    { border-left-color: var(--border); }
+  tr.s-quoted td:first-child   { border-left-color: var(--violet); }
+  tr.s-ordered td:first-child  { border-left-color: var(--success); }
+  tr.s-archived td:first-child { border-left-color: #444; }
 
-.nav a{
-  color:var(--text-dim);
-  text-decoration:none;
-  font-family:'IBM Plex Mono';
-  font-size:12px;
-}
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 3px;
+    white-space: nowrap;
+  }
+  .badge-draft    { background: #2a2720; color: var(--text-dim); border: 1px solid var(--border); }
+  .badge-quoted   { background: #22153a; color: var(--violet); }
+  .badge-ordered  { background: #1a3028; color: var(--success); }
+  .badge-archived { background: #222; color: #666; }
 
-.nav a.current{
-  color:var(--accent);
-  font-weight:600;
-}
+  /* Status popup */
+  .status-wrap { position: relative; display: inline-block; }
+  .status-menu {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 5px; z-index: 50;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5); min-width: 130px; overflow: hidden;
+  }
+  .status-menu.open { display: block; }
+  .status-item {
+    padding: 8px 12px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    cursor: pointer; color: var(--text);
+    transition: background 0.1s;
+  }
+  .status-item:hover { background: var(--accent-glow); color: var(--accent); }
 
-.btn{
-  background:var(--accent);
-  border:none;
-  padding:8px 12px;
-  color:#fff;
-  cursor:pointer;
-  font-family:'IBM Plex Mono';
-}
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  .dim  { color: var(--text-dim); }
+  .expired { color: var(--danger); font-weight: 600; }
 
-/* SUMMARY */
-.summary{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:10px;
-  padding:20px 24px;
-}
+  .copy-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-dim); font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; padding: 3px 8px; border-radius: 3px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-.card{
-  background:var(--panel2);
-  border:1px solid var(--border);
-  padding:12px;
-  cursor:pointer;
-}
+  .table-footer {
+    padding: 8px 14px;
+    display: flex; gap: 12px; align-items: center;
+    border-top: 1px solid var(--border);
+    background: var(--panel2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--text-dim);
+  }
 
-.card.active{
-  border-color:var(--accent);
-  background:var(--accent-glow);
-}
-
-/* FILTER */
-.filter{
-  padding:0 24px 10px;
-}
-
-.filter input{
-  width:260px;
-  padding:6px;
-  background:var(--panel2);
-  border:1px solid var(--border);
-  color:var(--text);
-  font-family:'IBM Plex Mono';
-}
-
-/* TABLE */
-.table-wrap{
-  margin:0 24px 24px;
-  background:var(--panel);
-  border:1px solid var(--border);
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-
-th,td{
-  padding:10px 14px;
-  border-bottom:1px solid var(--border);
-}
-
-th{
-  font-family:'IBM Plex Mono';
-  font-size:10px;
-  color:var(--text-dim);
-  cursor:pointer;
-}
-
-tr:hover{background:var(--accent-glow);cursor:pointer}
-
-/* BADGE */
-.badge{
-  font-family:'IBM Plex Mono';
-  font-size:10px;
-  padding:2px 8px;
-  cursor:pointer;
-}
-
-.draft{color:var(--text-dim)}
-.quoted{color:var(--accent)}
-.ordered{color:var(--success)}
-.archived{color:#777}
-
-/* STATUS MENU */
-.status-wrap{position:relative}
-.status-menu{
-  position:absolute;
-  top:120%;
-  left:0;
-  background:var(--panel2);
-  border:1px solid var(--border);
-  display:none;
-  z-index:10;
-}
-.status-menu.open{display:block}
-
-.status-item{
-  padding:6px 10px;
-  font-size:12px;
-}
-.status-item:hover{
-  background:var(--accent-glow);
-  color:var(--accent);
-}
-
-/* EXPIRED */
-.expired{color:var(--danger);font-weight:600}
-
+  .empty-state {
+    text-align: center; padding: 48px 20px;
+    color: var(--text-dim); font-size: 13px;
+  }
 </style>
 </head>
-
 <body>
 
 <header>
-  <img src="okkonenlogopuu.svg">
-  <div>Tarjoukset</div>
+  <a href="index.html">
+    <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote">
+  </a>
+  <span class="header-title">Tarjoukset</span>
 
-  <div class="header-right nav">
-    <a href="asiakkaat.html">Asiakkaat</a>
-    <a href="hinnasto.html">Hinnasto</a>
-    <a href="tarjoukset.html" class="current">Tarjoukset</a>
-    <a href="tarjous.html">Tarjous</a>
-    <button class="btn" onclick="newQuote()">+ Uusi tarjous</button>
+  <div class="header-right">
+    <button class="btn" onclick="uusiTarjous()">+ Uusi tarjous</button>
+
+    <div class="nav-menu-wrap">
+      <button class="nav-btn" onclick="toggleNav(event)">≡ Valikko</button>
+      <div class="nav-dropdown" id="navDropdown">
+        <a class="nav-item" href="asiakkaat.html">Asiakkaat</a>
+        <a class="nav-item" href="hinnasto.html">Hinnasto</a>
+        <hr class="nav-divider">
+        <a class="nav-item current" href="tarjoukset.html">Tarjoukset</a>
+        <a class="nav-item" href="tarjous.html">Uusi tarjous</a>
+      </div>
+    </div>
   </div>
 </header>
 
-<div class="summary" id="summary"></div>
+<div class="page">
 
-<div class="filter">
-  <input placeholder="Hae asiakas / tarjousnro..." oninput="search(this.value)">
-</div>
+  <!-- SUMMARY -->
+  <div class="summary-row">
+    <div class="summary-card active" id="card-active" onclick="setFilter('active')">
+      <div class="card-label">Avoimet</div>
+      <div class="card-number" id="cnt-active">—</div>
+    </div>
+    <div class="summary-card" id="card-quoted" onclick="setFilter('quoted')">
+      <div class="card-label">Lähetetty</div>
+      <div class="card-number" id="cnt-quoted">—</div>
+    </div>
+    <div class="summary-card" id="card-ordered" onclick="setFilter('ordered')">
+      <div class="card-label">Tilattu</div>
+      <div class="card-number" id="cnt-ordered">—</div>
+    </div>
+    <div class="summary-card" id="card-archived" onclick="setFilter('archived')">
+      <div class="card-label">Arkisto</div>
+      <div class="card-number" id="cnt-archived">—</div>
+    </div>
+    <div class="summary-card" id="card-all" onclick="setFilter('all')">
+      <div class="card-label">Kaikki</div>
+      <div class="card-number" id="cnt-all">—</div>
+    </div>
+  </div>
 
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-  <th onclick="sort('quote_number')">Tarjousnro</th>
-  <th onclick="sort('created_at')">Pvm</th>
-  <th>Asiakas</th>
-  <th>Toimitus</th>
-  <th onclick="sort('valid_until')">Voimassa</th>
-  <th onclick="sort('total_gross')">Summa €</th>
-  <th>Status</th>
-  <th></th>
-</tr>
-</thead>
-<tbody id="rows"></tbody>
-</table>
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <span class="filter-label">STATUS</span>
+    <div class="filter-btns">
+      <button class="fbtn active" data-filter="active" onclick="setStatusBtn(this,'active')">Avoimet</button>
+      <button class="fbtn" data-filter="draft" onclick="setStatusBtn(this,'draft')">Luonnos</button>
+      <button class="fbtn" data-filter="quoted" onclick="setStatusBtn(this,'quoted')">Lähetetty</button>
+      <button class="fbtn" data-filter="ordered" onclick="setStatusBtn(this,'ordered')">Tilattu</button>
+      <button class="fbtn arch-btn" data-filter="archived" onclick="setStatusBtn(this,'archived')">Arkisto</button>
+      <button class="fbtn" data-filter="all" onclick="setStatusBtn(this,'all')">Kaikki</button>
+    </div>
+    <input class="filter-search" id="searchInput" placeholder="Hae asiakas / tarjousnro..." oninput="applyFilters()">
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('quote_number')" id="th-quote_number">Tarjousnro <span class="sort-arrow" id="sa-quote_number"></span></th>
+          <th onclick="sortBy('created_at')" id="th-created_at">Päivämäärä <span class="sort-arrow" id="sa-created_at">↓</span></th>
+          <th onclick="sortBy('customer')" id="th-customer">Asiakas <span class="sort-arrow" id="sa-customer"></span></th>
+          <th onclick="sortBy('delivery_type')" id="th-delivery_type">Toimitus <span class="sort-arrow" id="sa-delivery_type"></span></th>
+          <th onclick="sortBy('valid_until')" id="th-valid_until">Voimassa <span class="sort-arrow" id="sa-valid_until"></span></th>
+          <th onclick="sortBy('total_gross')" id="th-total_gross" style="text-align:right">Summa € <span class="sort-arrow" id="sa-total_gross"></span></th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="quotesBody">
+        <tr><td colspan="8" class="empty-state">Ladataan...</td></tr>
+      </tbody>
+    </table>
+    <div class="table-footer">
+      <span id="footerCount">—</span>
+    </div>
+  </div>
+
 </div>
 
 <script>
+const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
 
-// 🔌 SUPABASE
-const supabase = window.supabase.createClient(
-  "https://iofjnoxvksbaqorqaydh.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo"
-)
+const STATUS_FI = {
+  DRAFT: 'Luonnos',
+  QUOTED: 'Lähetetty',
+  ORDERED: 'Tilattu',
+  ARCHIVED: 'Arkisto'
+};
+const STATUS_CLASS = {
+  DRAFT: 'draft',
+  QUOTED: 'quoted',
+  ORDERED: 'ordered',
+  ARCHIVED: 'archived'
+};
+const ACTIVE_STATUSES = ['DRAFT', 'QUOTED'];
 
-let data = []
-let filtered = []
-let currentFilter="ALL"
+let allQuotes = [];
+let currentFilter = 'active';
+let sortField = 'created_at';
+let sortDir = 'desc';
 
-// LOAD DATA
-async function load(){
-  const { data:rows } = await supabase
-    .from("quotes")
-    .select(`
-      id, quote_number, created_at, valid_until,
-      status, total_gross, delivery_type,
-      customers(name)
-    `)
-
-  data = rows.map(r=>({
-    ...r,
-    customer: r.customers?.name || "-"
-  }))
-
-  applyFilters()
+async function loadQuotes() {
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/quotes?select=id,quote_number,created_at,valid_until,status,total_gross,delivery_type,customers(name)&order=created_at.desc`,
+    { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+  );
+  const data = await r.json();
+  allQuotes = (Array.isArray(data) ? data : []).map(q => ({
+    ...q,
+    customer: q.customers?.name || '—'
+  }));
+  updateCounts();
+  applyFilters();
 }
 
-// SUMMARY
-function renderSummary(){
-  const counts={
-    ACTIVE:data.filter(x=>x.status==="DRAFT"||x.status==="QUOTED").length,
-    QUOTED:data.filter(x=>x.status==="QUOTED").length,
-    ORDERED:data.filter(x=>x.status==="ORDERED").length,
-    ARCHIVED:data.filter(x=>x.status==="ARCHIVED").length,
-    ALL:data.length
-  }
-
-  const labels={
-    ACTIVE:"Avoimet",
-    QUOTED:"Lähetetty",
-    ORDERED:"Tilattu",
-    ARCHIVED:"Arkisto",
-    ALL:"Kaikki"
-  }
-
-  const el=document.getElementById("summary")
-  el.innerHTML=""
-
-  Object.keys(labels).forEach(k=>{
-    const d=document.createElement("div")
-    d.className="card"+(currentFilter===k?" active":"")
-    d.innerHTML=`${labels[k]}<br><b>${counts[k]}</b>`
-    d.onclick=()=>{currentFilter=k;applyFilters()}
-    el.appendChild(d)
-  })
+function updateCounts() {
+  const active   = allQuotes.filter(q => ACTIVE_STATUSES.includes(q.status)).length;
+  const quoted   = allQuotes.filter(q => q.status === 'QUOTED').length;
+  const ordered  = allQuotes.filter(q => q.status === 'ORDERED').length;
+  const archived = allQuotes.filter(q => q.status === 'ARCHIVED').length;
+  document.getElementById('cnt-active').textContent   = active;
+  document.getElementById('cnt-quoted').textContent   = quoted;
+  document.getElementById('cnt-ordered').textContent  = ordered;
+  document.getElementById('cnt-archived').textContent = archived;
+  document.getElementById('cnt-all').textContent      = allQuotes.length;
 }
 
-// TABLE
-function render(){
-  const tbody=document.getElementById("rows")
-  tbody.innerHTML=""
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById('card-' + f);
+  if (card) card.classList.add('active');
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.fbtn[data-filter="${f}"]`);
+  if (btn) btn.classList.add('active');
+  applyFilters();
+}
 
-  const today=new Date()
+function setStatusBtn(btn, f) {
+  currentFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById('card-' + f);
+  if (card) card.classList.add('active');
+  applyFilters();
+}
 
-  filtered.forEach(row=>{
-    const expired=new Date(row.valid_until)<today && row.status==="QUOTED"
+function applyFilters() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  let rows = allQuotes.filter(o => {
+    if (currentFilter === 'active')   return ACTIVE_STATUSES.includes(o.status);
+    if (currentFilter === 'all')      return true;
+    if (currentFilter === 'draft')    return o.status === 'DRAFT';
+    if (currentFilter === 'quoted')   return o.status === 'QUOTED';
+    if (currentFilter === 'ordered')  return o.status === 'ORDERED';
+    if (currentFilter === 'archived') return o.status === 'ARCHIVED';
+    return true;
+  });
+  if (q) {
+    rows = rows.filter(o =>
+      o.customer.toLowerCase().includes(q) ||
+      (o.quote_number || '').toLowerCase().includes(q) ||
+      (o.delivery_type || '').toLowerCase().includes(q)
+    );
+  }
+  rows.sort((a, b) => {
+    let va = '', vb = '';
+    if (sortField === 'customer')    { va = a.customer; vb = b.customer; }
+    else if (sortField === 'total_gross') { va = a.total_gross || 0; vb = b.total_gross || 0; }
+    else { va = a[sortField] || ''; vb = b[sortField] || ''; }
+    const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+  renderTable(rows);
+}
 
-    const tr=document.createElement("tr")
-    tr.onclick=()=>location="tarjous.html?id="+row.id
+function sortBy(field) {
+  if (sortField === field) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+  else { sortField = field; sortDir = field === 'created_at' ? 'desc' : 'asc'; }
+  document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
+  document.querySelectorAll('th').forEach(t => t.classList.remove('sorted'));
+  const arrow = document.getElementById('sa-' + field);
+  const th    = document.getElementById('th-' + field);
+  if (arrow) arrow.textContent = sortDir === 'asc' ? '↑' : '↓';
+  if (th) th.classList.add('sorted');
+  applyFilters();
+}
 
-    tr.innerHTML=`
-      <td style="font-family:monospace">${row.quote_number}</td>
-      <td>${row.created_at?.slice(0,10)}</td>
-      <td>${row.customer}</td>
-      <td>${row.delivery_type||""}</td>
-      <td class="${expired?'expired':''}">${row.valid_until||""}</td>
-      <td style="text-align:right">${(row.total_gross||0).toLocaleString()} €</td>
+function renderTable(rows) {
+  const tbody = document.getElementById('quotesBody');
+  document.getElementById('footerCount').textContent =
+    rows.length === 0 ? 'Ei tarjouksia' : `${rows.length} tarjousta`;
 
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Ei tarjouksia valituilla suodattimilla</td></tr>';
+    return;
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  tbody.innerHTML = rows.map(q => {
+    const cls     = STATUS_CLASS[q.status] || 'draft';
+    const fi      = STATUS_FI[q.status] || q.status;
+    const date    = (q.created_at || '').slice(0,10).split('-').reverse().join('.');
+    const validDt = q.valid_until ? new Date(q.valid_until) : null;
+    const expired = validDt && validDt < today && q.status === 'QUOTED';
+    const validStr = q.valid_until ? q.valid_until.slice(0,10).split('-').reverse().join('.') : '—';
+    const gross   = q.total_gross ? q.total_gross.toLocaleString('fi-FI', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+
+    return `<tr class="s-${cls}" onclick="avaaQuote('${q.id}')">
+      <td class="mono" style="font-size:12px">${q.quote_number || '—'}</td>
+      <td class="mono dim" style="font-size:12px">${date}</td>
+      <td style="font-weight:500">${q.customer}</td>
+      <td class="dim" style="font-size:12px">${q.delivery_type || '—'}</td>
+      <td class="mono${expired?' expired':''}" style="font-size:12px">${validStr}</td>
+      <td class="mono" style="text-align:right">${gross}</td>
       <td onclick="event.stopPropagation()">
         <div class="status-wrap">
-          <span class="badge ${row.status.toLowerCase()}" onclick="toggleMenu(${row.id})">${row.status}</span>
-          <div class="status-menu" id="menu-${row.id}">
-            <div class="status-item" onclick="setStatus(${row.id},'DRAFT')">Luonnos</div>
-            <div class="status-item" onclick="setStatus(${row.id},'QUOTED')">Lähetetty</div>
-            <div class="status-item" onclick="setStatus(${row.id},'ORDERED')">Tilattu</div>
-            <div class="status-item" onclick="setStatus(${row.id},'ARCHIVED')">Arkisto</div>
+          <span class="badge badge-${cls}" onclick="toggleMenu('${q.id}',event)">${fi}</span>
+          <div class="status-menu" id="menu-${q.id}">
+            <div class="status-item" onclick="setStatus('${q.id}','DRAFT')">Luonnos</div>
+            <div class="status-item" onclick="setStatus('${q.id}','QUOTED')">Lähetetty</div>
+            <div class="status-item" onclick="setStatus('${q.id}','ORDERED')">Tilattu</div>
+            <div class="status-item" onclick="setStatus('${q.id}','ARCHIVED')">Arkisto</div>
           </div>
         </div>
       </td>
-
-      <td onclick="event.stopPropagation()">
-        <button onclick="copy(${row.id})">Kopioi</button>
+      <td onclick="event.stopPropagation()" style="white-space:nowrap;display:flex;gap:6px;align-items:center;">
+        <button class="copy-btn" onclick="kopioi('${q.id}')">⧉ Kopioi</button>
+        <span class="dim">›</span>
       </td>
-    `
-    tbody.appendChild(tr)
-  })
+    </tr>`;
+  }).join('');
 }
 
-// STATUS UPDATE
-async function setStatus(id,status){
-  await supabase.from("quotes").update({status}).eq("id",id)
-
-  const item=data.find(x=>x.id===id)
-  item.status=status
-
-  applyFilters()
+async function setStatus(id, status) {
+  await fetch(`${SUPABASE_URL}/rest/v1/quotes?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json', Prefer: 'return=representation'
+    },
+    body: JSON.stringify({ status })
+  });
+  const q = allQuotes.find(x => x.id === id);
+  if (q) q.status = status;
+  updateCounts();
+  applyFilters();
+  document.querySelectorAll('.status-menu').forEach(m => m.classList.remove('open'));
 }
 
-function toggleMenu(id){
-  document.querySelectorAll('.status-menu').forEach(m=>m.classList.remove('open'))
-  document.getElementById("menu-"+id).classList.toggle("open")
+function toggleMenu(id, e) {
+  e.stopPropagation();
+  const menu = document.getElementById('menu-' + id);
+  const wasOpen = menu.classList.contains('open');
+  document.querySelectorAll('.status-menu').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) menu.classList.add('open');
 }
 
-// FILTER
-function applyFilters(){
-  if(currentFilter==="ALL") filtered=[...data]
-  else if(currentFilter==="ACTIVE") filtered=data.filter(x=>x.status==="DRAFT"||x.status==="QUOTED")
-  else filtered=data.filter(x=>x.status===currentFilter)
-
-  renderSummary()
-  render()
+function avaaQuote(id) {
+  location.href = 'tarjous.html?id=' + id;
 }
 
-// SEARCH
-function search(q){
-  filtered=data.filter(x=>
-    x.customer.toLowerCase().includes(q.toLowerCase()) ||
-    x.quote_number.includes(q)
-  )
-  render()
+function kopioi(id) {
+  location.href = 'tarjous.html?copy=' + id;
 }
 
-// SORT
-function sort(k){
-  filtered.sort((a,b)=>a[k]>b[k]?1:-1)
-  render()
+function uusiTarjous() {
+  location.href = 'tarjous.html';
 }
 
-// ACTIONS
-function copy(id){
-  location="tarjous.html?copy="+id
-}
-function newQuote(){
-  location="tarjous.html"
+function toggleNav(e) {
+  e.stopPropagation();
+  document.getElementById('navDropdown').classList.toggle('open');
 }
 
-// CLOSE MENU
-document.addEventListener("click",(e)=>{
-  if(!e.target.closest(".status-wrap")){
-    document.querySelectorAll('.status-menu').forEach(m=>m.classList.remove('open'))
-  }
-})
+document.addEventListener('click', () => {
+  document.getElementById('navDropdown').classList.remove('open');
+  document.querySelectorAll('.status-menu').forEach(m => m.classList.remove('open'));
+});
 
-// INIT
-load()
+// Mark sorted column initially
+document.getElementById('sa-created_at').textContent = '↓';
+document.getElementById('th-created_at').classList.add('sorted');
 
+loadQuotes();
 </script>
-
 </body>
 </html>
