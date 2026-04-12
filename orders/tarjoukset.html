@@ -5,64 +5,68 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tarjoukset — Okkosen Puutuote</title>
 
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-
 :root {
-  --bg: #1c1a14;
-  --panel: #2a2720;
-  --panel2: #2f2b23;
-  --border: #4a4535;
+  --bg:#1c1a14;
+  --panel:#2a2720;
+  --panel2:#2f2b23;
+  --border:#4a4535;
 
-  --accent: #3a6b7a;
-  --accent-dim: #2d5561;
-  --accent-glow: rgba(58,107,122,0.15);
+  --accent:#3a6b7a;
+  --accent-dim:#2d5561;
+  --accent-glow:rgba(58,107,122,0.15);
 
-  --text: #ededf0;
-  --text-dim: #9595a0;
+  --text:#ededf0;
+  --text-dim:#9595a0;
 
-  --success: #3dba6e;
-  --danger: #e84040;
+  --success:#3dba6e;
+  --danger:#e84040;
 }
 
-* { box-sizing:border-box; }
+*{box-sizing:border-box;margin:0;padding:0}
 
-body {
-  margin:0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'IBM Plex Sans', sans-serif;
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'IBM Plex Sans';
 }
 
 /* HEADER */
-header {
+header{
   background:#111d20;
   border-bottom:2px solid var(--accent);
-  padding:10px 20px;
+  padding:10px 24px;
   display:flex;
   align-items:center;
+  gap:16px;
 }
 
-.header-right {
+header img{height:36px}
+
+.header-right{
   margin-left:auto;
   display:flex;
   align-items:center;
   gap:12px;
 }
 
-.nav a {
+.nav a{
   color:var(--text-dim);
   text-decoration:none;
   font-family:'IBM Plex Mono';
   font-size:12px;
 }
 
-.nav a.current {
+.nav a.current{
   color:var(--accent);
   font-weight:600;
 }
 
-.btn {
+.btn{
   background:var(--accent);
   border:none;
   padding:8px 12px;
@@ -72,82 +76,81 @@ header {
 }
 
 /* SUMMARY */
-.summary {
+.summary{
   display:grid;
-  grid-template-columns: repeat(5,1fr);
+  grid-template-columns:repeat(5,1fr);
   gap:10px;
-  padding:20px;
+  padding:20px 24px;
 }
 
-.card {
+.card{
   background:var(--panel2);
   border:1px solid var(--border);
   padding:12px;
   cursor:pointer;
 }
 
-.card.active {
+.card.active{
   border-color:var(--accent);
   background:var(--accent-glow);
 }
 
 /* FILTER */
-.filter {
-  padding:0 20px 10px;
+.filter{
+  padding:0 24px 10px;
 }
 
-.filter input {
-  width:250px;
+.filter input{
+  width:260px;
   padding:6px;
   background:var(--panel2);
   border:1px solid var(--border);
   color:var(--text);
+  font-family:'IBM Plex Mono';
 }
 
 /* TABLE */
-.table-wrap {
-  margin:0 20px 20px;
+.table-wrap{
+  margin:0 24px 24px;
   background:var(--panel);
   border:1px solid var(--border);
 }
 
-table {
+table{
   width:100%;
-  border-collapse: collapse;
+  border-collapse:collapse;
 }
 
-th, td {
-  padding:10px;
+th,td{
+  padding:10px 14px;
   border-bottom:1px solid var(--border);
 }
 
-th {
-  font-size:11px;
+th{
+  font-family:'IBM Plex Mono';
+  font-size:10px;
   color:var(--text-dim);
   cursor:pointer;
 }
 
-tr:hover {
-  background:var(--accent-glow);
-}
+tr:hover{background:var(--accent-glow);cursor:pointer}
 
 /* BADGE */
-.badge {
-  padding:3px 8px;
-  font-size:11px;
-  cursor:pointer;
+.badge{
   font-family:'IBM Plex Mono';
+  font-size:10px;
+  padding:2px 8px;
+  cursor:pointer;
 }
 
-.draft { color: var(--text-dim); }
-.quoted { color: var(--accent); }
-.ordered { color: var(--success); }
-.archived { color: #777; }
+.draft{color:var(--text-dim)}
+.quoted{color:var(--accent)}
+.ordered{color:var(--success)}
+.archived{color:#777}
 
 /* STATUS MENU */
-.status-wrap { position:relative; }
-
-.status-menu {
+.status-wrap{position:relative}
+.status-menu{
   position:absolute;
   top:120%;
   left:0;
@@ -156,23 +159,19 @@ tr:hover {
   display:none;
   z-index:10;
 }
+.status-menu.open{display:block}
 
-.status-menu.open { display:block; }
-
-.status-item {
+.status-item{
   padding:6px 10px;
-  cursor:pointer;
+  font-size:12px;
 }
-
-.status-item:hover {
+.status-item:hover{
   background:var(--accent-glow);
+  color:var(--accent);
 }
 
 /* EXPIRED */
-.expired {
-  color:var(--danger);
-  font-weight:600;
-}
+.expired{color:var(--danger);font-weight:600}
 
 </style>
 </head>
@@ -180,6 +179,7 @@ tr:hover {
 <body>
 
 <header>
+  <img src="okkonenlogopuu.svg">
   <div>Tarjoukset</div>
 
   <div class="header-right nav">
@@ -191,10 +191,8 @@ tr:hover {
   </div>
 </header>
 
-<!-- SUMMARY -->
 <div class="summary" id="summary"></div>
 
-<!-- SEARCH -->
 <div class="filter">
   <input placeholder="Hae asiakas / tarjousnro..." oninput="search(this.value)">
 </div>
@@ -203,12 +201,12 @@ tr:hover {
 <table>
 <thead>
 <tr>
-  <th onclick="sort('number')">Tarjousnro</th>
-  <th onclick="sort('date')">Pvm</th>
-  <th onclick="sort('customer')">Asiakas</th>
+  <th onclick="sort('quote_number')">Tarjousnro</th>
+  <th onclick="sort('created_at')">Pvm</th>
+  <th>Asiakas</th>
   <th>Toimitus</th>
-  <th onclick="sort('valid')">Voimassa</th>
-  <th onclick="sort('total')">Summa €</th>
+  <th onclick="sort('valid_until')">Voimassa</th>
+  <th onclick="sort('total_gross')">Summa €</th>
   <th>Status</th>
   <th></th>
 </tr>
@@ -219,72 +217,88 @@ tr:hover {
 
 <script>
 
-// MOCK DATA
-let data = [
-  {id:1, number:"2026-001", date:"2026-04-01", customer:"Matti", delivery:"Hirsirunko", valid:"2026-04-10", total:12430, status:"QUOTED"},
-  {id:2, number:"2026-002", date:"2026-04-05", customer:"Rakennus Oy", delivery:"Avaimet", valid:"2026-04-20", total:54300, status:"ORDERED"},
-  {id:3, number:"2026-003", date:"2026-03-01", customer:"Testi Oy", delivery:"Runko", valid:"2026-03-15", total:22000, status:"QUOTED"},
-]
+// 🔌 SUPABASE
+const supabase = window.supabase.createClient(
+  "https://iofjnoxvksbaqorqaydh.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo"
+)
 
-let filtered = [...data]
-let currentFilter = "ALL"
+let data = []
+let filtered = []
+let currentFilter="ALL"
+
+// LOAD DATA
+async function load(){
+  const { data:rows } = await supabase
+    .from("quotes")
+    .select(`
+      id, quote_number, created_at, valid_until,
+      status, total_gross, delivery_type,
+      customers(name)
+    `)
+
+  data = rows.map(r=>({
+    ...r,
+    customer: r.customers?.name || "-"
+  }))
+
+  applyFilters()
+}
 
 // SUMMARY
-function renderSummary() {
-  const counts = {
-    ACTIVE: data.filter(x=>x.status==="QUOTED"||x.status==="DRAFT").length,
-    QUOTED: data.filter(x=>x.status==="QUOTED").length,
-    ORDERED: data.filter(x=>x.status==="ORDERED").length,
-    ARCHIVED: data.filter(x=>x.status==="ARCHIVED").length,
-    ALL: data.length
+function renderSummary(){
+  const counts={
+    ACTIVE:data.filter(x=>x.status==="DRAFT"||x.status==="QUOTED").length,
+    QUOTED:data.filter(x=>x.status==="QUOTED").length,
+    ORDERED:data.filter(x=>x.status==="ORDERED").length,
+    ARCHIVED:data.filter(x=>x.status==="ARCHIVED").length,
+    ALL:data.length
   }
 
-  const labels = {
-    ACTIVE:"Aktiiviset",
+  const labels={
+    ACTIVE:"Avoimet",
     QUOTED:"Lähetetty",
     ORDERED:"Tilattu",
     ARCHIVED:"Arkisto",
     ALL:"Kaikki"
   }
 
-  const el = document.getElementById("summary")
+  const el=document.getElementById("summary")
   el.innerHTML=""
 
   Object.keys(labels).forEach(k=>{
-    const div=document.createElement("div")
-    div.className="card"+(currentFilter===k?" active":"")
-    div.innerHTML=`${labels[k]}<br><b>${counts[k]}</b>`
-    div.onclick=()=>{currentFilter=k; applyFilters()}
-    el.appendChild(div)
+    const d=document.createElement("div")
+    d.className="card"+(currentFilter===k?" active":"")
+    d.innerHTML=`${labels[k]}<br><b>${counts[k]}</b>`
+    d.onclick=()=>{currentFilter=k;applyFilters()}
+    el.appendChild(d)
   })
 }
 
 // TABLE
-function render() {
-  const tbody = document.getElementById("rows")
+function render(){
+  const tbody=document.getElementById("rows")
   tbody.innerHTML=""
 
-  const today = new Date()
+  const today=new Date()
 
   filtered.forEach(row=>{
-    const expired = new Date(row.valid) < today && row.status==="QUOTED"
+    const expired=new Date(row.valid_until)<today && row.status==="QUOTED"
 
     const tr=document.createElement("tr")
-
-    tr.onclick=()=>window.location="tarjous.html?id="+row.id
+    tr.onclick=()=>location="tarjous.html?id="+row.id
 
     tr.innerHTML=`
-      <td>${row.number}</td>
-      <td>${row.date}</td>
+      <td style="font-family:monospace">${row.quote_number}</td>
+      <td>${row.created_at?.slice(0,10)}</td>
       <td>${row.customer}</td>
-      <td>${row.delivery}</td>
-      <td class="${expired?'expired':''}">${row.valid}</td>
-      <td style="text-align:right">${row.total.toLocaleString()} €</td>
+      <td>${row.delivery_type||""}</td>
+      <td class="${expired?'expired':''}">${row.valid_until||""}</td>
+      <td style="text-align:right">${(row.total_gross||0).toLocaleString()} €</td>
+
       <td onclick="event.stopPropagation()">
         <div class="status-wrap">
-          <span class="badge ${row.status.toLowerCase()}" onclick="toggleMenu(${row.id})">
-            ${row.status}
-          </span>
+          <span class="badge ${row.status.toLowerCase()}" onclick="toggleMenu(${row.id})">${row.status}</span>
           <div class="status-menu" id="menu-${row.id}">
             <div class="status-item" onclick="setStatus(${row.id},'DRAFT')">Luonnos</div>
             <div class="status-item" onclick="setStatus(${row.id},'QUOTED')">Lähetetty</div>
@@ -293,65 +307,61 @@ function render() {
           </div>
         </div>
       </td>
+
       <td onclick="event.stopPropagation()">
         <button onclick="copy(${row.id})">Kopioi</button>
       </td>
     `
-
     tbody.appendChild(tr)
   })
 }
 
-// STATUS
+// STATUS UPDATE
+async function setStatus(id,status){
+  await supabase.from("quotes").update({status}).eq("id",id)
+
+  const item=data.find(x=>x.id===id)
+  item.status=status
+
+  applyFilters()
+}
+
 function toggleMenu(id){
   document.querySelectorAll('.status-menu').forEach(m=>m.classList.remove('open'))
   document.getElementById("menu-"+id).classList.toggle("open")
 }
 
-function setStatus(id,status){
-  const item=data.find(x=>x.id===id)
-  item.status=status
-
-  // TODO: Supabase update tähän
-
-  applyFilters()
-}
-
-// FILTER + SEARCH
-function search(q){
-  filtered = data.filter(x=>
-    x.customer.toLowerCase().includes(q.toLowerCase()) ||
-    x.number.includes(q)
-  )
-  render()
-}
-
+// FILTER
 function applyFilters(){
   if(currentFilter==="ALL") filtered=[...data]
-  else if(currentFilter==="ACTIVE") filtered=data.filter(x=>x.status==="QUOTED"||x.status==="DRAFT")
+  else if(currentFilter==="ACTIVE") filtered=data.filter(x=>x.status==="DRAFT"||x.status==="QUOTED")
   else filtered=data.filter(x=>x.status===currentFilter)
 
   renderSummary()
   render()
 }
 
+// SEARCH
+function search(q){
+  filtered=data.filter(x=>
+    x.customer.toLowerCase().includes(q.toLowerCase()) ||
+    x.quote_number.includes(q)
+  )
+  render()
+}
+
 // SORT
-function sort(key){
-  filtered.sort((a,b)=>{
-    if(a[key] > b[key]) return 1
-    if(a[key] < b[key]) return -1
-    return 0
-  })
+function sort(k){
+  filtered.sort((a,b)=>a[k]>b[k]?1:-1)
   render()
 }
 
 // ACTIONS
 function copy(id){
-  window.location = "tarjous.html?copy="+id
+  location="tarjous.html?copy="+id
 }
-
 function newQuote(){
-  window.location = "tarjous.html"
+  location="tarjous.html"
 }
 
 // CLOSE MENU
@@ -362,8 +372,7 @@ document.addEventListener("click",(e)=>{
 })
 
 // INIT
-renderSummary()
-render()
+load()
 
 </script>
 
