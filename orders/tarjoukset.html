@@ -35,7 +35,7 @@
   header img { height: 32px; }
   .header-title {
     font-size: 15px; font-weight: 500; color: var(--text);
-    font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.03em;
+    font-family: 'IBM Plex Sans', sans-serif;
   }
   .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
@@ -49,7 +49,7 @@
   }
   .nav-btn:hover { background: var(--input-bg); border-color: var(--accent); }
   .nav-dropdown {
-    display: none; position: absolute; top: calc(100% + 6px); right: 0;
+    display: none; position: absolute; top: calc(100% + 6px); left: 0;
     background: var(--panel2); border: 1px solid var(--border);
     border-radius: 6px; min-width: 180px; z-index: 999;
     box-shadow: 0 4px 16px rgba(0,0,0,0.5); overflow: hidden;
@@ -80,7 +80,7 @@
   /* SUMMARY CARDS */
   .summary-row {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 10px;
     margin-bottom: 16px;
   }
@@ -183,6 +183,7 @@
   tr.s-quoted td:first-child   { border-left-color: var(--violet); }
   tr.s-ordered td:first-child  { border-left-color: var(--success); }
   tr.s-archived td:first-child { border-left-color: #444; }
+  tr.s-template td:first-child { border-left-color: var(--accent); }
 
   /* BADGES */
   .badge {
@@ -196,6 +197,7 @@
   .badge-quoted   { background: #22153a; color: var(--violet); }
   .badge-ordered  { background: #1a3028; color: var(--success); }
   .badge-archived { background: #222; color: #666; }
+  .badge-template { background: #2a1f0e; color: var(--accent); border: 1px solid var(--accent-dim); }
 
   /* Status popup */
   .status-wrap { position: relative; display: inline-block; }
@@ -247,21 +249,22 @@
   <a href="index.html">
     <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote">
   </a>
+
+  <div class="nav-menu-wrap">
+    <button class="nav-btn" onclick="toggleNav(event)">≡ Valikko</button>
+    <div class="nav-dropdown" id="navDropdown">
+      <a class="nav-item" href="asiakkaat.html">Asiakkaat</a>
+      <a class="nav-item" href="hinnasto.html">Hinnasto</a>
+      <hr class="nav-divider">
+      <a class="nav-item current" href="tarjoukset.html">Tarjoukset</a>
+      <a class="nav-item" href="tarjous.html">Uusi tarjous</a>
+    </div>
+  </div>
+
   <span class="header-title">Tarjoukset</span>
 
   <div class="header-right">
     <button class="btn" onclick="uusiTarjous()">+ Uusi tarjous</button>
-
-    <div class="nav-menu-wrap">
-      <button class="nav-btn" onclick="toggleNav(event)">≡ Valikko</button>
-      <div class="nav-dropdown" id="navDropdown">
-        <a class="nav-item" href="asiakkaat.html">Asiakkaat</a>
-        <a class="nav-item" href="hinnasto.html">Hinnasto</a>
-        <hr class="nav-divider">
-        <a class="nav-item current" href="tarjoukset.html">Tarjoukset</a>
-        <a class="nav-item" href="tarjous.html">Uusi tarjous</a>
-      </div>
-    </div>
   </div>
 </header>
 
@@ -281,6 +284,10 @@
       <div class="card-label">Tilattu</div>
       <div class="card-number" id="cnt-ordered">—</div>
     </div>
+    <div class="summary-card" id="card-template" onclick="setFilter('template')">
+      <div class="card-label">Mallit</div>
+      <div class="card-number" id="cnt-template">—</div>
+    </div>
     <div class="summary-card" id="card-archived" onclick="setFilter('archived')">
       <div class="card-label">Arkisto</div>
       <div class="card-number" id="cnt-archived">—</div>
@@ -299,6 +306,7 @@
       <button class="fbtn" data-filter="draft" onclick="setStatusBtn(this,'draft')">Luonnos</button>
       <button class="fbtn" data-filter="quoted" onclick="setStatusBtn(this,'quoted')">Lähetetty</button>
       <button class="fbtn" data-filter="ordered" onclick="setStatusBtn(this,'ordered')">Tilattu</button>
+      <button class="fbtn" data-filter="template" onclick="setStatusBtn(this,'template')">Mallit</button>
       <button class="fbtn arch-btn" data-filter="archived" onclick="setStatusBtn(this,'archived')">Arkisto</button>
       <button class="fbtn" data-filter="all" onclick="setStatusBtn(this,'all')">Kaikki</button>
     </div>
@@ -339,13 +347,15 @@ const STATUS_FI = {
   DRAFT: 'Luonnos',
   QUOTED: 'Lähetetty',
   ORDERED: 'Tilattu',
-  ARCHIVED: 'Arkisto'
+  ARCHIVED: 'Arkisto',
+  TEMPLATE: 'Malli'
 };
 const STATUS_CLASS = {
   DRAFT: 'draft',
   QUOTED: 'quoted',
   ORDERED: 'ordered',
-  ARCHIVED: 'archived'
+  ARCHIVED: 'archived',
+  TEMPLATE: 'template'
 };
 const ACTIVE_STATUSES = ['DRAFT', 'QUOTED'];
 
@@ -373,10 +383,12 @@ function updateCounts() {
   const quoted   = allQuotes.filter(q => q.status === 'QUOTED').length;
   const ordered  = allQuotes.filter(q => q.status === 'ORDERED').length;
   const archived = allQuotes.filter(q => q.status === 'ARCHIVED').length;
+  const template = allQuotes.filter(q => q.status === 'TEMPLATE').length;
   document.getElementById('cnt-active').textContent   = active;
   document.getElementById('cnt-quoted').textContent   = quoted;
   document.getElementById('cnt-ordered').textContent  = ordered;
   document.getElementById('cnt-archived').textContent = archived;
+  document.getElementById('cnt-template').textContent = template;
   document.getElementById('cnt-all').textContent      = allQuotes.length;
 }
 
@@ -410,6 +422,7 @@ function applyFilters() {
     if (currentFilter === 'quoted')   return o.status === 'QUOTED';
     if (currentFilter === 'ordered')  return o.status === 'ORDERED';
     if (currentFilter === 'archived') return o.status === 'ARCHIVED';
+    if (currentFilter === 'template') return o.status === 'TEMPLATE';
     return true;
   });
   if (q) {
@@ -477,6 +490,7 @@ function renderTable(rows) {
             <div class="status-item" onclick="setStatus('${q.id}','DRAFT')">Luonnos</div>
             <div class="status-item" onclick="setStatus('${q.id}','QUOTED')">Lähetetty</div>
             <div class="status-item" onclick="setStatus('${q.id}','ORDERED')">Tilattu</div>
+            <div class="status-item" onclick="setStatus('${q.id}','TEMPLATE')">Malli</div>
             <div class="status-item" onclick="setStatus('${q.id}','ARCHIVED')">Arkisto</div>
           </div>
         </div>
