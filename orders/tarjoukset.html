@@ -540,18 +540,21 @@ function toggleMenu(id, e) {
   e.stopPropagation();
   const menu = document.getElementById('menu-' + id);
   const wasOpen = menu.classList.contains('open');
-  document.querySelectorAll('.status-menu').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.status-menu').forEach(m => {
+    m.classList.remove('open');
+    m.style.top = '';
+    m.style.bottom = '';
+  });
   if (!wasOpen) {
+    // Ensin näkyviin jotta getBoundingClientRect toimii
+    menu.style.top = 'calc(100% + 4px)';
+    menu.style.bottom = 'auto';
     menu.classList.add('open');
-    // Tarkistetaan mahtuuko dropdown alas vai pitääkö avata ylös
+    // Nyt mitataan mahtuuko alas
     const rect = menu.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.top;
-    if (spaceBelow < rect.height + 10) {
+    if (rect.bottom > window.innerHeight - 8) {
       menu.style.top = 'auto';
       menu.style.bottom = 'calc(100% + 4px)';
-    } else {
-      menu.style.top = 'calc(100% + 4px)';
-      menu.style.bottom = 'auto';
     }
   }
 }
