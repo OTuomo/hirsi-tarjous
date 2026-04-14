@@ -113,12 +113,12 @@
 const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
 
-async function sbGet(table, q='') {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${q}`, {
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
-  });
-  return r.json();
-}
+async function loadQuotes() {
+  const { data: { session } } = await window._supabaseClient.auth.getSession();
+  const token = session ? session.access_token : SUPABASE_KEY;
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/quotes?select=id,quote_number,created_at,valid_until,status,total_gross,delivery_type,is_template,template_name,customers(name)&order=created_at.desc`,
+    { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` } }
 
 function fmt(n) {
   return Number(n||0).toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
