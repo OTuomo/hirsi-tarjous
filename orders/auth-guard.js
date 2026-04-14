@@ -1,11 +1,8 @@
 /**
  * auth-guard.js — Okkosen Puutuote
- * Lisää tämä KAIKKIIN suojattuihin sivuihin (asiakkaat, hinnasto, tarjous, tarjoukset, print-sivut)
- *
- * Käyttö: <script src="auth-guard.js"></script>
- * Lisää ennen muuta omaa JS-koodia.
- * Supabase-kirjasto täytyy olla ladattuna ennen tätä:
- *   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+ * - Tarkistaa kirjautumisen, ohjaa loginiin jos ei sessiota
+ * - Korjaa automaattisesti kaikki Supabase fetch-kutsut käyttämään oikeaa tokenia
+ * - Lisää uloskirjautumisnapin navigaatioon
  */
 
 (function () {
@@ -21,35 +18,50 @@
   // Piilota sisältö kunnes auth tarkistettu
   document.documentElement.style.visibility = 'hidden';
 
+  // ── Fetch-korjaus ──────────────────────────────────────────
+  // Ylikirjoitetaan window.fetch niin että Supabase-kutsut saavat aina oikean tokenin
+  const _originalFetch = window.fetch.bind(window);
+  window.fetch = async function (url, options = {}) {
+    if (typeof url === 'string' && url.includes(SUPABASE_URL)) {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        options = options || {};
+        options.headers = options.headers || {};
+        if (options.headers instanceof Headers) {
+          options.headers.set('Authorization', `Bearer ${session.access_token}`);
+        } else {
+          options.headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+      }
+    }
+    return _originalFetch(url, options);
+  };
+
+  // ── Auth-tarkistus ─────────────────────────────────────────
   sb.auth.getSession().then(({ data }) => {
     if (!data.session) {
-      // Ei sessiota → kirjautumissivulle, ?next= muistaa minne oltiin menossa
       const currentPage = window.location.pathname.split('/').pop() || 'index.html';
       window.location.href = 'login.html?next=' + encodeURIComponent(currentPage);
     } else {
-      // Kirjautunut → näytä sivu ja aseta käyttäjätiedot
       document.documentElement.style.visibility = '';
       window._currentUser = data.session.user;
       renderUserInfo(data.session.user);
     }
   });
 
-  // Kuuntele auth-muutoksia (logout muualta, sessio vanhenee)
+  // Kuuntele auth-muutoksia
   sb.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT' || !session) {
       window.location.href = 'login.html';
     }
   });
 
-  // Lisää käyttäjän sähköposti + logout-nappi navigaatioon
+  // ── Uloskirjautumisnappi ───────────────────────────────────
   function renderUserInfo(user) {
-    // Odota että DOM on valmis
     const tryRender = () => {
-      const nav = document.querySelector('nav') || document.querySelector('.nav') || document.querySelector('header');
-      if (!nav) return; // Ei navigaatiota → ei lisätä
-
-      // Älä lisää kahdesti
       if (document.getElementById('auth-user-info')) return;
+      const nav = document.querySelector('nav') || document.querySelector('.nav') || document.querySelector('header');
+      if (!nav) return;
 
       const div = document.createElement('div');
       div.id = 'auth-user-info';
@@ -99,7 +111,7 @@
     }
   }
 
-  // Julkinen helper: hae nykyinen sessio (käytä sivujen omassa koodissa)
+  // Julkiset helperit
   window.getAuthSession = () => sb.auth.getSession();
   window.authSignOut = () => sb.auth.signOut();
 })();
