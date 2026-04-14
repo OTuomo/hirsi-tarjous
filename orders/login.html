@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kirjaudu — Okkosen Puutuote</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --amber: #d97706;
+      --amber-light: #f59e0b;
+      --amber-dark: #b45309;
+      --bg: #111008;
+      --surface: #1c1a12;
+      --surface2: #252218;
+      --border: #3a3520;
+      --text: #f5f0e8;
+      --text-muted: #a09070;
+      --error: #ef4444;
+      --success: #22c55e;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Taustaefekti — puun syyt */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          168deg,
+          transparent 0px,
+          transparent 80px,
+          rgba(217,119,6,0.015) 80px,
+          rgba(217,119,6,0.015) 81px
+        ),
+        repeating-linear-gradient(
+          172deg,
+          transparent 0px,
+          transparent 120px,
+          rgba(217,119,6,0.02) 120px,
+          rgba(217,119,6,0.02) 122px
+        );
+      pointer-events: none;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(217,119,6,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .login-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow:
+        0 0 0 1px rgba(217,119,6,0.05),
+        0 20px 60px rgba(0,0,0,0.6);
+      animation: fadeUp 0.4s ease;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo-area img {
+      height: 52px;
+      width: auto;
+      filter: brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(0.85);
+    }
+
+    .logo-area .company-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+      color: var(--text);
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.4rem;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0.65rem 0.9rem;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.95rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="email"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--amber);
+    }
+
+    input::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+    .btn-primary {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: 0.75rem;
+      background: var(--amber);
+      color: #000;
+      border: none;
+      border-radius: 3px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn-primary:hover  { background: var(--amber-light); }
+    .btn-primary:active { transform: scale(0.99); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .message {
+      margin-top: 1rem;
+      padding: 0.65rem 0.9rem;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .message.error   { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; display: block; }
+    .message.success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #86efac; display: block; }
+
+    .forgot-link {
+      display: block;
+      text-align: right;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .forgot-link:hover { color: var(--amber); }
+
+    /* Salasanan palautus -näkymä */
+    #reset-view { display: none; }
+    #login-view { display: block; }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      margin-bottom: 1rem;
+      text-decoration: none;
+    }
+    .back-link:hover { color: var(--amber); }
+
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+  <div class="logo-area">
+    <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote" onerror="this.style.display='none'" />
+    <span class="company-name">Okkosen Puutuote Oy</span>
+  </div>
+
+  <!-- Kirjautumisnäkymä -->
+  <div id="login-view">
+    <h1>Kirjaudu sisään</h1>
+    <form id="login-form" autocomplete="on">
+      <div class="form-group">
+        <label for="email">Sähköposti</label>
+        <input type="email" id="email" name="email" placeholder="nimi@okkosenpuutuote.com" required autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="password">Salasana</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+        <a class="forgot-link" id="show-reset">Unohditko salasanan?</a>
+      </div>
+      <button type="submit" class="btn-primary" id="login-btn">Kirjaudu</button>
+    </form>
+    <div class="message" id="login-msg"></div>
+  </div>
+
+  <!-- Salasanan palautus -->
+  <div id="reset-view">
+    <a class="back-link" id="back-to-login">← Takaisin</a>
+    <h1>Palauta salasana</h1>
+    <form id="reset-form">
+      <div class="form-group">
+        <label for="reset-email">Sähköposti</label>
+        <input type="email" id="reset-email" placeholder="nimi@okkosenpuutuote.com" required />
+      </div>
+      <button type="submit" class="btn-primary" id="reset-btn">Lähetä palautuslinkki</button>
+    </form>
+    <div class="message" id="reset-msg"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Jos jo kirjautunut → ohjaa etusivulle
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) redirectAfterLogin();
+  });
+
+  function redirectAfterLogin() {
+    // ?next= parametrin tuki: login.html?next=tarjous.html
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next');
+    window.location.href = next || 'tarjoukset.html';
+  }
+
+  function showMessage(elId, text, type) {
+    const el = document.getElementById(elId);
+    el.textContent = text;
+    el.className = 'message ' + type;
+  }
+
+  function setLoading(btn, loading, label) {
+    btn.disabled = loading;
+    btn.innerHTML = loading ? `<span class="spinner"></span>${label}` : label;
+  }
+
+  // Kirjautuminen
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    setLoading(btn, true, 'Kirjaudutaan...');
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      const msg = error.message.includes('Invalid login')
+        ? 'Väärä sähköposti tai salasana.'
+        : error.message.includes('Email not confirmed')
+        ? 'Vahvista sähköpostiosoitteesi ensin.'
+        : 'Kirjautuminen epäonnistui. Yritä uudelleen.';
+      showMessage('login-msg', msg, 'error');
+      setLoading(btn, false, 'Kirjaudu');
+    } else {
+      showMessage('login-msg', 'Kirjautuminen onnistui...', 'success');
+      setTimeout(redirectAfterLogin, 500);
+    }
+  });
+
+  // Näytä/piilota salasanan palautus
+  document.getElementById('show-reset').addEventListener('click', () => {
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('reset-view').style.display = 'block';
+    const email = document.getElementById('email').value;
+    if (email) document.getElementById('reset-email').value = email;
+  });
+
+  document.getElementById('back-to-login').addEventListener('click', () => {
+    document.getElementById('reset-view').style.display = 'none';
+    document.getElementById('login-view').style.display = 'block';
+  });
+
+  // Salasanan palautus
+  document.getElementById('reset-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('reset-btn');
+    const email = document.getElementById('reset-email').value.trim();
+
+    setLoading(btn, true, 'Lähetetään...');
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname.replace('login.html', '') + 'login.html'
+    });
+
+    if (error) {
+      showMessage('reset-msg', 'Virhe: ' + error.message, 'error');
+    } else {
+      showMessage('reset-msg', 'Palautuslinkki lähetetty! Tarkista sähköpostisi.', 'success');
+    }
+    setLoading(btn, false, 'Lähetä palautuslinkki');
+  });
+</script>
+</body>
+</html>
