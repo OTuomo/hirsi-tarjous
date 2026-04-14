@@ -274,10 +274,10 @@
 <script>
   const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const _sbAuth = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // Jos jo kirjautunut → ohjaa etusivulle
-  supabase.auth.getSession().then(({ data }) => {
+  _sbAuth.auth.getSession().then(({ data }) => {
     if (data.session) redirectAfterLogin();
   });
 
@@ -308,7 +308,7 @@
 
     setLoading(btn, true, 'Kirjaudutaan...');
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await _sbAuth.auth.signInWithPassword({ email, password });
 
     if (error) {
       const msg = error.message.includes('Invalid login')
@@ -345,7 +345,7 @@
 
     setLoading(btn, true, 'Lähetetään...');
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await _sbAuth.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname.replace('login.html', '') + 'login.html'
     });
 
