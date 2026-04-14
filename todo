@@ -1,7 +1,7 @@
 # Okkosen Puutuote — Tarjousjärjestelmä
 **Projektipäällikkö:** Claude  
 **Yrittäjä:** Tuomo (otuomo @ GitHub)  
-**Päivitetty:** 2026-04-11
+**Päivitetty:** 2026-04-14
 
 ---
 
@@ -57,29 +57,21 @@ tyosto_kuutio, salvostus_kuutio, leveys, mitta, kpl
 - Unique constraint: `products_code_unique`
 - Koodivälialueet kategorioittain — ks. hinnasto.html
 
-### `quotes` — LUOTU, tarvitsee sarakelaajennuksen
+### `quotes` — VALMIS, laajennettu ✅
 ```
 id, created_at, customer_id, quote_number, valid_until,
-status, notes, total_net, total_vat, total_gross
+status, notes, total_net, total_vat, total_gross,
+sections_json, delivery_type, footer_text, discount_amount,
+is_template, template_name
 ```
-**⚠️ Pitää ajaa Supabasessa (jos ei vielä ajettu):**
-```sql
-ALTER TABLE quotes
-  ADD COLUMN IF NOT EXISTS sections_json text,
-  ADD COLUMN IF NOT EXISTS delivery_type text,
-  ADD COLUMN IF NOT EXISTS footer_text text,
-  ADD COLUMN IF NOT EXISTS discount_amount numeric(10,2) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS is_template boolean DEFAULT false,
-  ADD COLUMN IF NOT EXISTS template_name text;
-```
+- Tuoterivit tallennetaan `sections_json`-kenttään JSON-muodossa
+- `quote_items` otetaan käyttöön myöhemmin tilausvaiheessa
 
 ### `quote_items` — LUOTU (ei aktiivisessa käytössä)
 ```
 id, quote_id, product_id, row_order, code, name,
 quantity, unit, unit_price, vat_percent, total_net
 ```
-- Tuoterivit tallennetaan toistaiseksi `quotes.sections_json`-kenttään JSON-muodossa
-- `quote_items` otetaan käyttöön myöhemmin tilausvaiheessa
 
 ### `quote_text_templates` — LUOTU
 ```
@@ -90,7 +82,12 @@ id, created_at, name, content, is_default
 
 ### Funktiot
 - `next_customer_number()` — automaattinen asiakasnumero ✅
-- `next_quote_number()` — automaattinen tarjousnumero (2025-001 tyylinen) ✅
+- `next_quote_number()` — automaattinen tarjousnumero (2026-001 tyylinen) ✅
+
+### Tietoturva ✅ TEHTY 2026-04-14
+- RLS (Row Level Security) päällä kaikilla tauluilla
+- Policy: kirjautuneet käyttäjät pääsevät kaikkeen
+- Käyttäjätunnukset luotu Supabase Authiin (Tuomo + omistaja)
 
 ### Tulevat taulut (ei vielä luotu)
 - `orders` — hyväksytyistä tarjouksista syntyvät tilaukset
@@ -101,20 +98,20 @@ id, created_at, name, content, is_default
 
 ## Sivut
 
-### VALMIIT JA GITHUBISSA
+### VALMIIT JA GITHUBISSA ✅
 | Sivu | URL | Kuvaus |
 |------|-----|--------|
+| login.html | /orders/login.html | Kirjautuminen — toimii |
 | asiakkaat.html | /orders/asiakkaat.html | Asiakashallinta — toimii |
 | hinnasto.html | /orders/hinnasto.html | Tuotteiden hallinta — toimii |
+| tarjous.html | /orders/tarjous.html | Tarjouslomake — toimii |
+| tarjoukset.html | /orders/tarjoukset.html | Tarjouslistaus — toimii |
+| print_quote.html | /orders/print_quote.html | Tarjouksen tulostus asiakkaalle — toimii |
+| print_supply.html | /orders/print_supply.html | Sisäinen tarvikkelista tuotannolle — toimii |
+| auth-guard.js | /orders/auth-guard.js | Kirjautumissuojaus kaikille sivuille |
 
-### VALMIIT, EI VIELÄ GITHUBISSA
-| Sivu | Kuvaus |
-|------|--------|
-| tarjous.html | Tarjouslomake — valmis, testaamatta |
-| print_quote.html | Tarjouksen tulostus asiakkaalle |
-
-### RAKENNETTU — tarjous.html
-- Asiakashaku + **Lisää asiakas** -modal suoraan lomakkeelta
+### Sivujen ominaisuudet — tarjous.html
+- Asiakashaku + Lisää asiakas -modal suoraan lomakkeelta
 - Nimikehaku tekstillä (nimi, koodi, kategoria) — dropdown-valinta
 - Osiot: lisää, nimeä, siirrä, poista, täppää pois/päälle
 - Tuoterivit per osio: nimike, kuvaus, määrä, yks, à-hinta, yhteissumma
@@ -123,21 +120,13 @@ id, created_at, name, content, is_default
 - Vakiotekstipohja haetaan Supabasesta, vaihdettavissa dropdownista
 - Tallennus Supabaseen, tarjousnumero automaattinen
 - Kopiointi URL-parametreilla (?copy=id&keepPrices=0/1)
-- Tulosta tarjous → print_quote.html, Tulosta tarvikkelista → print_supply.html
+- Statusmuutos suoraan lomakkeelta
 
-### RAKENNETTU — print_quote.html
-- Logo + "OKKOSEN PUUTUOTE" vasemmalla, TARJOUS keskellä, päivämäärät oikealla
-- Asiakasnimi + osoite vasemmalla, ALV-erittely + YHT oikealla
-- Tuoterivit osioittain, osio-otsikot korostettuina
-- Vakioteksti ennen alatunnistetta
-- Alatunniste aina sivun alalaidassa: vasen=osoite, keski=yhteystiedot, oikea=Y-tunnus+tarjousnumero+sivu
-
-### SEURAAVAKSI RAKENNETTAVAT
-| Sivu | Prioriteetti | Kuvaus |
-|------|-------------|--------|
-| print_supply.html | Korkea | Sisäinen tarvikkelista tuotannnolle (15-sivuinen malli olemassa) |
-| tarjoukset.html | Korkea | Tarjousten listaus, haku, statukset, avaa/kopioi/arkistoi |
-| Vakiotekstien hallinta | Matala | Modal tai sivu quote_text_templates CRUD:iin |
+### Sivujen ominaisuudet — tarjoukset.html
+- 6 summary-korttia: Avoimet, Lähetetty, Tilattu, Mallit, Arkisto, Kaikki
+- Suodatinpalkki: status-napit + vapaa hakukenttä
+- Mallit näkyvät omana ryhmänä (is_template=true)
+- Kopioi-nappi vie tarjous.html?copy=id
 
 ---
 
@@ -170,6 +159,8 @@ hinta = ostohinta × (1 + kate%) × kpl
 
 ### Vakiomallipohjat
 Tallennetaan `quotes`-tauluun `is_template=true`. Ei tarjousnumeroa. Kopioidaan uuteen tarjoukseen.
+- Harjusauna — tallennettu Supabaseen ✅
+- Täyspohja — tallennettu Supabaseen ✅
 
 ---
 
@@ -177,7 +168,7 @@ Tallennetaan `quotes`-tauluun `is_template=true`. Ei tarjousnumeroa. Kopioidaan 
 - Kadso = hirsirakennusten suunnitteluohjelma
 - Kadsosta ulos: osaluettelo CSV-muodossa
 - Tarjouslomakkeeseen "Tuo Kadsosta" -nappi → täyttää rivit automaattisesti hinnastosta
-- **Avoin:** täsmäävätkö Kadson koodit hinnastoon?
+- **Avoin:** täsmäävätkö Kadson koodit hinnastoon? (blokkaava)
 - **Avoin:** minkä muotoista CSV:tä Kadso tuottaa?
 
 ---
@@ -186,29 +177,26 @@ Tallennetaan `quotes`-tauluun `is_template=true`. Ei tarjousnumeroa. Kopioidaan 
 - Pääväri: amber `#d97706`
 - Fontit: IBM Plex Sans + IBM Plex Mono
 - Tumma teema, puu/ruskea-sävy
-- Mobiili: korttinäkymä alle 640px, taulukkö desktop
+- Mobiili: korttinäkymä alle 640px, taulukko desktop
 
 ---
 
 ## TODO
 
-### Heti — pitää tehdä ennen kuin tarjous.html toimii
-- [ ] Aja Supabasessa `ALTER TABLE quotes ADD COLUMN...` (ks. yllä)
-- [ ] Vie tarjous.html ja print_quote.html GitHubiin `/orders/`-kansioon
-- [ ] Testaa tarjous: tee tarjous, tallenna, tulosta
-
 ### Seuraavaksi
-- [ ] **print_supply.html** — sisäinen tarvikkelista (malli: Tarvikkeet_tulostus.pdf)
-- [ ] **tarjoukset.html** — tarjouslista: haku, suodatus statuksen mukaan, avaa/kopioi/arkistoi
+- [ ] **tarjoukset.html** — mallipohjat omana selkeänä ryhmänä taulukon yläpuolella, josta kopioidaan uusia tarjouksia
+- [ ] **Vakiotekstien hallinta** — modal tai sivu quote_text_templates CRUD:iin
+
+### Odottaa Tuomolta
+- [ ] Kadson nimikkeiden täsmäytys hinnastoon — ilman tätä CSV-tuontia ei voi rakentaa
 
 ### Myöhemmin
-- [ ] Vakiotekstien hallintasivu (CRUD quote_text_templates)
-- [ ] Vakiomallipohjat (Dyyni-A, Harjusauna jne.) is_template=true
-- [ ] Kadso CSV-tuonti (odottaa esimerkkitiedostoa Tuomolta)
+- [ ] Kadso CSV-tuonti tarjous.html:ään
 - [ ] Access-datan import-scripti (rakenne tiedossa: Laskut1.txt + Myynnit1.txt)
 - [ ] Tilaukset: orders-taulu, hyväksytystä tarjouksesta tilaus
 - [ ] Ulkoasun viimeistely (erillinen ulkoasu-chat)
 - [ ] orders, time_tracking, maintenance_log -taulut
+- [ ] Roolipohjaiset käyttöoikeudet kun työntekijöitä tulee (nyt kaikki kirjautuneet = täydet oikeudet)
 
 ---
 
