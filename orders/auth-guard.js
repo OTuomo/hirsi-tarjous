@@ -1,0 +1,105 @@
+/**
+ * auth-guard.js — Okkosen Puutuote
+ * Lisää tämä KAIKKIIN suojattuihin sivuihin (asiakkaat, hinnasto, tarjous, tarjoukset, print-sivut)
+ *
+ * Käyttö: <script src="auth-guard.js"></script>
+ * Lisää ennen muuta omaa JS-koodia.
+ * Supabase-kirjasto täytyy olla ladattuna ennen tätä:
+ *   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+ */
+
+(function () {
+  const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
+
+  // Luo tai käytä olemassa olevaa Supabase-instanssia
+  if (!window._supabaseClient) {
+    window._supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+  const sb = window._supabaseClient;
+
+  // Piilota sisältö kunnes auth tarkistettu
+  document.documentElement.style.visibility = 'hidden';
+
+  sb.auth.getSession().then(({ data }) => {
+    if (!data.session) {
+      // Ei sessiota → kirjautumissivulle, ?next= muistaa minne oltiin menossa
+      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+      window.location.href = 'login.html?next=' + encodeURIComponent(currentPage);
+    } else {
+      // Kirjautunut → näytä sivu ja aseta käyttäjätiedot
+      document.documentElement.style.visibility = '';
+      window._currentUser = data.session.user;
+      renderUserInfo(data.session.user);
+    }
+  });
+
+  // Kuuntele auth-muutoksia (logout muualta, sessio vanhenee)
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || !session) {
+      window.location.href = 'login.html';
+    }
+  });
+
+  // Lisää käyttäjän sähköposti + logout-nappi navigaatioon
+  function renderUserInfo(user) {
+    // Odota että DOM on valmis
+    const tryRender = () => {
+      const nav = document.querySelector('nav') || document.querySelector('.nav') || document.querySelector('header');
+      if (!nav) return; // Ei navigaatiota → ei lisätä
+
+      // Älä lisää kahdesti
+      if (document.getElementById('auth-user-info')) return;
+
+      const div = document.createElement('div');
+      div.id = 'auth-user-info';
+      div.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-left: auto;
+        font-size: 0.8rem;
+        color: #a09070;
+        font-family: 'IBM Plex Sans', sans-serif;
+      `;
+
+      const email = document.createElement('span');
+      email.textContent = user.email;
+      email.style.cssText = 'max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+
+      const logoutBtn = document.createElement('button');
+      logoutBtn.textContent = 'Kirjaudu ulos';
+      logoutBtn.style.cssText = `
+        background: transparent;
+        border: 1px solid #3a3520;
+        border-radius: 3px;
+        padding: 0.3rem 0.7rem;
+        font-size: 0.75rem;
+        color: #a09070;
+        cursor: pointer;
+        font-family: 'IBM Plex Sans', sans-serif;
+        transition: border-color 0.15s, color 0.15s;
+      `;
+      logoutBtn.onmouseover = () => { logoutBtn.style.borderColor = '#d97706'; logoutBtn.style.color = '#d97706'; };
+      logoutBtn.onmouseout  = () => { logoutBtn.style.borderColor = '#3a3520'; logoutBtn.style.color = '#a09070'; };
+      logoutBtn.onclick = async () => {
+        await sb.auth.signOut();
+        window.location.href = 'login.html';
+      };
+
+      div.appendChild(email);
+      div.appendChild(logoutBtn);
+      nav.appendChild(div);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', tryRender);
+    } else {
+      tryRender();
+    }
+  }
+
+  // Julkinen helper: hae nykyinen sessio (käytä sivujen omassa koodissa)
+  window.getAuthSession = () => sb.auth.getSession();
+  window.authSignOut = () => sb.auth.signOut();
+})();
