@@ -479,13 +479,26 @@
       <!-- KUUTIOHINNOITTELU (cubic) -->
       <div id="cubicFields" class="form-group full" style="display:none;">
         <div class="form-grid" style="width:100%;">
-          <div class="form-group">
-            <label>Leveys (mm)</label>
-            <input type="number" id="fLeveys" step="1" min="0" placeholder="esim. 135" oninput="laskeMyynnin()">
+          <div class="form-group full" style="background:rgba(217,119,6,0.05);border:1px solid rgba(217,119,6,0.15);border-radius:4px;padding:8px 10px 4px;">
+            <label style="color:var(--accent);">Aihiomitat — käytetään hinnan laskentaan</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+              <div class="form-group">
+                <label>Aihioleveys (mm)</label>
+                <input type="number" id="fAihioLeveys" step="1" min="0" placeholder="esim. 150" oninput="laskeMyynnin()">
+              </div>
+              <div class="form-group">
+                <label>Aihiopaksuus (mm)</label>
+                <input type="number" id="fAihioPaksuus" step="1" min="0" placeholder="esim. 75" oninput="laskeMyynnin()">
+              </div>
+            </div>
           </div>
           <div class="form-group">
-            <label>Mitta / paksuus (mm)</label>
-            <input type="number" id="fMitta" step="1" min="0" placeholder="esim. 50" oninput="laskeMyynnin()">
+            <label>Valmisleveys (mm)</label>
+            <input type="number" id="fLeveys" step="1" min="0" placeholder="esim. 135">
+          </div>
+          <div class="form-group">
+            <label>Valmispaksuus (mm)</label>
+            <input type="number" id="fMitta" step="1" min="0" placeholder="esim. 70">
           </div>
           <div class="form-group">
             <label>Kuutiohinta (€/m³, alv 0%)</label>
@@ -675,10 +688,10 @@ function laskeMyynnin() {
     const tyosto    = parseFloat(document.getElementById('fTyosto').value)      || 0;
     const salvostus = parseFloat(document.getElementById('fSalvostus').value)   || 0;
     const kate      = (parseFloat(document.getElementById('fKateCubic').value)  || 0) / 100;
-    const leveys    = parseFloat(document.getElementById('fLeveys').value)      || 0;
-    const mitta     = parseFloat(document.getElementById('fMitta').value)       || 0;
+    const aihioLeveys  = parseFloat(document.getElementById('fAihioLeveys').value)  || 0;
+    const aihioPaksuus = parseFloat(document.getElementById('fAihioPaksuus').value) || 0;
     const myyntiKuutio = (kuutio + tyosto + salvostus) * (1 + kate);
-    const jmHinta = (leveys > 0 && mitta > 0) ? myyntiKuutio * leveys * mitta / 1000000 : 0;
+    const jmHinta = (aihioLeveys > 0 && aihioPaksuus > 0) ? myyntiKuutio * aihioLeveys * aihioPaksuus / 1000000 : 0;
     document.getElementById('calcKuutio').textContent = myyntiKuutio > 0
       ? myyntiKuutio.toLocaleString('fi-FI', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €' : '—';
     document.getElementById('calcJm').textContent = jmHinta > 0
@@ -834,8 +847,10 @@ function openEdit(id) {
   document.getElementById('fPricingModel').value = p.pricing_model || 'simple';
 
   if (p.pricing_model === 'cubic') {
-    document.getElementById('fLeveys').value      = p.leveys           ?? '';
-    document.getElementById('fMitta').value       = p.mitta            ?? '';
+    document.getElementById('fAihioLeveys').value  = p.aihio_leveys      ?? '';
+    document.getElementById('fAihioPaksuus').value = p.aihio_paksuus    ?? '';
+    document.getElementById('fLeveys').value       = p.leveys           ?? '';
+    document.getElementById('fMitta').value        = p.mitta            ?? '';
     document.getElementById('fKuutiohinta').value = p.kuutiohinta      ?? '';
     document.getElementById('fTyosto').value      = p.tyosto_kuutio    ?? '';
     document.getElementById('fSalvostus').value   = p.salvostus_kuutio ?? '';
@@ -876,11 +891,13 @@ async function saveProduct() {
   };
 
   if (model === 'cubic') {
-    payload.kuutiohinta      = parseFloat(document.getElementById('fKuutiohinta').value) || null;
-    payload.tyosto_kuutio    = parseFloat(document.getElementById('fTyosto').value)      || 0;
-    payload.salvostus_kuutio = parseFloat(document.getElementById('fSalvostus').value)   || 0;
-    payload.leveys           = parseFloat(document.getElementById('fLeveys').value)      || null;
-    payload.mitta            = parseFloat(document.getElementById('fMitta').value)       || null;
+    payload.kuutiohinta      = parseFloat(document.getElementById('fKuutiohinta').value)  || null;
+    payload.tyosto_kuutio    = parseFloat(document.getElementById('fTyosto').value)       || 0;
+    payload.salvostus_kuutio = parseFloat(document.getElementById('fSalvostus').value)    || 0;
+    payload.aihio_leveys     = parseFloat(document.getElementById('fAihioLeveys').value)  || null;
+    payload.aihio_paksuus    = parseFloat(document.getElementById('fAihioPaksuus').value) || null;
+    payload.leveys           = parseFloat(document.getElementById('fLeveys').value)       || null;
+    payload.mitta            = parseFloat(document.getElementById('fMitta').value)        || null;
     payload.ostohinta        = null;
     payload.kpl              = 1;
   } else {
@@ -1018,7 +1035,7 @@ document.getElementById('csvImportBtn').addEventListener('click', async () => {
 // ── Helpers ────────────────────────────────────────────────
 function clearForm() {
   document.getElementById('fPricingModel').dataset.userChanged = '';
-  ['fCode','fName','fUnit','fCategory','fOstohinta','fKate','fKuutiohinta',
+  ['fCode','fName','fUnit','fCategory','fOstohinta','fKate','fKuutiohinta','fAihioLeveys','fAihioPaksuus',
    'fTyosto','fSalvostus','fKateCubic','fLeveys','fMitta'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
