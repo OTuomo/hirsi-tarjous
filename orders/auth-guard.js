@@ -50,9 +50,9 @@
   });
 
   // Kuuntele auth-muutoksia
-  sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT' || !session) {
-      window.location.href = 'login.html';
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') {
+      window.location.replace('login.html');
     }
   });
 
@@ -97,8 +97,15 @@
       logoutBtn.onmouseover = () => { logoutBtn.style.borderColor = '#d97706'; logoutBtn.style.color = '#d97706'; };
       logoutBtn.onmouseout  = () => { logoutBtn.style.borderColor = '#3a3520'; logoutBtn.style.color = '#a09070'; };
       logoutBtn.onclick = async () => {
-        await sb.auth.signOut();
-        window.location.href = 'login.html';
+        try {
+          await sb.auth.signOut({ scope: 'local' });
+        } catch (e) {
+          // Tyhjennetään sessio manuaalisesti jos signOut epäonnistuu
+          Object.keys(localStorage)
+            .filter(k => k.startsWith('sb-'))
+            .forEach(k => localStorage.removeItem(k));
+        }
+        window.location.replace('login.html');
       };
 
       div.appendChild(email);
