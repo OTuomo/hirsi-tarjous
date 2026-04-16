@@ -60,7 +60,9 @@
   function renderUserInfo(user) {
     const tryRender = () => {
       if (document.getElementById('auth-user-info')) return;
-      const nav = document.querySelector('nav') || document.querySelector('.nav') || document.querySelector('header');
+      // Lisätään .header-right:n sisään jos löytyy, muuten headerin loppuun
+      const headerRight = document.querySelector('.header-right');
+      const nav = headerRight || document.querySelector('nav') || document.querySelector('.nav') || document.querySelector('header');
       if (!nav) return;
 
       const div = document.createElement('div');
@@ -69,7 +71,7 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        margin-left: auto;
+        ${!headerRight ? 'margin-left: auto;' : ''}
         font-size: 0.8rem;
         color: #a09070;
         font-family: 'IBM Plex Sans', sans-serif;
@@ -101,7 +103,7 @@
 
       div.appendChild(email);
       div.appendChild(logoutBtn);
-      nav.appendChild(div);
+      nav.appendChild(div);  // nav on joko .header-right tai header
     };
 
     if (document.readyState === 'loading') {

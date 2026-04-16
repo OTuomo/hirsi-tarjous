@@ -404,26 +404,7 @@
     <div class="modal-title" id="modalTitle">Uusi tuote</div>
     <div class="form-grid">
 
-      <!-- Perustiedot -->
-      <div class="form-group">
-        <label>Tuotekoodi</label>
-        <input type="text" id="fCode" placeholder="esim. 2004">
-      </div>
-      <div class="form-group">
-        <label>Yksikkö</label>
-        <select id="fUnit">
-          <option value="">— valitse —</option>
-          <option value="jm">jm — juoksumetri</option>
-          <option value="Kpl">Kpl — kappale</option>
-          <option value="m²">m² — neliömetri</option>
-          <option value="m³">m³ — kuutiometri</option>
-          <option value="h">h — tunti</option>
-        </select>
-      </div>
-      <div class="form-group full">
-        <label>Nimike</label>
-        <input type="text" id="fName" placeholder="Tuotteen nimi">
-      </div>
+      <!-- Kategoria ensin — täyttää koodin automaattisesti -->
       <div class="form-group">
         <label>Kategoria</label>
         <select id="fCategory" onchange="onCategoryChange()">
@@ -443,6 +424,27 @@
       <div class="form-group">
         <label>ALV %</label>
         <input type="number" id="fVat" step="0.1" value="25.5" min="0" max="100">
+      </div>
+
+      <!-- Tuotekoodi + Yksikkö -->
+      <div class="form-group">
+        <label>Tuotekoodi</label>
+        <input type="text" id="fCode" placeholder="— valitse kategoria ensin —">
+      </div>
+      <div class="form-group">
+        <label>Yksikkö</label>
+        <select id="fUnit">
+          <option value="">— valitse —</option>
+          <option value="jm">jm — juoksumetri</option>
+          <option value="Kpl">Kpl — kappale</option>
+          <option value="m²">m² — neliömetri</option>
+          <option value="m³">m³ — kuutiometri</option>
+          <option value="h">h — tunti</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label>Nimike</label>
+        <input type="text" id="fName" placeholder="Tuotteen nimi">
       </div>
 
       <!-- Hinnoittelumalli -->
