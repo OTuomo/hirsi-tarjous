@@ -410,14 +410,16 @@ async function loadCustomers() {
 }
 
 async function loadProducts() {
-  const data = await sbGet('products', '?order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,kate_percent');
+  const data = await sbGet('products', '?order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,aihio_leveys,aihio_paksuus,kate_percent');
   products = Array.isArray(data) ? data : [];
   console.log('Tuotteet ladattu:', products.length, 'kpl');
   products.forEach(p => {
-    if (p.pricing_model === 'cubic' && p.kuutiohinta != null && p.leveys && p.mitta) {
-      const kate = 1 + (parseFloat(p.kate_percent) || 0) / 100;
+    if (p.pricing_model === 'cubic' && p.kuutiohinta != null) {
+      const kate = 1 + (parseFloat(p.kate_percent) || 0);
+      const al = parseFloat(p.aihio_leveys || p.leveys || 0);
+      const ap = parseFloat(p.aihio_paksuus || p.mitta || 0);
       const mv = (parseFloat(p.kuutiohinta) + parseFloat(p.tyosto_kuutio||0) + parseFloat(p.salvostus_kuutio||0)) * kate;
-      p.price = mv * parseFloat(p.leveys) * parseFloat(p.mitta) / 1000000;
+      p.price = al && ap ? mv * al * ap / 1000000 : p.price;
     }
   });
 }
