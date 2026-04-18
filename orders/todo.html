@@ -8,340 +8,190 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth-guard.js"></script>
 <style>
-  :root {
-    --bg:        #faf7f2;
-    --bg2:       #f3ede4;
-    --bg3:       #ede4d8;
-    --panel:     #ffffff;
-    --border:    #e0d4c4;
-    --border2:   #cfc0ac;
-    --accent:    #d97706;
-    --accent-dim:#b45309;
-    --accent-bg: rgba(217,119,6,0.10);
-    --text:      #2a1f14;
-    --text-mid:  #6b4f38;
-    --text-dim:  #a08878;
-    --shadow:    0 1px 4px rgba(100,60,20,0.08);
-    --radius:    6px;
-    --red:       #dc2626;
-    --yellow:    #d97706;
-    --green:     #16a34a;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 14px;
-    min-height: 100vh;
-  }
-
-  /* ── HEADER ───────────────────────────────────────────── */
-  header {
-    background: var(--panel);
-    border-bottom: 2px solid var(--accent);
-    padding: 10px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: var(--shadow);
-  }
-  header .logo { height: 32px; width: auto; }
-  .nav-menu-wrap { position: relative; }
-  .nav-btn {
-    background: var(--bg2); border: 1px solid var(--border2);
-    color: var(--text); font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px; font-weight: 600; padding: 6px 12px;
-    border-radius: 4px; cursor: pointer; letter-spacing: .04em;
-  }
-  .nav-btn:hover { background: var(--bg3); }
-  .nav-dropdown {
-    display: none; position: absolute; top: calc(100% + 6px); left: 0;
-    background: var(--panel); border: 1px solid var(--border2);
-    border-radius: var(--radius); min-width: 200px; z-index: 999;
-    box-shadow: 0 4px 16px rgba(100,60,20,0.15); overflow: hidden;
-  }
-  .nav-dropdown.open { display: block; }
-  .nav-section-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
-    font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--text-dim); padding: 8px 14px 4px;
-  }
-  .nav-item {
-    display: block; padding: 8px 14px;
-    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
-    color: var(--text); text-decoration: none; transition: background .1s;
-  }
-  .nav-item:hover { background: var(--accent-bg); color: var(--accent); }
-  .nav-item.current { color: var(--accent); font-weight: 600; }
-  header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
-  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-
-  /* ── BUTTONS ──────────────────────────────────────────── */
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 14px; border-radius: var(--radius);
-    border: 1px solid var(--border2); background: var(--panel);
-    color: var(--text-mid); font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px; font-weight: 600; cursor: pointer;
-    transition: all .15s; letter-spacing: .03em; white-space: nowrap;
-  }
-  .btn:hover { background: var(--bg2); color: var(--text); border-color: var(--accent); }
-  .btn-accent { background: var(--accent); color: white; border-color: var(--accent); }
-  .btn-accent:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: white; }
-  .btn-sm { padding: 4px 10px; font-size: 11px; }
-  .btn-ghost { background: transparent; border-color: transparent; color: var(--text-dim); }
-  .btn-ghost:hover { background: var(--bg2); border-color: var(--border); color: var(--text); }
-
-  /* ── PAGE ─────────────────────────────────────────────── */
-  .page { max-width: 1100px; margin: 0 auto; padding: 24px; }
-
-  .page-header {
-    display: flex; align-items: center;
-    justify-content: space-between; margin-bottom: 24px; gap: 12px;
-    flex-wrap: wrap;
-  }
-  .page-header h2 { font-size: 20px; font-weight: 600; }
-
-  .show-done-wrap {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: var(--text-dim); cursor: pointer;
-  }
-
-  /* ── KAKSI PALSTAA ────────────────────────────────────── */
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-  }
-
-  .col-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 14px; padding-bottom: 10px;
-    border-bottom: 2px solid var(--border);
-  }
-  .col-title {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .07em;
-    color: var(--text-mid);
-  }
-  .col-title.shared { color: var(--accent); }
-
-  /* ── TODO KORTIT ──────────────────────────────────────── */
-  .todo-list { display: flex; flex-direction: column; gap: 8px; }
-
-  .todo-item {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--border2);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    display: flex; align-items: flex-start; gap: 10px;
-    transition: opacity .2s;
-    box-shadow: var(--shadow);
-  }
-  .todo-item.done { opacity: .5; }
-  .todo-item.priority-high   { border-left-color: var(--red); }
-  .todo-item.priority-normal { border-left-color: var(--yellow); }
-  .todo-item.priority-low    { border-left-color: var(--green); }
-
-  .todo-check {
-    width: 18px; height: 18px; flex-shrink: 0;
-    margin-top: 2px; cursor: pointer; accent-color: var(--accent);
-  }
-  .todo-body { flex: 1; min-width: 0; }
-  .todo-title {
-    font-size: 14px; font-weight: 500; color: var(--text);
-    line-height: 1.4;
-  }
-  .todo-item.done .todo-title { text-decoration: line-through; color: var(--text-dim); }
-  .todo-meta {
-    display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;
-    align-items: center;
-  }
-  .todo-date {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; color: var(--text-dim);
-  }
-  .todo-date.overdue { color: var(--red); font-weight: 600; }
-  .badge-priority {
-    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
-    padding: 1px 6px; border-radius: 99px; font-weight: 600;
-  }
-  .badge-high   { background: rgba(220,38,38,.12);  color: var(--red); }
-  .badge-normal { background: rgba(217,119,6,.12);  color: var(--yellow); }
-  .badge-low    { background: rgba(22,163,74,.12);  color: var(--green); }
-  .todo-del {
-    background: none; border: none; cursor: pointer;
-    color: var(--text-dim); font-size: 14px; padding: 2px 4px;
-    border-radius: 3px; flex-shrink: 0;
-    transition: color .1s;
-  }
-  .todo-del:hover { color: var(--red); }
-
-  .todo-empty {
-    text-align: center; padding: 32px 16px;
-    color: var(--text-dim); font-size: 13px;
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-  }
-
-  /* ── LISÄÄ TODO NAPPI ─────────────────────────────────── */
-  .add-todo-btn {
-    width: 100%; margin-top: 10px;
-    padding: 8px; border: 2px dashed var(--border2);
-    border-radius: var(--radius); background: none;
-    color: var(--text-dim); font-size: 13px; cursor: pointer;
-    transition: all .15s; font-family: inherit;
-  }
-  .add-todo-btn:hover {
-    border-color: var(--accent); color: var(--accent);
-    background: var(--accent-bg);
-  }
-
-  /* ── MODAL ────────────────────────────────────────────── */
-  .modal-backdrop {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.25); z-index: 200;
-    align-items: center; justify-content: center;
-  }
-  .modal-backdrop.open { display: flex; }
-  .modal {
-    background: var(--panel); border: 1px solid var(--border2);
-    border-radius: 8px; padding: 28px; width: 460px;
-    max-width: 96vw; box-shadow: 0 8px 32px rgba(100,60,20,0.15);
-  }
-  .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  label {
-    font-size: 11px; color: var(--text-mid);
-    text-transform: uppercase; letter-spacing: .05em;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-  input[type="text"], input[type="date"], select, textarea {
-    background: var(--bg2); border: 1px solid var(--border2);
-    color: var(--text); border-radius: 4px; padding: 7px 11px;
-    font-family: inherit; font-size: 13px; outline: none;
-    transition: border-color .15s;
-  }
-  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-  select option { background: var(--panel); }
-  .shared-toggle {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; color: var(--text-mid); cursor: pointer;
-    margin-top: 4px;
-  }
-  .shared-toggle input { width: auto; accent-color: var(--accent); }
-  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-
-  /* ── TOAST ────────────────────────────────────────────── */
-  #toast {
-    position: fixed; bottom: 24px; right: 24px;
-    background: var(--panel); border: 1px solid var(--border2);
-    border-radius: var(--radius); padding: 12px 18px;
-    font-size: 13px; color: var(--text); z-index: 999;
-    display: none; box-shadow: var(--shadow);
-  }
-  #toast.success { border-color: #22c55e; color: #15803d; }
-  #toast.error   { border-color: #ef4444; color: #dc2626; }
-
-  /* ── MOBIILI ──────────────────────────────────────────── */
-  @media (max-width: 640px) {
-    .page { padding: 16px; }
-    .columns { grid-template-columns: 1fr; }
-  }
+:root{--bg:#faf7f2;--bg2:#f3ede4;--bg3:#ede4d8;--panel:#ffffff;--border:#e0d4c4;--border2:#cfc0ac;--accent:#d97706;--accent-dim:#b45309;--accent-bg:rgba(217,119,6,0.10);--text:#2a1f14;--text-mid:#6b4f38;--text-dim:#a08878;--shadow:0 1px 4px rgba(100,60,20,0.08);--radius:6px;--red:#dc2626;--yellow:#d97706;--green:#16a34a;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;min-height:100vh;}
+header{background:var(--panel);border-bottom:2px solid var(--accent);padding:10px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+header .logo{height:32px;width:auto;}
+.nav-menu-wrap{position:relative;}
+.nav-btn{background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:6px 12px;border-radius:4px;cursor:pointer;letter-spacing:.04em;}
+.nav-btn:hover{background:var(--bg3);}
+.nav-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--panel);border:1px solid var(--border2);border-radius:var(--radius);min-width:200px;z-index:999;box-shadow:0 4px 16px rgba(100,60,20,0.15);overflow:hidden;}
+.nav-dropdown.open{display:block;}
+.nav-section-label{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);padding:8px 14px 4px;}
+.nav-item{display:block;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);text-decoration:none;transition:background .1s;}
+.nav-item:hover{background:var(--accent-bg);color:var(--accent);}
+.nav-item.current{color:var(--accent);font-weight:600;}
+header h1{font-size:16px;font-weight:500;}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--panel);color:var(--text-mid);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.03em;white-space:nowrap;}
+.btn:hover{background:var(--bg2);color:var(--text);border-color:var(--accent);}
+.btn-accent{background:var(--accent);color:white;border-color:var(--accent);}
+.btn-accent:hover{background:var(--accent-dim);border-color:var(--accent-dim);color:white;}
+.btn-sm{padding:4px 10px;font-size:11px;}
+.page{max-width:1100px;margin:0 auto;padding:24px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;}
+.page-header h2{font-size:20px;font-weight:600;}
+.show-done-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);}
+.tab-btn{padding:8px 16px;border:none;background:none;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;letter-spacing:.04em;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.columns{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);}
+.col-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-mid);}
+.col-title.shared{color:var(--accent);}
+.todo-list{display:flex;flex-direction:column;gap:8px;}
+.todo-item{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--border2);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:flex-start;gap:10px;box-shadow:var(--shadow);transition:opacity .2s;}
+.todo-item.done{opacity:.45;}
+.todo-item.priority-high{border-left-color:var(--red);}
+.todo-item.priority-normal{border-left-color:var(--yellow);}
+.todo-item.priority-low{border-left-color:var(--green);}
+.todo-check{width:18px;height:18px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--accent);}
+.todo-body{flex:1;min-width:0;}
+.todo-title{font-size:14px;font-weight:500;color:var(--text);line-height:1.4;}
+.todo-item.done .todo-title{text-decoration:line-through;color:var(--text-dim);}
+.todo-notes{font-size:12px;color:var(--text-dim);margin-top:2px;}
+.todo-meta{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;align-items:center;}
+.todo-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
+.todo-date.overdue{color:var(--red);font-weight:600;}
+.badge-priority{font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:99px;font-weight:600;}
+.badge-high{background:rgba(220,38,38,.12);color:var(--red);}
+.badge-normal{background:rgba(217,119,6,.12);color:var(--yellow);}
+.badge-low{background:rgba(22,163,74,.12);color:var(--green);}
+.todo-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:14px;padding:2px 4px;border-radius:3px;flex-shrink:0;transition:color .1s;}
+.todo-del:hover{color:var(--red);}
+.todo-empty{text-align:center;padding:32px 16px;color:var(--text-dim);font-size:13px;border:2px dashed var(--border);border-radius:var(--radius);}
+.checklist-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px;}
+.checklist-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+.checklist-header-title{font-weight:600;font-size:14px;flex:1;}
+.checklist-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
+.checklist-body{padding:8px 0;}
+.checklist-item{display:flex;align-items:center;gap:10px;padding:6px 14px;transition:background .1s;}
+.checklist-item:hover{background:var(--bg2);}
+.checklist-item.done .checklist-item-text{text-decoration:line-through;color:var(--text-dim);}
+.checklist-item-text{flex:1;font-size:13px;}
+.checklist-item-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:12px;padding:2px 4px;opacity:0;transition:opacity .1s;}
+.checklist-item:hover .checklist-item-del{opacity:1;}
+.checklist-item-del:hover{color:var(--red);}
+.checklist-add{display:flex;gap:8px;padding:8px 14px;border-top:1px solid var(--border);}
+.checklist-add input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:5px 10px;font-size:13px;font-family:inherit;color:var(--text);outline:none;}
+.checklist-add input:focus{border-color:var(--accent);}
+.new-checklist-btn{width:100%;margin-bottom:12px;padding:10px;border:2px dashed var(--border2);border-radius:var(--radius);background:none;color:var(--text-dim);font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit;}
+.new-checklist-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg);}
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:200;align-items:center;justify-content:center;}
+.modal-backdrop.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:28px;width:460px;max-width:96vw;box-shadow:0 8px 32px rgba(100,60,20,0.15);}
+.modal h2{font-size:16px;font-weight:600;margin-bottom:18px;}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+label{font-size:11px;color:var(--text-mid);text-transform:uppercase;letter-spacing:.05em;font-family:'IBM Plex Mono',monospace;}
+input[type="text"],input[type="date"],input[type="time"],select,textarea{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:7px 11px;font-family:inherit;font-size:13px;outline:none;transition:border-color .15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+select option{background:var(--panel);}
+.shared-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;margin-top:4px;}
+.shared-toggle input{width:auto;accent-color:var(--accent);}
+.form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--text);z-index:999;display:none;box-shadow:var(--shadow);}
+#toast.success{border-color:#22c55e;color:#15803d;}
+#toast.error{border-color:#ef4444;color:#dc2626;}
+@media(max-width:640px){.page{padding:16px;}.columns{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
-
 <header>
   <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote" class="logo">
   <div class="nav-menu-wrap">
-    <button class="nav-btn" onclick="toggleNav(event)">☰ Valikko</button>
+    <button class="nav-btn" onclick="toggleNav(event)">&#9776; Valikko</button>
     <div class="nav-dropdown" id="navDropdown">
       <div class="nav-section-label">Sivut</div>
-      <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
-      <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
-      <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
-      <a class="nav-item" href="tarjous.html">✏️ Uusi tarjous</a>
-      <a class="nav-item" href="kalenteri.html">📅 Kalenteri</a>
-      <a class="nav-item current" href="todo.html">✅ Muistilista</a>
+      <a class="nav-item" href="asiakkaat.html">&#128100; Asiakkaat</a>
+      <a class="nav-item" href="hinnasto.html">&#128230; Hinnasto</a>
+      <a class="nav-item" href="tarjoukset.html">&#128203; Tarjoukset</a>
+      <a class="nav-item" href="tarjous.html">&#9999;&#65039; Uusi tarjous</a>
+      <a class="nav-item" href="kalenteri.html">&#128197; Kalenteri</a>
+      <a class="nav-item current" href="todo.html">&#9989; Muistilista</a>
     </div>
   </div>
   <h1>Muistilista</h1>
   <div class="header-right">
     <label class="show-done-wrap">
       <input type="checkbox" id="showDone" onchange="renderAll()" style="accent-color:var(--accent);width:auto;">
-      Näytä tehdyt
+      N&auml;yt&auml; tehdyt
     </label>
   </div>
 </header>
-
 <div class="page">
-
-  <div class="page-header">
-    <h2>Muistilista &amp; tehtävät</h2>
+  <div class="page-header"><h2>Muistilista &amp; teht&auml;v&auml;t</h2></div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-todos" onclick="switchTab('todos')">&#128203; Teht&auml;v&auml;t</button>
+    <button class="tab-btn" id="tab-lists" onclick="switchTab('lists')">&#128722; Listat</button>
   </div>
-
-  <div class="columns">
-
-    <!-- OMAT -->
-    <div>
-      <div class="col-header">
-        <span class="col-title">🔒 Omat</span>
-        <button class="btn btn-sm btn-accent" onclick="openModal(false)">+ Lisää</button>
+  <div id="view-todos">
+    <div class="columns">
+      <div>
+        <div class="col-header">
+          <span class="col-title">&#128274; Omat</span>
+          <button class="btn btn-sm btn-accent" onclick="openModal(false)">+ Lis&auml;&auml;</button>
+        </div>
+        <div class="todo-list" id="listOmat"></div>
       </div>
-      <div class="todo-list" id="listOmat"></div>
-    </div>
-
-    <!-- YHTEISET -->
-    <div>
-      <div class="col-header">
-        <span class="col-title shared">👥 Yhteiset</span>
-        <button class="btn btn-sm btn-accent" onclick="openModal(true)">+ Lisää</button>
+      <div>
+        <div class="col-header">
+          <span class="col-title shared">&#128101; Yhteiset</span>
+          <button class="btn btn-sm btn-accent" onclick="openModal(true)">+ Lis&auml;&auml;</button>
+        </div>
+        <div class="todo-list" id="listYhteiset"></div>
       </div>
-      <div class="todo-list" id="listYhteiset"></div>
     </div>
-
+  </div>
+  <div id="view-lists" style="display:none;">
+    <div class="columns">
+      <div>
+        <div class="col-header"><span class="col-title">&#128274; Omat listat</span></div>
+        <button class="new-checklist-btn" onclick="openNewListModal(false)">+ Uusi lista</button>
+        <div id="omatListat"></div>
+      </div>
+      <div>
+        <div class="col-header"><span class="col-title shared">&#128101; Yhteiset listat</span></div>
+        <button class="new-checklist-btn" onclick="openNewListModal(true)">+ Uusi lista</button>
+        <div id="yhteisListat"></div>
+      </div>
+    </div>
   </div>
 </div>
-
-<!-- LISÄÄ TODO MODAL -->
 <div class="modal-backdrop" id="todoModal">
   <div class="modal">
-    <h2 id="modalTitle">Uusi tehtävä</h2>
+    <h2 id="modalTitle">Uusi teht&auml;v&auml;</h2>
     <div class="form-group">
-      <label>Tehtävä *</label>
+      <label>Teht&auml;v&auml; *</label>
       <input type="text" id="fTitle" placeholder="esim. Soita Jormalle">
     </div>
     <div class="form-group">
-      <label>Lisätiedot</label>
-      <textarea id="fNotes" rows="2" placeholder="Vapaaehtoinen lisätieto..."></textarea>
+      <label>Lis&auml;tiedot</label>
+      <textarea id="fNotes" rows="2" placeholder="Vapaaehtoinen..."></textarea>
     </div>
-    <div class="form-row">
+    <div class="form-row-3">
       <div class="form-group">
-        <label>Päivämäärä (vapaaehtoinen)</label>
+        <label>P&auml;iv&auml;m&auml;&auml;r&auml;</label>
         <input type="date" id="fDate">
       </div>
       <div class="form-group">
-        <label>Tärkeys</label>
+        <label>Kellonaika</label>
+        <input type="time" id="fTime">
+      </div>
+      <div class="form-group">
+        <label>T&auml;rkeys</label>
         <select id="fPriority">
-          <option value="high">🔴 Kiireellinen</option>
-          <option value="normal" selected>🟡 Normaali</option>
-          <option value="low">🟢 Ei kiireellinen</option>
+          <option value="high">Kiireellinen</option>
+          <option value="normal" selected>Normaali</option>
+          <option value="low">Ei kiireellinen</option>
         </select>
       </div>
     </div>
     <label class="shared-toggle">
       <input type="checkbox" id="fShared">
-      Näkyy kaikille (yhteinen)
+      N&auml;kyy kaikille (yhteinen)
     </label>
     <div class="form-actions">
       <button class="btn" onclick="closeModal()">Peruuta</button>
@@ -349,190 +199,250 @@
     </div>
   </div>
 </div>
-
+<div class="modal-backdrop" id="listModal">
+  <div class="modal">
+    <h2>Uusi lista</h2>
+    <div class="form-group">
+      <label>Listan nimi *</label>
+      <input type="text" id="fListName" placeholder="esim. Ostoslista">
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeListModal()">Peruuta</button>
+      <button class="btn btn-accent" onclick="saveNewList()">Luo lista</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
-
 <script>
-const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+var SURL = "https://iofjnoxvksbaqorqaydh.supabase.co";
+var SKEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo";
+var scl = supabase.createClient(SURL, SKEY);
 
-let todos     = [];
-let currentUserId = null;
+var todos = [];
+var checklists = [];
+var currentUserId = null;
+var newListShared = false;
 
-// ── Nav ────────────────────────────────────────────────
 function toggleNav(e) {
   e.stopPropagation();
   document.getElementById('navDropdown').classList.toggle('open');
 }
-document.addEventListener('click', () => document.getElementById('navDropdown').classList.remove('open'));
+document.addEventListener('click', function() {
+  document.getElementById('navDropdown').classList.remove('open');
+});
 
-// ── Init ───────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tab-todos').classList.toggle('active', tab === 'todos');
+  document.getElementById('tab-lists').classList.toggle('active', tab === 'lists');
+  document.getElementById('view-todos').style.display = tab === 'todos' ? '' : 'none';
+  document.getElementById('view-lists').style.display = tab === 'lists' ? '' : 'none';
+}
+
 async function init() {
-  const { data: { session } } = await db.auth.getSession();
-  currentUserId = session?.user?.id || null;
+  var session = await scl.auth.getSession();
+  currentUserId = session.data.session ? session.data.session.user.id : null;
   await loadTodos();
+  loadChecklists();
   renderAll();
 }
 init();
 
 async function loadTodos() {
-  const { data, error } = await db
-    .from('todos')
-    .select('*')
-    .order('is_done')
-    .order('priority', { ascending: false })
-    .order('due_date', { ascending: true, nullsFirst: false })
-    .order('created_at');
-  if (error) { showToast('Virhe ladattaessa: ' + error.message, 'error'); return; }
-  todos = data || [];
+  var res = await scl.from('todos').select('*').order('is_done').order('created_at');
+  if (res.error) { showToast('Virhe: ' + res.error.message, 'error'); return; }
+  todos = res.data || [];
 }
 
-// ── Renderöinti ────────────────────────────────────────
 function renderAll() {
-  const showDone = document.getElementById('showDone').checked;
-  const today    = new Date().toISOString().slice(0, 10);
-
-  // Omat — käyttäjän omat EIKÄ jaetut
-  const omat = todos.filter(t =>
-    !t.is_shared && t.user_id === currentUserId &&
-    (showDone || !t.is_done)
-  );
-
-  // Yhteiset — kaikki jaetut
-  const yhteiset = todos.filter(t =>
-    t.is_shared && (showDone || !t.is_done)
-  );
-
-  renderList('listOmat',     omat,     showDone);
-  renderList('listYhteiset', yhteiset, showDone);
+  var showDone = document.getElementById('showDone').checked;
+  var today = new Date().toISOString().slice(0, 10);
+  var omat = todos.filter(function(t) { return !t.is_shared && t.user_id === currentUserId && (showDone || !t.is_done); });
+  var yhteiset = todos.filter(function(t) { return t.is_shared && (showDone || !t.is_done); });
+  renderList('listOmat', omat, today);
+  renderList('listYhteiset', yhteiset, today);
 }
 
-const PRIORITY_LABEL = { high: 'Kiireellinen', normal: 'Normaali', low: 'Ei kiireellinen' };
-const PRIORITY_ORDER = { high: 0, normal: 1, low: 2 };
+var PLABEL = { high: 'Kiireellinen', normal: 'Normaali', low: 'Ei kiireellinen' };
 
-function renderList(containerId, items, showDone) {
-  const container = document.getElementById(containerId);
-  const today     = new Date().toISOString().slice(0, 10);
-
-  if (!items.length) {
-    container.innerHTML = '<div class="todo-empty">Ei tehtäviä</div>';
-    return;
-  }
-
-  container.innerHTML = items.map(t => {
-    const isOverdue = !t.is_done && t.due_date && t.due_date < today;
-    const dateStr   = t.due_date
-      ? t.due_date.split('-').reverse().join('.')
-      : '';
-    const priority  = t.priority || 'normal';
-
-    return `<div class="todo-item priority-${priority} ${t.is_done ? 'done' : ''}" id="todo-${t.id}">
-      <input type="checkbox" class="todo-check" ${t.is_done ? 'checked' : ''}
-        onchange="toggleDone('${t.id}', this.checked)">
-      <div class="todo-body">
-        <div class="todo-title">${esc(t.title)}</div>
-        ${t.notes ? '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + esc(t.notes) + '</div>' : ''}
-        <div class="todo-meta">
-          ${dateStr ? '<span class="todo-date' + (isOverdue ? ' overdue' : '') + '">' + (isOverdue ? '⚠ ' : '') + dateStr + '</span>' : ''}
-          <span class="badge-priority badge-${priority}">${PRIORITY_LABEL[priority]}</span>
-        </div>
-      </div>
-      <button class="todo-del" onclick="deleteTodo('${t.id}')" title="Poista">✕</button>
-    </div>`;
+function renderList(id, items, today) {
+  var el = document.getElementById(id);
+  if (!items.length) { el.innerHTML = '<div class="todo-empty">Ei teht&auml;vi&auml;</div>'; return; }
+  el.innerHTML = items.map(function(t) {
+    var p = t.priority || 'normal';
+    var isOverdue = !t.is_done && t.due_date && t.due_date < today;
+    var dateStr = t.due_date ? t.due_date.split('-').reverse().join('.') : '';
+    var timeStr = t.due_time ? t.due_time.slice(0,5) : '';
+    var dateTime = dateStr ? (dateStr + (timeStr ? ' klo ' + timeStr : '')) : '';
+    return '<div class="todo-item priority-' + p + (t.is_done ? ' done' : '') + '">'
+      + '<input type="checkbox" class="todo-check"' + (t.is_done ? ' checked' : '') + ' onchange="toggleDone('' + t.id + '',this.checked)">'
+      + '<div class="todo-body">'
+      + '<div class="todo-title">' + esc(t.title) + '</div>'
+      + (t.notes ? '<div class="todo-notes">' + esc(t.notes) + '</div>' : '')
+      + '<div class="todo-meta">'
+      + (dateTime ? '<span class="todo-date' + (isOverdue ? ' overdue' : '') + '">' + (isOverdue ? '! ' : '') + dateTime + '</span>' : '')
+      + '<span class="badge-priority badge-' + p + '">' + PLABEL[p] + '</span>'
+      + '</div></div>'
+      + '<button class="todo-del" onclick="deleteTodo('' + t.id + '')">&#10005;</button>'
+      + '</div>';
   }).join('');
 }
 
-// ── Toiminnot ──────────────────────────────────────────
 async function toggleDone(id, done) {
-  const { error } = await db.from('todos').update({
-    is_done: done,
-    done_at: done ? new Date().toISOString() : null,
-  }).eq('id', id);
-  if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
-  const idx = todos.findIndex(t => t.id === id);
-  if (idx >= 0) { todos[idx].is_done = done; todos[idx].done_at = done ? new Date().toISOString() : null; }
+  await scl.from('todos').update({ is_done: done, done_at: done ? new Date().toISOString() : null }).eq('id', id);
+  var t = todos.find(function(x) { return x.id === id; });
+  if (t) t.is_done = done;
   renderAll();
 }
 
 async function deleteTodo(id) {
   if (!confirm('Poistetaanko tehtävä?')) return;
-  const { error } = await db.from('todos').delete().eq('id', id);
-  if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
-  todos = todos.filter(t => t.id !== id);
+  await scl.from('todos').delete().eq('id', id);
+  todos = todos.filter(function(t) { return t.id !== id; });
   renderAll();
   showToast('Poistettu', 'success');
 }
 
-// ── Modal ──────────────────────────────────────────────
 function openModal(shared) {
   document.getElementById('modalTitle').textContent = shared ? 'Uusi yhteinen tehtävä' : 'Uusi oma tehtävä';
-  document.getElementById('fTitle').value    = '';
-  document.getElementById('fNotes').value    = '';
-  document.getElementById('fDate').value     = '';
+  ['fTitle','fNotes','fDate','fTime'].forEach(function(i) { document.getElementById(i).value = ''; });
   document.getElementById('fPriority').value = 'normal';
   document.getElementById('fShared').checked = shared;
   document.getElementById('todoModal').classList.add('open');
-  setTimeout(() => document.getElementById('fTitle').focus(), 100);
+  setTimeout(function() { document.getElementById('fTitle').focus(); }, 100);
 }
-function closeModal() {
-  document.getElementById('todoModal').classList.remove('open');
-}
-document.getElementById('todoModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('todoModal')) closeModal();
-});
-
-// Enter tallentaa
-document.getElementById('fTitle').addEventListener('keydown', e => {
-  if (e.key === 'Enter') saveTodo();
-});
+function closeModal() { document.getElementById('todoModal').classList.remove('open'); }
+document.getElementById('todoModal').addEventListener('click', function(e) { if (e.target === document.getElementById('todoModal')) closeModal(); });
+document.getElementById('fTitle').addEventListener('keydown', function(e) { if (e.key === 'Enter') saveTodo(); });
 
 async function saveTodo() {
-  const title = document.getElementById('fTitle').value.trim();
+  var title = document.getElementById('fTitle').value.trim();
   if (!title) { showToast('Kirjoita tehtävä', 'error'); return; }
-
-  const due_date = document.getElementById('fDate').value || null;
-  const due_week = due_date ? getWeekKey(new Date(due_date)) : null;
-
-  const payload = {
-    title,
-    notes:     document.getElementById('fNotes').value.trim() || null,
-    due_date,
-    due_week,
-    priority:  document.getElementById('fPriority').value,
+  var due_date = document.getElementById('fDate').value || null;
+  var res = await scl.from('todos').insert([{
+    title: title,
+    notes: document.getElementById('fNotes').value.trim() || null,
+    due_date: due_date,
+    due_time: document.getElementById('fTime').value || null,
+    due_week: due_date ? getWeekKey(new Date(due_date)) : null,
+    priority: document.getElementById('fPriority').value,
     is_shared: document.getElementById('fShared').checked,
-    user_id:   currentUserId,
-    is_done:   false,
-  };
-
-  const { data, error } = await db.from('todos').insert([payload]).select();
-  if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
-  todos.unshift(data[0]);
+    user_id: currentUserId,
+    is_done: false
+  }]).select();
+  if (res.error) { showToast('Virhe: ' + res.error.message, 'error'); return; }
+  todos.unshift(res.data[0]);
   renderAll();
   closeModal();
   showToast('Tehtävä lisätty ✓', 'success');
 }
 
+function loadChecklists() {
+  try { checklists = JSON.parse(localStorage.getItem('okkonen_checklists') || '[]'); }
+  catch(e) { checklists = []; }
+  renderChecklists();
+}
+function saveChecklists() { localStorage.setItem('okkonen_checklists', JSON.stringify(checklists)); }
+
+function renderChecklists() {
+  renderCLGroup('omatListat', checklists.filter(function(l) { return !l.is_shared; }));
+  renderCLGroup('yhteisListat', checklists.filter(function(l) { return l.is_shared; }));
+}
+
+function renderCLGroup(cid, lists) {
+  var el = document.getElementById(cid);
+  if (!lists.length) { el.innerHTML = ''; return; }
+  el.innerHTML = lists.map(function(list) {
+    var done = list.items.filter(function(i) { return i.done; }).length;
+    var total = list.items.length;
+    var items = list.items.map(function(item) {
+      return '<div class="checklist-item' + (item.done ? ' done' : '') + '">'
+        + '<input type="checkbox" style="accent-color:var(--accent);width:auto;cursor:pointer;"'
+        + (item.done ? ' checked' : '') + ' onchange="toggleCI('' + list.id + '','' + item.id + '',this.checked)">'
+        + '<span class="checklist-item-text">' + esc(item.text) + '</span>'
+        + '<button class="checklist-item-del" onclick="deleteCI('' + list.id + '','' + item.id + '')">&#10005;</button>'
+        + '</div>';
+    }).join('');
+    return '<div class="checklist-panel">'
+      + '<div class="checklist-header" onclick="toggleCL('' + list.id + '')">'
+      + '<span class="checklist-header-title">' + esc(list.name) + '</span>'
+      + '<span class="checklist-progress">' + done + '/' + total + '</span>'
+      + '<button style="background:none;border:none;cursor:pointer;color:var(--text-dim);margin-left:8px;font-size:14px;" onclick="event.stopPropagation();deleteCL('' + list.id + '')">&#128465;</button>'
+      + '</div>'
+      + '<div class="checklist-body" id="cl-' + list.id + '">'
+      + items
+      + '<div class="checklist-add">'
+      + '<input type="text" id="cli-' + list.id + '" placeholder="Lisää kohta..." onkeydown="if(event.key==='Enter')addCI('' + list.id + '')">'
+      + '<button class="btn btn-sm btn-accent" onclick="addCI('' + list.id + '')">+</button>'
+      + '</div></div></div>';
+  }).join('');
+}
+
+function toggleCL(id) {
+  var b = document.getElementById('cl-' + id);
+  if (b) b.style.display = b.style.display === 'none' ? '' : 'none';
+}
+function toggleCI(lid, iid, done) {
+  var l = checklists.find(function(x) { return x.id === lid; });
+  if (!l) return;
+  var i = l.items.find(function(x) { return x.id === iid; });
+  if (i) i.done = done;
+  saveChecklists(); renderChecklists();
+}
+function addCI(lid) {
+  var inp = document.getElementById('cli-' + lid);
+  var text = inp ? inp.value.trim() : '';
+  if (!text) return;
+  var l = checklists.find(function(x) { return x.id === lid; });
+  if (!l) return;
+  l.items.push({ id: Date.now().toString(), text: text, done: false });
+  saveChecklists(); renderChecklists();
+  setTimeout(function() { var n = document.getElementById('cli-' + lid); if (n) n.focus(); }, 50);
+}
+function deleteCI(lid, iid) {
+  var l = checklists.find(function(x) { return x.id === lid; });
+  if (!l) return;
+  l.items = l.items.filter(function(i) { return i.id !== iid; });
+  saveChecklists(); renderChecklists();
+}
+function deleteCL(id) {
+  if (!confirm('Poistetaanko lista?')) return;
+  checklists = checklists.filter(function(l) { return l.id !== id; });
+  saveChecklists(); renderChecklists();
+  showToast('Lista poistettu', 'success');
+}
+
+function openNewListModal(shared) {
+  newListShared = shared;
+  document.getElementById('fListName').value = '';
+  document.getElementById('listModal').classList.add('open');
+  setTimeout(function() { document.getElementById('fListName').focus(); }, 100);
+}
+function closeListModal() { document.getElementById('listModal').classList.remove('open'); }
+document.getElementById('listModal').addEventListener('click', function(e) { if (e.target === document.getElementById('listModal')) closeListModal(); });
+document.getElementById('fListName').addEventListener('keydown', function(e) { if (e.key === 'Enter') saveNewList(); });
+function saveNewList() {
+  var name = document.getElementById('fListName').value.trim();
+  if (!name) { showToast('Anna nimi', 'error'); return; }
+  checklists.push({ id: Date.now().toString(), name: name, is_shared: newListShared, items: [] });
+  saveChecklists(); renderChecklists(); closeListModal();
+  showToast('Lista luotu ✓', 'success');
+}
+
 function getWeekKey(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const wk = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  var dn = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dn);
+  var ys = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  var wk = Math.ceil((((d - ys) / 86400000) + 1) / 7);
   return d.getUTCFullYear() + '-' + String(wk).padStart(2, '0');
 }
-
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-let toastTimer;
-function showToast(msg, type = '') {
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+var toastTimer;
+function showToast(msg, type) {
   clearTimeout(toastTimer);
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = type; t.style.display = 'block';
-  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = type || ''; t.style.display = 'block';
+  toastTimer = setTimeout(function() { t.style.display = 'none'; }, 3000);
 }
 </script>
 </body>
