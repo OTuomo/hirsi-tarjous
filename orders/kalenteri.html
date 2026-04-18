@@ -43,6 +43,8 @@
   }
 
   /* ── HEADER ───────────────────────────────────────────── */
+  header .logo { height: 32px; width: auto; }
+
   header {
     background: var(--panel);
     border-bottom: 2px solid var(--accent);
@@ -356,6 +358,7 @@
 <body>
 
 <header>
+  <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote" class="logo">
   <div class="nav-menu-wrap">
     <button class="nav-btn" onclick="toggleNav(event)">☰ Valikko</button>
     <div class="nav-dropdown" id="navDropdown">
