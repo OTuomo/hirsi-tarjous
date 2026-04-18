@@ -234,6 +234,7 @@
   .badge-archived { background: #222; color: #666; }
   .badge-template { background: #2a1f0e; color: var(--accent); border: 1px solid var(--accent-dim); }
   tr.s-completed td:first-child { border-left: 3px solid #22c55e; }
+  .badge-completed { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
 
   /* Status popup */
   .status-wrap { position: relative; display: inline-block; }
@@ -377,8 +378,8 @@
           <th onclick="sortBy('customer')" id="th-customer">Asiakas <span class="sort-arrow" id="sa-customer"></span></th>
           <th onclick="sortBy('delivery_type')" id="th-delivery_type">Toimitus <span class="sort-arrow" id="sa-delivery_type"></span></th>
           <th onclick="sortBy('valid_until')" id="th-valid_until">Voimassa <span class="sort-arrow" id="sa-valid_until"></span></th>
+          <th onclick="sortBy('delivery_week')" id="th-delivery_week">Toimitusviikko <span class="sort-arrow" id="sa-delivery_week"></span></th>
           <th onclick="sortBy('total_gross')" id="th-total_gross" style="text-align:right">Summa € <span class="sort-arrow" id="sa-total_gross"></span></th>
-          <th>Toimitusviikko</th>
           <th>Status</th>
           <th></th>
         </tr>
@@ -596,7 +597,7 @@ function renderTable(rows) {
       <td style="font-weight:500">${q.customer}</td>
       <td class="dim" style="font-size:12px">${q.delivery_type || '—'}</td>
       <td class="mono${expired?' expired':''}" style="font-size:12px">${isTmpl ? '—' : validStr}</td>
-      <td class="mono" style="font-size:12px;color:var(--accent)">${q.delivery_week || '—'}</td>
+      <td class="mono" style="font-size:12px;color:var(--accent)">${(!isTmpl && q.delivery_week) ? q.delivery_week : '—'}</td>
       <td class="mono" style="text-align:right">${isTmpl ? '—' : gross}</td>
       <td onclick="event.stopPropagation()">
         <div class="status-wrap">
