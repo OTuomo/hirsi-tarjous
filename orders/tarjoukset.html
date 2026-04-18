@@ -179,6 +179,37 @@
   }
 
 
+  /* MOBIILIKORTTINÄKYMÄ */
+  .quote-card-list { display: none; }
+
+  @media (max-width: 640px) {
+    .table-wrap table, .table-wrap thead, .table-wrap tbody { display: none; }
+    .quote-card-list { display: block; padding: 4px; }
+    .quote-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 6px; padding: 12px 14px; margin-bottom: 8px;
+      cursor: pointer; transition: background .1s;
+    }
+    .quote-card:active { background: var(--panel2); }
+    .quote-card-top {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; gap: 8px; margin-bottom: 6px;
+    }
+    .quote-card-name { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+    .quote-card-sum {
+      font-family: 'IBM Plex Mono', monospace; font-size: 15px;
+      font-weight: 600; color: var(--accent); white-space: nowrap;
+    }
+    .quote-card-bottom {
+      display: flex; align-items: center; gap: 8px;
+      flex-wrap: wrap; font-size: 11px;
+    }
+    .quote-card-meta { color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
+    .quote-card-week { color: var(--accent); font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+    .summary-row { grid-template-columns: repeat(4, 1fr); }
+    .table-footer { display: none; }
+  }
+
   /* VÄLILEHDET */
   .tabs { display:flex; gap:4px; margin-bottom:16px; }
   .tab-btn {
@@ -374,6 +405,7 @@
   </div>
 
   <!-- TABLE -->
+  <div class="quote-card-list" id="quoteCardList"></div>
   <div class="table-wrap" id="quotesTableWrap">
     <table>
       <thead>
@@ -625,6 +657,31 @@ function renderTable(rows) {
         <span class="dim">›</span>
       </td>
     </tr>`;
+  }).join('');
+
+  // Mobiilikorttinäkymä
+  const cardList = document.getElementById('quoteCardList');
+  cardList.innerHTML = rows.map(q => {
+    const isTmpl = q.is_template;
+    const cls    = isTmpl ? 'template' : (STATUS_CLASS[q.status] || 'draft');
+    const fi     = isTmpl ? 'Malli' : (STATUS_FI[q.status] || q.status);
+    const nimi   = isTmpl ? (q.template_name || '— malli —') : (q.customer || '—');
+    const nro    = isTmpl ? '' : (q.quote_number || '');
+    const gross  = q.total_gross ? Number(q.total_gross).toLocaleString('fi-FI',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €' : '—';
+    const date   = (q.created_at||'').slice(0,10).split('-').reverse().join('.');
+    const week   = (!isTmpl && q.delivery_week) ? q.delivery_week : '';
+    return '<div class="quote-card" onclick="avaaQuote(\'' + q.id + '\')">'
+      + '<div class="quote-card-top">'
+      + '<div class="quote-card-name">' + esc(nimi) + '</div>'
+      + '<div class="quote-card-sum">' + (isTmpl ? '—' : gross) + '</div>'
+      + '</div>'
+      + '<div class="quote-card-bottom">'
+      + (nro ? '<span class="quote-card-meta">' + esc(nro) + '</span>' : '')
+      + '<span class="quote-card-meta">' + date + '</span>'
+      + (week ? '<span class="quote-card-week">vko ' + esc(week) + '</span>' : '')
+      + '<span class="badge badge-' + cls + '" style="font-size:10px;">' + fi + '</span>'
+      + '</div>'
+      + '</div>';
   }).join('');
 }
 
