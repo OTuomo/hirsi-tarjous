@@ -164,7 +164,18 @@
   <h1>Tarjous</h1>
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
-    <span class="status-badge draft" id="statusBadge">Luonnos</span>
+    <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna</button>
+    <select id="statusSelect" onchange="changeStatus(this.value)"
+      style="font-size:12px;padding:6px 10px;width:auto;font-family:'IBM Plex Mono',monospace;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:4px;">
+      <option value="DRAFT">Luonnos</option>
+      <option value="IN_PROGRESS">Kesken</option>
+      <option value="QUOTED">Tarjottu</option>
+      <option value="ORDERED">Tilattu</option>
+      <option value="COMPLETED">Valmis</option>
+      <option value="ARCHIVED">Arkisto</option>
+      <option value="MODEL">Malli</option>
+    </select>
+    <span class="status-badge draft" id="statusBadge" style="display:none;">Luonnos</span>
   </div>
 </header>
 
@@ -241,6 +252,10 @@
     <div class="panel-body">
       <div class="basics-grid">
         <div class="field">
+          <label>Tarjousnumero</label>
+          <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
+        </div>
+        <div class="field">
           <label>Asiakas *</label>
           <div class="customer-row">
             <div class="customer-search-wrap">
@@ -251,10 +266,6 @@
             <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="openNewCustModal()" title="Lisää uusi asiakas">+ Asiakas</button>
           </div>
           <input type="hidden" id="customerId">
-        </div>
-        <div class="field">
-          <label>Tarjousnumero</label>
-          <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
         </div>
         <div class="field">
           <label>Päivämäärä</label>
@@ -332,20 +343,6 @@
 
   <!-- TOIMINTOPAINIKKEET -->
   <div class="action-bar">
-    <button class="btn btn-secondary" onclick="saveDraft()">💾 Tallenna</button>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <label style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;">Status:</label>
-      <select id="statusSelect" onchange="changeStatus(this.value)"
-        style="font-size:12px;padding:6px 10px;width:auto;font-family:'IBM Plex Mono',monospace;">
-        <option value="DRAFT">Luonnos</option>
-        <option value="IN_PROGRESS">Kesken</option>
-        <option value="QUOTED">Tarjottu</option>
-        <option value="ORDERED">Tilattu</option>
-        <option value="COMPLETED">Valmis</option>
-        <option value="ARCHIVED">Arkisto</option>
-        <option value="MODEL">Malli</option>
-      </select>
-    </div>
     <!-- TUOTANNON ETENEMINEN (näkyy vain ORDERED-tilassa) -->
     <div id="prodStatus" style="display:none;align-items:center;gap:12px;padding:6px 12px;background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.2);border-radius:4px;">
       <span style="font-size:11px;color:var(--accent);font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:nowrap;">TUOTANTO:</span>
