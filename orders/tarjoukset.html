@@ -178,6 +178,39 @@
     padding-left: 11px;
   }
 
+
+  /* VÄLILEHDET */
+  .tabs { display:flex; gap:4px; margin-bottom:16px; }
+  .tab-btn {
+    padding:8px 18px; border:1px solid var(--border); border-radius:4px 4px 0 0;
+    background:var(--panel2); color:var(--text-dim);
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;
+    cursor:pointer; letter-spacing:.04em; transition:all .15s;
+  }
+  .tab-btn:hover { color:var(--text); border-color:var(--accent-dim); }
+  .tab-btn.active { color:var(--accent); border-color:var(--accent); background:var(--accent-glow); }
+
+  /* MALLIPOHJAT */
+  .templates-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+    gap:14px; padding:4px;
+  }
+  .tpl-card {
+    background:var(--panel); border:1px solid var(--border); border-radius:6px;
+    padding:16px; display:flex; flex-direction:column; gap:10px; transition:border-color .15s;
+  }
+  .tpl-card:hover { border-color:var(--accent-dim); }
+  .tpl-card-name { font-size:15px; font-weight:600; color:var(--text); }
+  .tpl-card-meta { font-size:12px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; display:flex; flex-direction:column; gap:3px; }
+  .tpl-card-price { font-size:18px; font-weight:600; color:var(--accent); font-family:'IBM Plex Mono',monospace; }
+  .tpl-card-btn {
+    margin-top:auto; padding:8px 14px; background:var(--accent); color:#141210;
+    border:none; border-radius:4px; font-family:'IBM Plex Mono',monospace;
+    font-size:12px; font-weight:700; cursor:pointer; letter-spacing:.04em;
+  }
+  .tpl-card-btn:hover { opacity:.85; }
+  @media (max-width:640px) { .templates-grid { grid-template-columns:1fr; } }
+
   /* Row accent by status */
   tr.s-draft td:first-child    { border-left-color: var(--border); }
   tr.s-progress td:first-child { border-left-color: var(--warn); }
@@ -272,6 +305,15 @@
 
 <div class="page">
 
+  <!-- VÄLILEHDET -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-quotes" onclick="switchTab('quotes')">Tarjoukset</button>
+    <button class="tab-btn" id="tab-templates" onclick="switchTab('templates')">Mallipohjat &nbsp;<span id="cnt-template" style="opacity:.6;font-size:10px;">—</span></button>
+  </div>
+
+  <!-- TARJOUKSET-NÄKYMÄ -->
+  <div id="view-quotes">
+
   <!-- SUMMARY -->
   <div class="summary-row">
     <div class="summary-card active" id="card-active" onclick="setFilter('active')">
@@ -289,10 +331,6 @@
     <div class="summary-card" id="card-ordered" onclick="setFilter('ordered')">
       <div class="card-label">Tilattu</div>
       <div class="card-number" id="cnt-ordered">—</div>
-    </div>
-    <div class="summary-card" id="card-template" onclick="setFilter('template')">
-      <div class="card-label">Mallit</div>
-      <div class="card-number" id="cnt-template">—</div>
     </div>
     <div class="summary-card" id="card-archived" onclick="setFilter('archived')">
       <div class="card-label">Arkisto</div>
@@ -313,15 +351,23 @@
       <button class="fbtn" data-filter="in_progress" onclick="setStatusBtn(this,'in_progress')">Kesken</button>
       <button class="fbtn" data-filter="quoted" onclick="setStatusBtn(this,'quoted')">Lähetetty</button>
       <button class="fbtn" data-filter="ordered" onclick="setStatusBtn(this,'ordered')">Tilattu</button>
-      <button class="fbtn" data-filter="template" onclick="setStatusBtn(this,'template')">Mallit</button>
       <button class="fbtn arch-btn" data-filter="archived" onclick="setStatusBtn(this,'archived')">Arkisto</button>
       <button class="fbtn" data-filter="all" onclick="setStatusBtn(this,'all')">Kaikki</button>
     </div>
     <input class="filter-search" id="searchInput" placeholder="Hae asiakas / tarjousnro..." oninput="applyFilters()">
   </div>
 
+  </div><!-- /view-quotes -->
+
+  <!-- MALLIPOHJAT-NÄKYMÄ -->
+  <div id="view-templates" style="display:none;">
+    <div class="templates-grid" id="templatesGrid">
+      <div style="color:var(--text-dim);font-size:13px;padding:20px;">Ladataan...</div>
+    </div>
+  </div>
+
   <!-- TABLE -->
-  <div class="table-wrap">
+  <div class="table-wrap" id="quotesTableWrap">
     <table>
       <thead>
         <tr>
@@ -388,6 +434,53 @@ async function loadQuotes() {
   applyFilters();
 }
 
+
+let currentTab = 'quotes';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-quotes').classList.toggle('active', tab === 'quotes');
+  document.getElementById('tab-templates').classList.toggle('active', tab === 'templates');
+  document.getElementById('view-quotes').style.display      = tab === 'quotes'    ? '' : 'none';
+  document.getElementById('view-templates').style.display   = tab === 'templates' ? '' : 'none';
+  document.getElementById('quotesTableWrap').style.display  = tab === 'quotes'    ? '' : 'none';
+  if (tab === 'templates') renderTemplates();
+}
+
+const DELIVERY_FI = {
+  hirsitoimitus:'Hirsitoimitus', puuosatoimitus:'Puuosatoimitus',
+  valmistoimitus:'Valmistoimitus', nouto:'Nouto tehtaalta', toimitettu:'Toimitettu'
+};
+
+function renderTemplates() {
+  const tpls = allQuotes.filter(q => q.is_template);
+  const grid = document.getElementById('templatesGrid');
+  if (!tpls.length) {
+    grid.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;grid-column:1/-1;">Ei mallipohjia vielä.</div>';
+    return;
+  }
+  grid.innerHTML = tpls.map(t => {
+    const hinta   = t.total_gross != null ? Number(t.total_gross).toLocaleString('fi-FI',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €' : '—';
+    const toim    = DELIVERY_FI[t.delivery_type] || t.delivery_type || '—';
+    const nimi    = t.template_name || (t.customers && t.customers.name) || 'Nimeämätön pohja';
+    const asiakas = t.customers && t.customers.name ? '<span>Asiakas: ' + esc(t.customers.name) + '</span>' : '';
+    return '<div class="tpl-card">'
+      + '<div class="tpl-card-name">' + esc(nimi) + '</div>'
+      + '<div class="tpl-card-meta"><span>Toimitus: ' + esc(toim) + '</span>' + asiakas + '</div>'
+      + '<div class="tpl-card-price">' + hinta + '</div>'
+      + '<button class="tpl-card-btn" onclick="copyTemplate(\'' + t.id + '\')">+ Kopioi uudeksi tarjoukseksi</button>'
+      + '</div>';
+  }).join('');
+}
+
+function copyTemplate(id) {
+  window.location.href = 'tarjous.html?copy=' + id + '&keepPrices=1';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function updateCounts() {
   const active      = allQuotes.filter(q => !q.is_template && ACTIVE_STATUSES.includes(q.status)).length;
   const in_progress = allQuotes.filter(q => !q.is_template && q.status === 'IN_PROGRESS').length;
@@ -402,6 +495,7 @@ function updateCounts() {
   document.getElementById('cnt-archived').textContent    = archived;
   document.getElementById('cnt-template').textContent    = template;
   document.getElementById('cnt-all').textContent         = allQuotes.length;
+  if (currentTab === 'templates') renderTemplates();
 }
 
 function setFilter(f) {
