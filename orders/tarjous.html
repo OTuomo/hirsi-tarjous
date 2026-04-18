@@ -241,6 +241,10 @@
     <div class="panel-body">
       <div class="basics-grid">
         <div class="field">
+          <label>Tarjousnumero</label>
+          <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
+        </div>
+        <div class="field">
           <label>Asiakas *</label>
           <div class="customer-row">
             <div class="customer-search-wrap">
@@ -251,10 +255,6 @@
             <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="openNewCustModal()" title="Lisää uusi asiakas">+ Asiakas</button>
           </div>
           <input type="hidden" id="customerId">
-        </div>
-        <div class="field">
-          <label>Tarjousnumero</label>
-          <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
         </div>
         <div class="field">
           <label>Päivämäärä</label>
