@@ -334,6 +334,10 @@
       <div class="card-label">Tilattu</div>
       <div class="card-number" id="cnt-ordered">—</div>
     </div>
+    <div class="summary-card" id="card-completed" onclick="setFilter('completed')">
+      <div class="card-label">Valmis</div>
+      <div class="card-number" id="cnt-completed">—</div>
+    </div>
     <div class="summary-card" id="card-archived" onclick="setFilter('archived')">
       <div class="card-label">Arkisto</div>
       <div class="card-number" id="cnt-archived">—</div>
@@ -353,6 +357,7 @@
       <button class="fbtn" data-filter="in_progress" onclick="setStatusBtn(this,'in_progress')">Kesken</button>
       <button class="fbtn" data-filter="quoted" onclick="setStatusBtn(this,'quoted')">Lähetetty</button>
       <button class="fbtn" data-filter="ordered" onclick="setStatusBtn(this,'ordered')">Tilattu</button>
+      <button class="fbtn" data-filter="completed" onclick="setStatusBtn(this,'completed')">Valmis</button>
       <button class="fbtn arch-btn" data-filter="archived" onclick="setStatusBtn(this,'archived')">Arkisto</button>
       <button class="fbtn" data-filter="all" onclick="setStatusBtn(this,'all')">Kaikki</button>
     </div>
@@ -374,10 +379,10 @@
       <thead>
         <tr>
           <th onclick="sortBy('quote_number')" id="th-quote_number">Tarjousnro <span class="sort-arrow" id="sa-quote_number"></span></th>
-          <th onclick="sortBy('created_at')" id="th-created_at">Päivämäärä <span class="sort-arrow" id="sa-created_at">↓</span></th>
           <th onclick="sortBy('customer')" id="th-customer">Asiakas <span class="sort-arrow" id="sa-customer"></span></th>
-          <th onclick="sortBy('delivery_type')" id="th-delivery_type">Toimitus <span class="sort-arrow" id="sa-delivery_type"></span></th>
+          <th onclick="sortBy('created_at')" id="th-created_at">Päivämäärä <span class="sort-arrow" id="sa-created_at"></span></th>
           <th onclick="sortBy('valid_until')" id="th-valid_until">Voimassa <span class="sort-arrow" id="sa-valid_until"></span></th>
+          <th onclick="sortBy('delivery_type')" id="th-delivery_type">Toimitus <span class="sort-arrow" id="sa-delivery_type"></span></th>
           <th onclick="sortBy('delivery_week')" id="th-delivery_week">Toimitusviikko <span class="sort-arrow" id="sa-delivery_week"></span></th>
           <th onclick="sortBy('total_gross')" id="th-total_gross" style="text-align:right">Summa € <span class="sort-arrow" id="sa-total_gross"></span></th>
           <th>Status</th>
@@ -490,13 +495,14 @@ function updateCounts() {
   const active      = allQuotes.filter(q => !q.is_template && ACTIVE_STATUSES.includes(q.status)).length;
   const in_progress = allQuotes.filter(q => !q.is_template && q.status === 'IN_PROGRESS').length;
   const quoted      = allQuotes.filter(q => !q.is_template && q.status === 'QUOTED').length;
-  const ordered     = allQuotes.filter(q => !q.is_template && (q.status === 'ORDERED' || q.status === 'COMPLETED')).length;
+  const ordered     = allQuotes.filter(q => !q.is_template && q.status === 'ORDERED').length;
   const archived    = allQuotes.filter(q => !q.is_template && q.status === 'ARCHIVED').length;
   const template    = allQuotes.filter(q => q.is_template).length;
   document.getElementById('cnt-active').textContent      = active;
   document.getElementById('cnt-in_progress').textContent = in_progress;
   document.getElementById('cnt-quoted').textContent      = quoted;
   document.getElementById('cnt-ordered').textContent     = ordered;
+  document.getElementById('cnt-completed').textContent   = allQuotes.filter(q => !q.is_template && q.status === 'COMPLETED').length;
   document.getElementById('cnt-archived').textContent    = archived;
   document.getElementById('cnt-template').textContent    = template;
   document.getElementById('cnt-all').textContent         = allQuotes.length;
@@ -534,6 +540,7 @@ function applyFilters() {
     if (currentFilter === 'in_progress') return !o.is_template && o.status === 'IN_PROGRESS';
     if (currentFilter === 'quoted')      return !o.is_template && o.status === 'QUOTED';
     if (currentFilter === 'ordered')     return !o.is_template && o.status === 'ORDERED';
+    if (currentFilter === 'completed')   return !o.is_template && o.status === 'COMPLETED';
     if (currentFilter === 'archived')    return !o.is_template && o.status === 'ARCHIVED';
     return true;
   });
@@ -593,10 +600,10 @@ function renderTable(rows) {
 
     return `<tr class="s-${cls}" onclick="avaaQuote('${q.id}')">
       <td class="mono" style="font-size:12px">${nro}</td>
-      <td class="mono dim" style="font-size:12px">${date}</td>
       <td style="font-weight:500">${q.customer}</td>
-      <td class="dim" style="font-size:12px">${q.delivery_type || '—'}</td>
+      <td class="mono dim" style="font-size:12px">${date}</td>
       <td class="mono${expired?' expired':''}" style="font-size:12px">${isTmpl ? '—' : validStr}</td>
+      <td class="dim" style="font-size:12px">${q.delivery_type || '—'}</td>
       <td class="mono" style="font-size:12px;color:var(--accent)">${(!isTmpl && q.delivery_week) ? q.delivery_week : '—'}</td>
       <td class="mono" style="text-align:right">${isTmpl ? '—' : gross}</td>
       <td onclick="event.stopPropagation()">
