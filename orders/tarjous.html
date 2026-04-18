@@ -273,6 +273,10 @@
             <option value="toimitettu">Toimitettu</option>
           </select>
         </div>
+        <div class="field">
+          <label>Toimitusviikko</label>
+          <input type="text" id="deliveryWeek" placeholder="esim. 2026-32" maxlength="7">
+        </div>
       </div>
       <div class="field" style="margin-top:10px;">
         <label>Kohde / viite</label>
@@ -337,6 +341,22 @@
         <option value="ARCHIVED">Arkisto</option>
         <option value="MODEL">Malli</option>
       </select>
+    </div>
+    <!-- TUOTANNON ETENEMINEN (näkyy vain ORDERED-tilassa) -->
+    <div id="prodStatus" style="display:none;align-items:center;gap:12px;padding:6px 12px;background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.2);border-radius:4px;">
+      <span style="font-size:11px;color:var(--accent);font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:nowrap;">TUOTANTO:</span>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="prodTuotannossa" style="width:auto;" onchange="saveProdStatus()">
+        Tuotannossa
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="prodValmis" style="width:auto;" onchange="saveProdStatus()">
+        Valmis noutoon/lähetykseen
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="prodToimitettu" style="width:auto;" onchange="saveProdStatus()">
+        Toimitettu
+      </label>
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-left:4px;">
       <input type="checkbox" id="showPrices" checked style="width:auto;cursor:pointer;">
@@ -986,6 +1006,7 @@ function buildQuoteData(status) {
     discount_amount: adj,
     sections_json: JSON.stringify(sections),
     delivery_type: document.getElementById('deliveryType').value || null,
+    delivery_week: document.getElementById('deliveryWeek').value.trim() || null,
     is_template: false,
     total_net: Math.round(noTax * 100) / 100,
     total_vat: Math.round(vat * 100) / 100,
@@ -1012,9 +1033,22 @@ async function saveDraft() {
   }
 }
 
+
+async function saveProdStatus() {
+  if (!currentQuoteId) return;
+  try {
+    await sbPatch('quotes', currentQuoteId, {
+      prod_tuotannossa: document.getElementById('prodTuotannossa').checked,
+      prod_valmis:      document.getElementById('prodValmis').checked,
+      prod_toimitettu:  document.getElementById('prodToimitettu').checked,
+    });
+  } catch(e) { console.error('saveProdStatus:', e); }
+}
+
 async function changeStatus(newStatus) {
   currentStatus = newStatus;
   updateStatusBadge();
+  document.getElementById('prodStatus').style.display = newStatus === 'ORDERED' ? 'flex' : 'none';
   if (currentQuoteId) {
     try { await sbPatch('quotes', currentQuoteId, { status: newStatus }); } catch(e) {}
   }
@@ -1029,9 +1063,14 @@ async function loadQuote(id) {
   if (!q) return;
   currentQuoteId = q.id;
   currentStatus = q.status || 'DRAFT';
+  document.getElementById('prodStatus').style.display = currentStatus === 'ORDERED' ? 'flex' : 'none';
   document.getElementById('quoteNumber').value = q.quote_number || '';
   document.getElementById('quoteDate').value = (q.created_at||'').slice(0,10);
   document.getElementById('quoteValid').value = (q.valid_until||'').slice(0,10);
+  document.getElementById('deliveryWeek').value = q.delivery_week || '';
+  document.getElementById('prodTuotannossa').checked = q.prod_tuotannossa || false;
+  document.getElementById('prodValmis').checked      = q.prod_valmis      || false;
+  document.getElementById('prodToimitettu').checked  = q.prod_toimitettu  || false;
   document.getElementById('deliveryType').value = q.delivery_type || '';
   document.getElementById('quoteRef').value = q.notes || '';
   document.getElementById('defaultText').value = q.footer_text || '';
