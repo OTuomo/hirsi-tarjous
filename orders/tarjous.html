@@ -166,6 +166,34 @@
   </div>
 </header>
 
+
+<!-- TEKSTIPOHJAT MODAL -->
+<div class="modal-overlay" id="textTplModal">
+  <div class="modal" style="width:560px;max-height:80vh;overflow-y:auto;">
+    <h2>Tekstipohjien hallinta</h2>
+    <div id="tplList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;">Uusi pohja</div>
+      <div class="field">
+        <label>Nimi</label>
+        <input type="text" id="tplNewName" placeholder="esim. Vakiotoimitus">
+      </div>
+      <div class="field" style="margin-top:8px;">
+        <label>Sisältö</label>
+        <textarea id="tplNewContent" rows="4" placeholder="Kirjoita tekstipohja..."></textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <input type="checkbox" id="tplNewDefault" style="width:auto;">
+        <label style="text-transform:none;letter-spacing:0;font-size:13px;">Oletus (latautuu automaattisesti uuteen tarjoukseen)</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeTextTemplateModal()">Sulje</button>
+      <button class="btn btn-primary btn-sm" onclick="saveNewTextTemplate()">Lisää pohja</button>
+    </div>
+  </div>
+</div>
+
 <!-- LISÄÄ ASIAKAS MODAL -->
 <div class="modal-overlay" id="newCustModal">
   <div class="modal">
@@ -238,9 +266,9 @@
           <label>Toimitusaste</label>
           <select id="deliveryType">
             <option value="">— valitse —</option>
-            <option value="hirsirunko">Hirsirunko</option>
-            <option value="puuosat">Hirsirunko + puuosat</option>
-            <option value="avaimet">Avaimet käteen</option>
+            <option value="hirsitoimitus">Hirsitoimitus</option>
+            <option value="puuosatoimitus">Puuosatoimitus</option>
+            <option value="valmistoimitus">Valmistoimitus</option>
             <option value="nouto">Nouto tehtaalta</option>
             <option value="toimitettu">Toimitettu</option>
           </select>
@@ -289,6 +317,7 @@
         <option value="">— valitse pohja —</option>
         <option value="__none__">Ei tekstiä</option>
       </select>
+      <button onclick="openTextTemplateModal()" style="margin-left:8px;padding:2px 8px;font-size:11px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;" title="Hallitse tekstipohjia">✎ Muokkaa pohjia</button>
     </div>
     <div class="panel-body default-text-wrap">
       <textarea id="defaultText" placeholder="Vakioteksti tai toimitushuomiot..."></textarea>
@@ -352,6 +381,12 @@ async function sbPatch(table, id, data) {
     body: JSON.stringify(data)
   });
   return r.json();
+}
+async function sbDelete(table, id) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+  });
 }
 async function sbRpc(fn, params={}) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
@@ -498,6 +533,105 @@ document.addEventListener('click', e => {
 });
 
 // =============================================
+
+// TEKSTIPOHJAT MODAL
+function openTextTemplateModal() {
+  renderTplList();
+  document.getElementById('textTplModal').classList.add('open');
+}
+function closeTextTemplateModal() {
+  document.getElementById('textTplModal').classList.remove('open');
+  document.getElementById('tplNewName').value = '';
+  document.getElementById('tplNewContent').value = '';
+  document.getElementById('tplNewDefault').checked = false;
+}
+document.getElementById('textTplModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('textTplModal')) closeTextTemplateModal();
+});
+
+function renderTplList() {
+  const list = document.getElementById('tplList');
+  if (!textTemplates.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:12px;">Ei tekstipohjia vielä.</div>';
+    return;
+  }
+  list.innerHTML = textTemplates.map(t => `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <input type="text" value="${esc(t.name)}" id="tplName_${t.id}"
+          style="flex:1;font-size:13px;padding:4px 8px;">
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;text-transform:none;letter-spacing:0;">
+          <input type="checkbox" ${t.is_default ? 'checked' : ''} id="tplDef_${t.id}" style="width:auto;">
+          Oletus
+        </label>
+        <button onclick="saveTpl('${t.id}')" class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;">Tallenna</button>
+        <button onclick="deleteTpl('${t.id}')" class="btn btn-sm" style="padding:3px 8px;font-size:11px;color:var(--danger);background:transparent;border:1px solid rgba(232,64,64,0.3);">Poista</button>
+      </div>
+      <textarea id="tplContent_${t.id}" rows="3" style="font-size:12px;">${esc(t.content)}</textarea>
+    </div>
+  `).join('');
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function saveTpl(id) {
+  const name    = document.getElementById('tplName_' + id).value.trim();
+  const content = document.getElementById('tplContent_' + id).value;
+  const isDef   = document.getElementById('tplDef_' + id).checked;
+  if (!name) return;
+  // Jos asetetaan oletukseksi, poistetaan muilta
+  if (isDef) {
+    for (const t of textTemplates.filter(x => x.id !== id && x.is_default)) {
+      await sbPatch('quote_text_templates', t.id, { is_default: false });
+    }
+  }
+  await sbPatch('quote_text_templates', id, { name, content, is_default: isDef });
+  await reloadTpl();
+}
+
+async function deleteTpl(id) {
+  const t = textTemplates.find(x => String(x.id) === String(id));
+  if (!confirm('Poistetaanko pohja "' + (t?.name || '') + '"?')) return;
+  await sbDelete('quote_text_templates', id);
+  await reloadTpl();
+}
+
+async function saveNewTextTemplate() {
+  const name    = document.getElementById('tplNewName').value.trim();
+  const content = document.getElementById('tplNewContent').value;
+  const isDef   = document.getElementById('tplNewDefault').checked;
+  if (!name) { alert('Anna pohjalle nimi'); return; }
+  if (isDef) {
+    for (const t of textTemplates.filter(x => x.is_default)) {
+      await sbPatch('quote_text_templates', t.id, { is_default: false });
+    }
+  }
+  await sbPost('quote_text_templates', { name, content, is_default: isDef });
+  await reloadTpl();
+  document.getElementById('tplNewName').value = '';
+  document.getElementById('tplNewContent').value = '';
+  document.getElementById('tplNewDefault').checked = false;
+}
+
+async function reloadTpl() {
+  const data = await sbGet('quote_text_templates', '?order=name.asc&select=id,name,content,is_default');
+  textTemplates = Array.isArray(data) ? data : [];
+  // Päivitä dropdown
+  const sel = document.getElementById('textTemplateSelect');
+  const cur = sel.value;
+  while (sel.options.length > 2) sel.remove(2);
+  textTemplates.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.name;
+    sel.appendChild(opt);
+  });
+  sel.value = cur;
+  renderTplList();
+}
+
 // UUSI ASIAKAS MODAL
 // =============================================
 function openNewCustModal() {
