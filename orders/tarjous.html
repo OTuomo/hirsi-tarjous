@@ -341,6 +341,7 @@
         <option value="IN_PROGRESS">Kesken</option>
         <option value="QUOTED">Tarjottu</option>
         <option value="ORDERED">Tilattu</option>
+        <option value="COMPLETED">Valmis</option>
         <option value="ARCHIVED">Arkisto</option>
         <option value="MODEL">Malli</option>
       </select>
@@ -1051,7 +1052,7 @@ async function saveProdStatus() {
 async function changeStatus(newStatus) {
   currentStatus = newStatus;
   updateStatusBadge();
-  document.getElementById('prodStatus').style.display = newStatus === 'ORDERED' ? 'flex' : 'none';
+  document.getElementById('prodStatus').style.display = ['ORDERED','COMPLETED'].includes(newStatus) ? 'flex' : 'none';
   if (currentQuoteId) {
     try { await sbPatch('quotes', currentQuoteId, { status: newStatus }); } catch(e) {}
   }
@@ -1066,7 +1067,7 @@ async function loadQuote(id) {
   if (!q) return;
   currentQuoteId = q.id;
   currentStatus = q.status || 'DRAFT';
-  document.getElementById('prodStatus').style.display = currentStatus === 'ORDERED' ? 'flex' : 'none';
+  document.getElementById('prodStatus').style.display = ['ORDERED','COMPLETED'].includes(currentStatus) ? 'flex' : 'none';
   document.getElementById('quoteNumber').value = q.quote_number || '';
   document.getElementById('quoteDate').value = (q.created_at||'').slice(0,10);
   document.getElementById('quoteValid').value = (q.valid_until||'').slice(0,10);
