@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalenteri — Okkosen Puutuote</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+<style>
+  :root {
+    --bg:        #faf7f2;
+    --bg2:       #f3ede4;
+    --bg3:       #ede4d8;
+    --panel:     #ffffff;
+    --border:    #e0d4c4;
+    --border2:   #cfc0ac;
+    --accent:    #d97706;
+    --accent-dim:#b45309;
+    --accent-bg: rgba(217,119,6,0.10);
+    --text:      #2a1f14;
+    --text-mid:  #6b4f38;
+    --text-dim:  #a08878;
+    --today-bg:  rgba(217,119,6,0.12);
+    --ordered-bg:#dbeafe;
+    --ordered-fg:#1d4ed8;
+    --completed-bg:#dcfce7;
+    --completed-fg:#15803d;
+    --absence-bg:#fef3c7;
+    --absence-fg:#92400e;
+    --shadow:    0 1px 4px rgba(100,60,20,0.08);
+    --radius:    6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ───────────────────────────────────────────── */
+  header {
+    background: var(--panel);
+    border-bottom: 2px solid var(--accent);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .nav-menu-wrap { position: relative; }
+  .nav-btn {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: .04em;
+  }
+  .nav-btn:hover { background: var(--bg3); }
+  .nav-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    min-width: 200px;
+    z-index: 999;
+    box-shadow: 0 4px 16px rgba(100,60,20,0.15);
+    overflow: hidden;
+  }
+  .nav-dropdown.open { display: block; }
+  .nav-section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 14px 4px;
+  }
+  .nav-item {
+    display: block;
+    padding: 8px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    text-decoration: none;
+    transition: background .1s;
+  }
+  .nav-item:hover { background: var(--accent-bg); color: var(--accent); }
+  .nav-item.current { color: var(--accent); font-weight: 600; }
+  header h1 {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+  /* ── NAVIGAATIO ───────────────────────────────────────── */
+  .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .cal-nav-left { display: flex; align-items: center; gap: 10px; }
+  .cal-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 220px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    background: var(--panel);
+    color: var(--text-mid);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    letter-spacing: .03em;
+  }
+  .btn:hover { background: var(--bg2); color: var(--text); border-color: var(--accent); }
+  .btn-accent { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-accent:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: white; }
+
+  /* ── LEGENDA ──────────────────────────────────────────── */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-mid);
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── KALENTERI ────────────────────────────────────────── */
+  .cal-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+  }
+  .cal-weekday {
+    padding: 10px 8px;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-mid);
+  }
+  .cal-weekday.weekend { color: var(--text-dim); }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .cal-day {
+    min-height: 100px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 6px;
+    vertical-align: top;
+    transition: background .1s;
+  }
+  .cal-day:nth-child(7n) { border-right: none; }
+  .cal-day.other-month { background: var(--bg); }
+  .cal-day.today { background: var(--today-bg); }
+  .cal-day.weekend { background: var(--bg2); }
+  .cal-day.weekend.other-month { background: var(--bg3); }
+
+  .day-number {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mid);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .day-number.today-num {
+    color: var(--accent);
+  }
+  .week-num {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  /* ── TAPAHTUMAT ───────────────────────────────────────── */
+  .event {
+    display: block;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity .1s;
+    text-decoration: none;
+  }
+  .event:hover { opacity: .8; }
+  .event-ordered {
+    background: var(--ordered-bg);
+    color: var(--ordered-fg);
+    border-left: 3px solid var(--ordered-fg);
+  }
+  .event-completed {
+    background: var(--completed-bg);
+    color: var(--completed-fg);
+    border-left: 3px solid var(--completed-fg);
+  }
+  .event-absence {
+    background: var(--absence-bg);
+    color: var(--absence-fg);
+    border-left: 3px solid var(--absence-fg);
+  }
+
+  /* ── LISÄÄ POISSAOLO MODAL ────────────────────────────── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 28px;
+    width: 420px;
+    max-width: 96vw;
+    box-shadow: 0 8px 32px rgba(100,60,20,0.15);
+  }
+  .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 18px; color: var(--text); }
+  .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  label { font-size: 12px; color: var(--text-mid); text-transform: uppercase; letter-spacing: .05em; font-family: 'IBM Plex Mono', monospace; }
+  input, select, textarea {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 4px;
+    padding: 7px 11px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--panel); }
+  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+  /* ── TOAST ────────────────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 999;
+    display: none;
+    box-shadow: var(--shadow);
+  }
+  #toast.success { border-color: #22c55e; color: #15803d; }
+  #toast.error { border-color: #ef4444; color: #dc2626; }
+
+  /* ── MOBIILI ──────────────────────────────────────────── */
+  .mobile-list { display: none; }
+
+  @media (max-width: 640px) {
+    .page { padding: 16px; }
+    .cal-wrap { display: none; }
+    .mobile-list { display: block; }
+    .cal-title { font-size: 18px; min-width: 0; }
+    .legend { display: none; }
+
+    .week-block {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .week-block-header {
+      background: var(--bg2);
+      padding: 8px 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-mid);
+      border-bottom: 1px solid var(--border);
+    }
+    .week-block-body { padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .week-block-empty { color: var(--text-dim); font-size: 12px; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav-menu-wrap">
+    <button class="nav-btn" onclick="toggleNav(event)">☰ Valikko</button>
+    <div class="nav-dropdown" id="navDropdown">
+      <div class="nav-section-label">Sivut</div>
+      <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
+      <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
+      <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
+      <a class="nav-item" href="tarjous.html">✏️ Uusi tarjous</a>
+      <a class="nav-item current" href="kalenteri.html">📅 Kalenteri</a>
+    </div>
+  </div>
+  <h1>Kalenteri</h1>
+  <div class="header-right">
+    <button class="btn btn-accent" onclick="openAbsenceModal()">+ Poissaolo</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- NAVIGAATIO -->
+  <div class="cal-nav">
+    <div class="cal-nav-left">
+      <button class="btn" onclick="prevMonth()">‹</button>
+      <div class="cal-title" id="calTitle">—</div>
+      <button class="btn" onclick="nextMonth()">›</button>
+      <button class="btn" onclick="goToday()">Tänään</button>
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--ordered-bg);border-left:3px solid var(--ordered-fg);"></div>
+        Tilattu
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--completed-bg);border-left:3px solid var(--completed-fg);"></div>
+        Valmis
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--absence-bg);border-left:3px solid var(--absence-fg);"></div>
+        Poissaolo
+      </div>
+    </div>
+  </div>
+
+  <!-- KALENTERI (desktop) -->
+  <div class="cal-wrap">
+    <div class="cal-weekdays">
+      <div class="cal-weekday">Ma</div>
+      <div class="cal-weekday">Ti</div>
+      <div class="cal-weekday">Ke</div>
+      <div class="cal-weekday">To</div>
+      <div class="cal-weekday">Pe</div>
+      <div class="cal-weekday weekend">La</div>
+      <div class="cal-weekday weekend">Su</div>
+    </div>
+    <div class="cal-grid" id="calGrid">
+      <!-- JS täyttää -->
+    </div>
+  </div>
+
+  <!-- MOBIILILISTA -->
+  <div class="mobile-list" id="mobileList">
+    <!-- JS täyttää -->
+  </div>
+
+</div>
+
+<!-- POISSAOLO MODAL -->
+<div class="modal-backdrop" id="absenceModal">
+  <div class="modal">
+    <h2>Lisää poissaolo</h2>
+    <div class="form-group">
+      <label>Henkilö / selite</label>
+      <input type="text" id="absNotes" placeholder="esim. Tuomo loma">
+    </div>
+    <div class="form-group">
+      <label>Alkaa</label>
+      <input type="date" id="absStart">
+    </div>
+    <div class="form-group">
+      <label>Päättyy</label>
+      <input type="date" id="absEnd">
+    </div>
+    <div class="form-group">
+      <label>Tyyppi</label>
+      <select id="absType">
+        <option value="loma">Loma</option>
+        <option value="sairaus">Sairaus</option>
+        <option value="muu">Muu</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeAbsenceModal()">Peruuta</button>
+      <button class="btn btn-accent" onclick="saveAbsence()">Tallenna</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── Tila ───────────────────────────────────────────────
+let viewYear  = new Date().getFullYear();
+let viewMonth = new Date().getMonth(); // 0-11
+let quotes    = [];
+let absences  = [];
+
+const MONTHS_FI = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
+                   'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+
+// ── Nav ────────────────────────────────────────────────
+function toggleNav(e) {
+  e.stopPropagation();
+  document.getElementById('navDropdown').classList.toggle('open');
+}
+document.addEventListener('click', () => document.getElementById('navDropdown').classList.remove('open'));
+
+// ── Init ───────────────────────────────────────────────
+init();
+
+async function init() {
+  await loadData();
+  renderCalendar();
+}
+
+async function loadData() {
+  try {
+    // Hae tilatut ja valmiit tarjoukset joilla on toimitusviikko
+    const { data: qData } = await db
+      .from('quotes')
+      .select('id, quote_number, delivery_week, status, customers(name)')
+      .in('status', ['ORDERED', 'COMPLETED'])
+      .not('delivery_week', 'is', null);
+    quotes = qData || [];
+
+    // Hae poissaolot
+    const { data: aData } = await db
+      .from('absences')
+      .select('*')
+      .order('start_date');
+    absences = aData || [];
+  } catch(e) {
+    console.error('loadData:', e);
+  }
+}
+
+// ── Viikkonumero ───────────────────────────────────────
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return String(d.getUTCFullYear()) + '-' + String(Math.ceil((((d - yearStart) / 86400000) + 1) / 7)).padStart(2, '0');
+}
+
+function getWeekNum(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+// ── Renderöi kalenteri ─────────────────────────────────
+function renderCalendar() {
+  document.getElementById('calTitle').textContent = MONTHS_FI[viewMonth] + ' ' + viewYear;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Kuukauden ensimmäinen ja viimeinen päivä
+  const firstDay = new Date(viewYear, viewMonth, 1);
+  const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+
+  // Maanantai = 0, ..., sunnuntai = 6
+  let startDow = firstDay.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  // Edellisen kuun täytepäivät
+  for (let i = 0; i < startDow; i++) {
+    const d = new Date(viewYear, viewMonth, -(startDow - 1 - i));
+    grid.appendChild(buildDayCell(d, true, today));
+  }
+
+  // Tämän kuukauden päivät
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const date = new Date(viewYear, viewMonth, d);
+    grid.appendChild(buildDayCell(date, false, today));
+  }
+
+  // Seuraavan kuun täytepäivät
+  const totalCells = startDow + lastDay.getDate();
+  const remainder  = totalCells % 7;
+  if (remainder > 0) {
+    for (let i = 1; i <= 7 - remainder; i++) {
+      const d = new Date(viewYear, viewMonth + 1, i);
+      grid.appendChild(buildDayCell(d, true, today));
+    }
+  }
+
+  renderMobileList();
+}
+
+function buildDayCell(date, otherMonth, today) {
+  const cell = document.createElement('div');
+  const dow  = date.getDay(); // 0=su, 6=la
+  const isWeekend = dow === 0 || dow === 6;
+  const isToday   = date.getTime() === today.getTime();
+  const weekKey   = getWeekNumber(date);
+  const isMonday  = (date.getDay() === 1);
+
+  cell.className = 'cal-day'
+    + (otherMonth ? ' other-month' : '')
+    + (isWeekend  ? ' weekend' : '')
+    + (isToday    ? ' today' : '');
+
+  // Päivänumero + viikkonumero maanantailla
+  const numDiv = document.createElement('div');
+  numDiv.className = 'day-number' + (isToday ? ' today-num' : '');
+  numDiv.innerHTML = date.getDate()
+    + (isMonday ? '<span class="week-num">vko ' + getWeekNum(date) + '</span>' : '');
+  cell.appendChild(numDiv);
+
+  // Toimitukset tällä viikolla — näytetään maanantailla
+  if (isMonday || date.getDate() === 1) {
+    const weekQuotes = quotes.filter(q => q.delivery_week === weekKey);
+    weekQuotes.forEach(q => {
+      const ev = document.createElement('a');
+      ev.className = 'event event-' + (q.status === 'COMPLETED' ? 'completed' : 'ordered');
+      ev.href = 'tarjous.html?id=' + q.id;
+      ev.textContent = (q.customers?.name || q.quote_number || '—');
+      ev.title = (q.quote_number || '') + ' · ' + (q.customers?.name || '') + ' · vko ' + weekKey.split('-')[1];
+      cell.appendChild(ev);
+    });
+  }
+
+  // Poissaolot tänä päivänä
+  const dateStr = date.toISOString().slice(0, 10);
+  absences
+    .filter(a => a.start_date <= dateStr && a.end_date >= dateStr)
+    .forEach(a => {
+      const ev = document.createElement('div');
+      ev.className = 'event event-absence';
+      ev.textContent = a.notes || a.type;
+      ev.title = a.notes || a.type;
+      cell.appendChild(ev);
+    });
+
+  return cell;
+}
+
+// ── Mobiililista ───────────────────────────────────────
+function renderMobileList() {
+  const list = document.getElementById('mobileList');
+  list.innerHTML = '';
+
+  // Kerää kaikki viikot tässä kuukaudessa
+  const weeks = new Map();
+  const firstDay = new Date(viewYear, viewMonth, 1);
+  const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+
+  for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+    const wk = getWeekNumber(new Date(d));
+    if (!weeks.has(wk)) weeks.set(wk, []);
+  }
+
+  // Lisää toimitukset
+  quotes.forEach(q => {
+    if (weeks.has(q.delivery_week)) {
+      weeks.get(q.delivery_week).push({ type: q.status === 'COMPLETED' ? 'completed' : 'ordered', q });
+    }
+  });
+
+  if (weeks.size === 0) {
+    list.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">Ei tapahtumia</div>';
+    return;
+  }
+
+  weeks.forEach((events, wk) => {
+    const block = document.createElement('div');
+    block.className = 'week-block';
+    const wkNum = wk.split('-')[1];
+    block.innerHTML = '<div class="week-block-header">Viikko ' + wkNum + ' · ' + wk.split('-')[0] + '</div>';
+
+    if (events.length === 0) {
+      block.innerHTML += '<div class="week-block-empty">Ei toimituksia</div>';
+    } else {
+      const body = document.createElement('div');
+      body.className = 'week-block-body';
+      events.forEach(ev => {
+        if (ev.q) {
+          const a = document.createElement('a');
+          a.className = 'event event-' + ev.type;
+          a.href = 'tarjous.html?id=' + ev.q.id;
+          a.textContent = ev.q.customers?.name || ev.q.quote_number || '—';
+          body.appendChild(a);
+        }
+      });
+      block.appendChild(body);
+    }
+    list.appendChild(block);
+  });
+}
+
+// ── Navigointi ─────────────────────────────────────────
+function prevMonth() {
+  viewMonth--;
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  renderCalendar();
+}
+function nextMonth() {
+  viewMonth++;
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  renderCalendar();
+}
+function goToday() {
+  viewYear  = new Date().getFullYear();
+  viewMonth = new Date().getMonth();
+  renderCalendar();
+}
+
+// ── Poissaolo modal ────────────────────────────────────
+function openAbsenceModal() {
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('absStart').value = today;
+  document.getElementById('absEnd').value   = today;
+  document.getElementById('absNotes').value = '';
+  document.getElementById('absType').value  = 'loma';
+  document.getElementById('absenceModal').classList.add('open');
+}
+function closeAbsenceModal() {
+  document.getElementById('absenceModal').classList.remove('open');
+}
+document.getElementById('absenceModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('absenceModal')) closeAbsenceModal();
+});
+
+async function saveAbsence() {
+  const start = document.getElementById('absStart').value;
+  const end   = document.getElementById('absEnd').value;
+  const notes = document.getElementById('absNotes').value.trim();
+  const type  = document.getElementById('absType').value;
+
+  if (!start || !end) { showToast('Valitse päivämäärät', 'error'); return; }
+  if (end < start)    { showToast('Päättymispäivä ennen alkua', 'error'); return; }
+
+  const { data: { session } } = await db.auth.getSession();
+  const { error } = await db.from('absences').insert([{
+    start_date: start,
+    end_date:   end,
+    notes:      notes || type,
+    type:       type,
+    user_id:    session?.user?.id || null,
+  }]);
+
+  if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
+  showToast('Poissaolo tallennettu ✓', 'success');
+  closeAbsenceModal();
+  await loadData();
+  renderCalendar();
+}
+
+// ── Toast ──────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = type;
+  t.style.display = 'block';
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+</script>
+</body>
+</html>
