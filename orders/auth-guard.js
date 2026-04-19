@@ -18,41 +18,53 @@
   // Piilota sisältö kunnes auth tarkistettu
   document.documentElement.style.visibility = 'hidden';
 
+  // ── Session-cache ──────────────────────────────────────────
+  // Pidetään sessio muistissa — ei kutsuta getSession() joka REST-pyynnöllä
+  let _cachedSession = null;
+
   // ── Fetch-korjaus ──────────────────────────────────────────
   // Ylikirjoitetaan window.fetch niin että Supabase-kutsut saavat aina oikean tokenin
   const _originalFetch = window.fetch.bind(window);
   window.fetch = async function (url, options = {}) {
     if (typeof url === 'string' && url.includes(SUPABASE_URL)) {
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) {
+      if (_cachedSession) {
         options = options || {};
         options.headers = options.headers || {};
         if (options.headers instanceof Headers) {
-          options.headers.set('Authorization', `Bearer ${session.access_token}`);
+          options.headers.set('Authorization', `Bearer ${_cachedSession.access_token}`);
         } else {
-          options.headers['Authorization'] = `Bearer ${session.access_token}`;
+          options.headers['Authorization'] = `Bearer ${_cachedSession.access_token}`;
         }
       }
     }
     return _originalFetch(url, options);
   };
 
-  // ── Auth-tarkistus ─────────────────────────────────────────
-  sb.auth.getSession().then(({ data }) => {
-    if (!data.session) {
-      const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-      window.location.href = 'login.html?next=' + encodeURIComponent(currentPage);
-    } else {
-      document.documentElement.style.visibility = '';
-      window._currentUser = data.session.user;
-      renderUserInfo(data.session.user);
-    }
-  });
-
-  // Kuuntele auth-muutoksia
-  sb.auth.onAuthStateChange((event) => {
+  // ── Auth-tarkistus ja muutostenKuuntelu ────────────────────
+  // onAuthStateChange käynnistyy heti INITIAL_SESSION-eventillä sivun latautuessa,
+  // joten erillinen getSession()-kutsu ei ole tarpeen.
+  sb.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT') {
+      _cachedSession = null;
       window.location.replace('login.html');
+      return;
+    }
+    if (event === 'INITIAL_SESSION') {
+      if (!session) {
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        window.location.href = 'login.html?next=' + encodeURIComponent(currentPage);
+        return;
+      }
+      _cachedSession = session;
+      document.documentElement.style.visibility = '';
+      window._currentUser = session.user;
+      renderUserInfo(session.user);
+      return;
+    }
+    // SIGNED_IN tai TOKEN_REFRESHED — päivitetään cache, ei muuta toimintaa
+    if (session) {
+      _cachedSession = session;
+      window._currentUser = session.user;
     }
   });
 
