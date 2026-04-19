@@ -147,6 +147,14 @@
   .product-card { background: var(--input-bg); border: 1px solid var(--border); border-radius: 5px; padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
   .product-card .card-row { display: flex; gap: 8px; align-items: center; }
   .product-card label { min-width: 60px; }
+
+  /* VIIKKOSELAIN */
+  .week-picker { display: flex; align-items: center; gap: 4px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; height: 32px; }
+  .week-arrow { background: none; border: none; color: var(--text-dim); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 3px; font-family: inherit; }
+  .week-arrow:hover { color: var(--accent); background: var(--accent-glow); }
+  .week-display { flex: 1; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text); white-space: nowrap; cursor: pointer; user-select: none; min-width: 160px; }
+  .week-display:hover { color: var(--text-dim); }
+  .week-display.empty { color: var(--text-dim); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -288,7 +296,12 @@
       <div class="basics-row2">
         <div class="field">
           <label>Toimitusviikko</label>
-          <input type="text" id="deliveryWeek" placeholder="esim. 2026-32" maxlength="7">
+          <div class="week-picker" id="weekPickerWrap">
+            <button type="button" class="week-arrow" id="weekPrev" onclick="stepWeek(-1)" title="Edellinen viikko">&#8249;</button>
+            <span class="week-display" id="weekDisplay" onclick="clearWeek()" title="Tyhjennä klikkaamalla">—</span>
+            <button type="button" class="week-arrow" id="weekNext" onclick="stepWeek(1)" title="Seuraava viikko">&#8250;</button>
+          </div>
+          <input type="hidden" id="deliveryWeek">
         </div>
         <div class="field field-quotenum">
           <label>Tarjousnumero</label>
@@ -443,6 +456,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const valid = new Date(today); valid.setDate(today.getDate() + 14);
   document.getElementById('quoteValid').value = valid.toISOString().slice(0,10);
 
+  // Odotetaan auth-guardin sessiota ennen Supabase-kutsuja
+  await window._authReady;
+
   await Promise.all([loadCustomers(), loadProducts(), loadTextTemplates()]);
 
   const params = new URLSearchParams(window.location.search);
@@ -558,8 +574,77 @@ document.addEventListener('click', e => {
 });
 
 // =============================================
+// VIIKKOSELAIN
+// =============================================
+// Palauttaa ISO viikkonumeron (1–53) ja vuoden Date-objektille
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7; // ma=1 ... su=7
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return { week, year: d.getUTCFullYear() };
+}
 
-// TEKSTIPOHJAT MODAL
+// Palauttaa maanantain Date-objektina viikkoavaimelle "2026-32"
+function mondayOfWeek(key) {
+  if (!key) return null;
+  const [year, week] = key.split('-').map(Number);
+  // ISO: vk1 on se viikko jossa vuoden ensimmäinen torstai on
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (jan4day - 1) + (week - 1) * 7);
+  return monday;
+}
+
+function formatWeekDisplay(key) {
+  if (!key) return '—';
+  const monday = mondayOfWeek(key);
+  if (!monday) return key;
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const fmt = d => `${d.getUTCDate()}.${d.getUTCMonth()+1}.`;
+  const [year, week] = key.split('-');
+  return `Vko ${week} (${fmt(monday)}–${fmt(sunday)}${sunday.getUTCFullYear()})`;
+}
+
+function setWeekValue(key) {
+  document.getElementById('deliveryWeek').value = key || '';
+  const display = document.getElementById('weekDisplay');
+  if (key) {
+    display.textContent = formatWeekDisplay(key);
+    display.classList.remove('empty');
+  } else {
+    display.textContent = '—';
+    display.classList.add('empty');
+  }
+}
+
+function stepWeek(delta) {
+  const current = document.getElementById('deliveryWeek').value;
+  let monday;
+  if (current) {
+    monday = mondayOfWeek(current);
+  } else {
+    // Ei valittu → aloitetaan kuluvasta viikosta
+    const today = new Date();
+    const { week, year } = getISOWeek(today);
+    monday = mondayOfWeek(`${year}-${week}`);
+  }
+  monday.setUTCDate(monday.getUTCDate() + delta * 7);
+  const { week, year } = getISOWeek(monday);
+  setWeekValue(`${year}-${week}`);
+}
+
+function clearWeek() {
+  setWeekValue('');
+}
+
+// Lataa tallennettu toimitusviikko kenttään (kutsutaan loadQuote:sta)
+function loadDeliveryWeek(key) {
+  setWeekValue(key || '');
+}
 function openTextTemplateModal() {
   renderTplList();
   document.getElementById('textTplModal').classList.add('open');
@@ -1072,7 +1157,7 @@ async function loadQuote(id) {
   document.getElementById('quoteNumber').value = q.quote_number || '';
   document.getElementById('quoteDate').value = (q.created_at||'').slice(0,10);
   document.getElementById('quoteValid').value = (q.valid_until||'').slice(0,10);
-  document.getElementById('deliveryWeek').value = q.delivery_week || '';
+  loadDeliveryWeek(q.delivery_week || '');
   document.getElementById('prodTuotannossa').checked = q.prod_tuotannossa || false;
   document.getElementById('prodValmis').checked      = q.prod_valmis      || false;
   document.getElementById('prodToimitettu').checked  = q.prod_toimitettu  || false;
