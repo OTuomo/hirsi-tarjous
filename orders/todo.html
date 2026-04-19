@@ -41,7 +41,7 @@ header h1{font-size:16px;font-weight:500;}
 .col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);}
 .col-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-mid);}
 .col-title.shared{color:var(--accent);}
-.todo-list{display:flex;flex-direction:column;gap:8px;}
+.todo-list{display:flex;flex-direction:column;gap:8px;min-height:40px;}
 .todo-item{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--border2);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:flex-start;gap:10px;box-shadow:var(--shadow);transition:opacity .2s;}
 .todo-item.done{opacity:.45;}
 .todo-item.priority-high{border-left-color:var(--red);}
@@ -59,7 +59,7 @@ header h1{font-size:16px;font-weight:500;}
 .badge-high{background:rgba(220,38,38,.12);color:var(--red);}
 .badge-normal{background:rgba(217,119,6,.12);color:var(--yellow);}
 .badge-low{background:rgba(22,163,74,.12);color:var(--green);}
-.todo-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:14px;padding:2px 4px;border-radius:3px;flex-shrink:0;transition:color .1s;}
+.todo-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;padding:2px 6px;border-radius:3px;flex-shrink:0;transition:color .1s;line-height:1;}
 .todo-del:hover{color:var(--red);}
 .todo-empty{text-align:center;padding:32px 16px;color:var(--text-dim);font-size:13px;border:2px dashed var(--border);border-radius:var(--radius);}
 .checklist-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px;}
@@ -67,15 +67,15 @@ header h1{font-size:16px;font-weight:500;}
 .checklist-header-title{font-weight:600;font-size:14px;flex:1;}
 .checklist-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
 .checklist-body{padding:8px 0;}
-.checklist-item{display:flex;align-items:center;gap:10px;padding:6px 14px;transition:background .1s;}
+.checklist-item{display:flex;align-items:center;gap:10px;padding:7px 14px;transition:background .1s;}
 .checklist-item:hover{background:var(--bg2);}
 .checklist-item.done .checklist-item-text{text-decoration:line-through;color:var(--text-dim);}
 .checklist-item-text{flex:1;font-size:13px;}
-.checklist-item-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:12px;padding:2px 4px;opacity:0;transition:opacity .1s;}
+.checklist-item-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:12px;padding:2px 6px;opacity:0;transition:opacity .1s;}
 .checklist-item:hover .checklist-item-del{opacity:1;}
 .checklist-item-del:hover{color:var(--red);}
 .checklist-add{display:flex;gap:8px;padding:8px 14px;border-top:1px solid var(--border);}
-.checklist-add input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:5px 10px;font-size:13px;font-family:inherit;color:var(--text);outline:none;}
+.checklist-add input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:13px;font-family:inherit;color:var(--text);outline:none;}
 .checklist-add input:focus{border-color:var(--accent);}
 .new-checklist-btn{width:100%;margin-bottom:12px;padding:10px;border:2px dashed var(--border2);border-radius:var(--radius);background:none;color:var(--text-dim);font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit;}
 .new-checklist-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg);}
@@ -86,7 +86,7 @@ header h1{font-size:16px;font-weight:500;}
 .form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
 .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
 label{font-size:11px;color:var(--text-mid);text-transform:uppercase;letter-spacing:.05em;font-family:'IBM Plex Mono',monospace;}
-input[type="text"],input[type="date"],input[type="time"],select,textarea{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:7px 11px;font-family:inherit;font-size:13px;outline:none;transition:border-color .15s;}
+input[type=text],input[type=date],input[type=time],select,textarea{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:7px 11px;font-family:inherit;font-size:13px;outline:none;transition:border-color .15s;width:100%;}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);}
 select option{background:var(--panel);}
 .shared-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;margin-top:4px;}
@@ -105,41 +105,41 @@ select option{background:var(--panel);}
     <button class="nav-btn" onclick="toggleNav(event)">&#9776; Valikko</button>
     <div class="nav-dropdown" id="navDropdown">
       <div class="nav-section-label">Sivut</div>
-      <a class="nav-item" href="asiakkaat.html">&#128100; Asiakkaat</a>
-      <a class="nav-item" href="hinnasto.html">&#128230; Hinnasto</a>
-      <a class="nav-item" href="tarjoukset.html">&#128203; Tarjoukset</a>
-      <a class="nav-item" href="tarjous.html">&#9999;&#65039; Uusi tarjous</a>
-      <a class="nav-item" href="kalenteri.html">&#128197; Kalenteri</a>
-      <a class="nav-item current" href="todo.html">&#9989; Muistilista</a>
+      <a class="nav-item" href="asiakkaat.html">Asiakkaat</a>
+      <a class="nav-item" href="hinnasto.html">Hinnasto</a>
+      <a class="nav-item" href="tarjoukset.html">Tarjoukset</a>
+      <a class="nav-item" href="tarjous.html">Uusi tarjous</a>
+      <a class="nav-item" href="kalenteri.html">Kalenteri</a>
+      <a class="nav-item current" href="todo.html">Muistilista</a>
     </div>
   </div>
   <h1>Muistilista</h1>
   <div class="header-right">
     <label class="show-done-wrap">
       <input type="checkbox" id="showDone" onchange="renderAll()" style="accent-color:var(--accent);width:auto;">
-      N&auml;yt&auml; tehdyt
+      Nayta tehdyt
     </label>
   </div>
 </header>
 <div class="page">
-  <div class="page-header"><h2>Muistilista &amp; teht&auml;v&auml;t</h2></div>
+  <div class="page-header"><h2>Muistilista ja tehtavat</h2></div>
   <div class="tabs">
-    <button class="tab-btn active" id="tab-todos" onclick="switchTab('todos')">&#128203; Teht&auml;v&auml;t</button>
-    <button class="tab-btn" id="tab-lists" onclick="switchTab('lists')">&#128722; Listat</button>
+    <button class="tab-btn active" id="tab-todos" onclick="switchTab('todos')">Tehtavat</button>
+    <button class="tab-btn" id="tab-lists" onclick="switchTab('lists')">Listat</button>
   </div>
   <div id="view-todos">
     <div class="columns">
       <div>
         <div class="col-header">
-          <span class="col-title">&#128274; Omat</span>
-          <button class="btn btn-sm btn-accent" onclick="openModal(false)">+ Lis&auml;&auml;</button>
+          <span class="col-title">Omat</span>
+          <button class="btn btn-sm btn-accent" onclick="openModal(false)">+ Lisaa</button>
         </div>
         <div class="todo-list" id="listOmat"></div>
       </div>
       <div>
         <div class="col-header">
-          <span class="col-title shared">&#128101; Yhteiset</span>
-          <button class="btn btn-sm btn-accent" onclick="openModal(true)">+ Lis&auml;&auml;</button>
+          <span class="col-title shared">Yhteiset</span>
+          <button class="btn btn-sm btn-accent" onclick="openModal(true)">+ Lisaa</button>
         </div>
         <div class="todo-list" id="listYhteiset"></div>
       </div>
@@ -148,12 +148,12 @@ select option{background:var(--panel);}
   <div id="view-lists" style="display:none;">
     <div class="columns">
       <div>
-        <div class="col-header"><span class="col-title">&#128274; Omat listat</span></div>
+        <div class="col-header"><span class="col-title">Omat listat</span></div>
         <button class="new-checklist-btn" onclick="openNewListModal(false)">+ Uusi lista</button>
         <div id="omatListat"></div>
       </div>
       <div>
-        <div class="col-header"><span class="col-title shared">&#128101; Yhteiset listat</span></div>
+        <div class="col-header"><span class="col-title shared">Yhteiset listat</span></div>
         <button class="new-checklist-btn" onclick="openNewListModal(true)">+ Uusi lista</button>
         <div id="yhteisListat"></div>
       </div>
@@ -162,37 +162,17 @@ select option{background:var(--panel);}
 </div>
 <div class="modal-backdrop" id="todoModal">
   <div class="modal">
-    <h2 id="modalTitle">Uusi teht&auml;v&auml;</h2>
-    <div class="form-group">
-      <label>Teht&auml;v&auml; *</label>
-      <input type="text" id="fTitle" placeholder="esim. Soita Jormalle">
-    </div>
-    <div class="form-group">
-      <label>Lis&auml;tiedot</label>
-      <textarea id="fNotes" rows="2" placeholder="Vapaaehtoinen..."></textarea>
-    </div>
+    <h2 id="modalTitle">Uusi tehtava</h2>
+    <div class="form-group"><label>Tehtava *</label><input type="text" id="fTitle" placeholder="esim. Soita Jormalle"></div>
+    <div class="form-group"><label>Lisatiedot</label><textarea id="fNotes" rows="2" placeholder="Vapaaehtoinen..."></textarea></div>
     <div class="form-row-3">
-      <div class="form-group">
-        <label>P&auml;iv&auml;m&auml;&auml;r&auml;</label>
-        <input type="date" id="fDate">
-      </div>
-      <div class="form-group">
-        <label>Kellonaika</label>
-        <input type="time" id="fTime">
-      </div>
-      <div class="form-group">
-        <label>T&auml;rkeys</label>
-        <select id="fPriority">
-          <option value="high">Kiireellinen</option>
-          <option value="normal" selected>Normaali</option>
-          <option value="low">Ei kiireellinen</option>
-        </select>
+      <div class="form-group"><label>Paivamaara</label><input type="date" id="fDate"></div>
+      <div class="form-group"><label>Kellonaika</label><input type="time" id="fTime"></div>
+      <div class="form-group"><label>Tarkeys</label>
+        <select id="fPriority"><option value="high">Kiireellinen</option><option value="normal" selected>Normaali</option><option value="low">Ei kiireellinen</option></select>
       </div>
     </div>
-    <label class="shared-toggle">
-      <input type="checkbox" id="fShared">
-      N&auml;kyy kaikille (yhteinen)
-    </label>
+    <label class="shared-toggle"><input type="checkbox" id="fShared"> Nakyy kaikille</label>
     <div class="form-actions">
       <button class="btn" onclick="closeModal()">Peruuta</button>
       <button class="btn btn-accent" onclick="saveTodo()">Tallenna</button>
@@ -202,10 +182,7 @@ select option{background:var(--panel);}
 <div class="modal-backdrop" id="listModal">
   <div class="modal">
     <h2>Uusi lista</h2>
-    <div class="form-group">
-      <label>Listan nimi *</label>
-      <input type="text" id="fListName" placeholder="esim. Ostoslista">
-    </div>
+    <div class="form-group"><label>Listan nimi *</label><input type="text" id="fListName" placeholder="esim. Ostoslista"></div>
     <div class="form-actions">
       <button class="btn" onclick="closeListModal()">Peruuta</button>
       <button class="btn btn-accent" onclick="saveNewList()">Luo lista</button>
@@ -217,7 +194,6 @@ select option{background:var(--panel);}
 var SURL = "https://iofjnoxvksbaqorqaydh.supabase.co";
 var SKEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo";
 var scl = supabase.createClient(SURL, SKEY);
-
 var todos = [];
 var checklists = [];
 var currentUserId = null;
@@ -225,161 +201,239 @@ var newListShared = false;
 
 function toggleNav(e) {
   e.stopPropagation();
-  document.getElementById('navDropdown').classList.toggle('open');
+  document.getElementById("navDropdown").classList.toggle("open");
 }
-document.addEventListener('click', function() {
-  document.getElementById('navDropdown').classList.remove('open');
+document.addEventListener("click", function() {
+  document.getElementById("navDropdown").classList.remove("open");
 });
 
 function switchTab(tab) {
-  document.getElementById('tab-todos').classList.toggle('active', tab === 'todos');
-  document.getElementById('tab-lists').classList.toggle('active', tab === 'lists');
-  document.getElementById('view-todos').style.display = tab === 'todos' ? '' : 'none';
-  document.getElementById('view-lists').style.display = tab === 'lists' ? '' : 'none';
+  document.getElementById("tab-todos").classList.toggle("active", tab === "todos");
+  document.getElementById("tab-lists").classList.toggle("active", tab === "lists");
+  document.getElementById("view-todos").style.display = tab === "todos" ? "" : "none";
+  document.getElementById("view-lists").style.display = tab === "lists" ? "" : "none";
 }
 
 async function init() {
-  var session = await scl.auth.getSession();
-  currentUserId = session.data.session ? session.data.session.user.id : null;
+  var s = await scl.auth.getSession();
+  currentUserId = (s.data && s.data.session) ? s.data.session.user.id : null;
   await loadTodos();
   loadChecklists();
   renderAll();
 }
-init();
 
 async function loadTodos() {
-  var res = await scl.from('todos').select('*').order('is_done').order('created_at');
-  if (res.error) { showToast('Virhe: ' + res.error.message, 'error'); return; }
-  todos = res.data || [];
+  var r = await scl.from("todos").select("*").order("is_done").order("created_at");
+  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
+  todos = r.data || [];
 }
 
 function renderAll() {
-  var showDone = document.getElementById('showDone').checked;
+  var showDone = document.getElementById("showDone").checked;
   var today = new Date().toISOString().slice(0, 10);
   var omat = todos.filter(function(t) { return !t.is_shared && t.user_id === currentUserId && (showDone || !t.is_done); });
   var yhteiset = todos.filter(function(t) { return t.is_shared && (showDone || !t.is_done); });
-  renderList('listOmat', omat, today);
-  renderList('listYhteiset', yhteiset, today);
+  buildList(document.getElementById("listOmat"), omat, today);
+  buildList(document.getElementById("listYhteiset"), yhteiset, today);
 }
 
-var PLABEL = { high: 'Kiireellinen', normal: 'Normaali', low: 'Ei kiireellinen' };
+var PLABEL = { high: "Kiireellinen", normal: "Normaali", low: "Ei kiireellinen" };
 
-function renderList(id, items, today) {
-  var el = document.getElementById(id);
-  if (!items.length) { el.innerHTML = '<div class="todo-empty">Ei teht&auml;vi&auml;</div>'; return; }
-  el.innerHTML = items.map(function(t) {
-    var p = t.priority || 'normal';
+function buildList(container, items, today) {
+  container.innerHTML = "";
+  if (!items.length) {
+    var empty = document.createElement("div");
+    empty.className = "todo-empty";
+    empty.textContent = "Ei tehtavia";
+    container.appendChild(empty);
+    return;
+  }
+  items.forEach(function(t) {
+    var p = t.priority || "normal";
     var isOverdue = !t.is_done && t.due_date && t.due_date < today;
-    var dateStr = t.due_date ? t.due_date.split('-').reverse().join('.') : '';
-    var timeStr = t.due_time ? t.due_time.slice(0,5) : '';
-    var dateTime = dateStr ? (dateStr + (timeStr ? ' klo ' + timeStr : '')) : '';
-    return '<div class="todo-item priority-' + p + (t.is_done ? ' done' : '') + '">'
-      + '<input type="checkbox" class="todo-check"' + (t.is_done ? ' checked' : '') + ' onchange="toggleDone('' + t.id + '',this.checked)">'
-      + '<div class="todo-body">'
-      + '<div class="todo-title">' + esc(t.title) + '</div>'
-      + (t.notes ? '<div class="todo-notes">' + esc(t.notes) + '</div>' : '')
-      + '<div class="todo-meta">'
-      + (dateTime ? '<span class="todo-date' + (isOverdue ? ' overdue' : '') + '">' + (isOverdue ? '! ' : '') + dateTime + '</span>' : '')
-      + '<span class="badge-priority badge-' + p + '">' + PLABEL[p] + '</span>'
-      + '</div></div>'
-      + '<button class="todo-del" onclick="deleteTodo('' + t.id + '')">&#10005;</button>'
-      + '</div>';
-  }).join('');
+    var div = document.createElement("div");
+    div.className = "todo-item priority-" + p + (t.is_done ? " done" : "");
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "todo-check";
+    cb.checked = !!t.is_done;
+    cb.addEventListener("change", function() { toggleDone(t.id, this.checked); });
+    var body = document.createElement("div");
+    body.className = "todo-body";
+    var title = document.createElement("div");
+    title.className = "todo-title";
+    title.textContent = t.title;
+    body.appendChild(title);
+    if (t.notes) {
+      var notes = document.createElement("div");
+      notes.className = "todo-notes";
+      notes.textContent = t.notes;
+      body.appendChild(notes);
+    }
+    var meta = document.createElement("div");
+    meta.className = "todo-meta";
+    if (t.due_date) {
+      var dateStr = t.due_date.split("-").reverse().join(".");
+      var timeStr = t.due_time ? " klo " + t.due_time.slice(0,5) : "";
+      var dateEl = document.createElement("span");
+      dateEl.className = "todo-date" + (isOverdue ? " overdue" : "");
+      dateEl.textContent = (isOverdue ? "! " : "") + dateStr + timeStr;
+      meta.appendChild(dateEl);
+    }
+    var badge = document.createElement("span");
+    badge.className = "badge-priority badge-" + p;
+    badge.textContent = PLABEL[p];
+    meta.appendChild(badge);
+    body.appendChild(meta);
+    var del = document.createElement("button");
+    del.className = "todo-del";
+    del.textContent = "X";
+    del.title = "Poista";
+    del.addEventListener("click", function() { deleteTodo(t.id); });
+    div.appendChild(cb);
+    div.appendChild(body);
+    div.appendChild(del);
+    container.appendChild(div);
+  });
 }
 
 async function toggleDone(id, done) {
-  await scl.from('todos').update({ is_done: done, done_at: done ? new Date().toISOString() : null }).eq('id', id);
+  await scl.from("todos").update({ is_done: done, done_at: done ? new Date().toISOString() : null }).eq("id", id);
   var t = todos.find(function(x) { return x.id === id; });
   if (t) t.is_done = done;
   renderAll();
 }
 
 async function deleteTodo(id) {
-  if (!confirm('Poistetaanko tehtävä?')) return;
-  await scl.from('todos').delete().eq('id', id);
+  if (!confirm("Poistetaanko tehtava?")) return;
+  await scl.from("todos").delete().eq("id", id);
   todos = todos.filter(function(t) { return t.id !== id; });
   renderAll();
-  showToast('Poistettu', 'success');
+  showToast("Poistettu", "success");
 }
 
 function openModal(shared) {
-  document.getElementById('modalTitle').textContent = shared ? 'Uusi yhteinen tehtävä' : 'Uusi oma tehtävä';
-  ['fTitle','fNotes','fDate','fTime'].forEach(function(i) { document.getElementById(i).value = ''; });
-  document.getElementById('fPriority').value = 'normal';
-  document.getElementById('fShared').checked = shared;
-  document.getElementById('todoModal').classList.add('open');
-  setTimeout(function() { document.getElementById('fTitle').focus(); }, 100);
+  document.getElementById("modalTitle").textContent = shared ? "Uusi yhteinen tehtava" : "Uusi oma tehtava";
+  ["fTitle","fNotes","fDate","fTime"].forEach(function(i) { document.getElementById(i).value = ""; });
+  document.getElementById("fPriority").value = "normal";
+  document.getElementById("fShared").checked = shared;
+  document.getElementById("todoModal").classList.add("open");
+  setTimeout(function() { document.getElementById("fTitle").focus(); }, 100);
 }
-function closeModal() { document.getElementById('todoModal').classList.remove('open'); }
-document.getElementById('todoModal').addEventListener('click', function(e) { if (e.target === document.getElementById('todoModal')) closeModal(); });
-document.getElementById('fTitle').addEventListener('keydown', function(e) { if (e.key === 'Enter') saveTodo(); });
+function closeModal() { document.getElementById("todoModal").classList.remove("open"); }
+document.getElementById("todoModal").addEventListener("click", function(e) {
+  if (e.target === document.getElementById("todoModal")) closeModal();
+});
+document.getElementById("fTitle").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") saveTodo();
+});
 
 async function saveTodo() {
-  var title = document.getElementById('fTitle').value.trim();
-  if (!title) { showToast('Kirjoita tehtävä', 'error'); return; }
-  var due_date = document.getElementById('fDate').value || null;
-  var res = await scl.from('todos').insert([{
+  var title = document.getElementById("fTitle").value.trim();
+  if (!title) { showToast("Kirjoita tehtava", "error"); return; }
+  var due_date = document.getElementById("fDate").value || null;
+  var r = await scl.from("todos").insert([{
     title: title,
-    notes: document.getElementById('fNotes').value.trim() || null,
+    notes: document.getElementById("fNotes").value.trim() || null,
     due_date: due_date,
-    due_time: document.getElementById('fTime').value || null,
+    due_time: document.getElementById("fTime").value || null,
     due_week: due_date ? getWeekKey(new Date(due_date)) : null,
-    priority: document.getElementById('fPriority').value,
-    is_shared: document.getElementById('fShared').checked,
+    priority: document.getElementById("fPriority").value,
+    is_shared: document.getElementById("fShared").checked,
     user_id: currentUserId,
     is_done: false
   }]).select();
-  if (res.error) { showToast('Virhe: ' + res.error.message, 'error'); return; }
-  todos.unshift(res.data[0]);
+  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
+  todos.unshift(r.data[0]);
   renderAll();
   closeModal();
-  showToast('Tehtävä lisätty ✓', 'success');
+  showToast("Lisatty!", "success");
 }
 
 function loadChecklists() {
-  try { checklists = JSON.parse(localStorage.getItem('okkonen_checklists') || '[]'); }
+  try { checklists = JSON.parse(localStorage.getItem("okkonen_checklists") || "[]"); }
   catch(e) { checklists = []; }
   renderChecklists();
 }
-function saveChecklists() { localStorage.setItem('okkonen_checklists', JSON.stringify(checklists)); }
+function saveChecklists() { localStorage.setItem("okkonen_checklists", JSON.stringify(checklists)); }
 
 function renderChecklists() {
-  renderCLGroup('omatListat', checklists.filter(function(l) { return !l.is_shared; }));
-  renderCLGroup('yhteisListat', checklists.filter(function(l) { return l.is_shared; }));
+  buildCLGroup("omatListat", checklists.filter(function(l) { return !l.is_shared; }));
+  buildCLGroup("yhteisListat", checklists.filter(function(l) { return l.is_shared; }));
 }
 
-function renderCLGroup(cid, lists) {
-  var el = document.getElementById(cid);
-  if (!lists.length) { el.innerHTML = ''; return; }
-  el.innerHTML = lists.map(function(list) {
+function buildCLGroup(cid, lists) {
+  var container = document.getElementById(cid);
+  container.innerHTML = "";
+  lists.forEach(function(list) {
     var done = list.items.filter(function(i) { return i.done; }).length;
     var total = list.items.length;
-    var items = list.items.map(function(item) {
-      return '<div class="checklist-item' + (item.done ? ' done' : '') + '">'
-        + '<input type="checkbox" style="accent-color:var(--accent);width:auto;cursor:pointer;"'
-        + (item.done ? ' checked' : '') + ' onchange="toggleCI('' + list.id + '','' + item.id + '',this.checked)">'
-        + '<span class="checklist-item-text">' + esc(item.text) + '</span>'
-        + '<button class="checklist-item-del" onclick="deleteCI('' + list.id + '','' + item.id + '')">&#10005;</button>'
-        + '</div>';
-    }).join('');
-    return '<div class="checklist-panel">'
-      + '<div class="checklist-header" onclick="toggleCL('' + list.id + '')">'
-      + '<span class="checklist-header-title">' + esc(list.name) + '</span>'
-      + '<span class="checklist-progress">' + done + '/' + total + '</span>'
-      + '<button style="background:none;border:none;cursor:pointer;color:var(--text-dim);margin-left:8px;font-size:14px;" onclick="event.stopPropagation();deleteCL('' + list.id + '')">&#128465;</button>'
-      + '</div>'
-      + '<div class="checklist-body" id="cl-' + list.id + '">'
-      + items
-      + '<div class="checklist-add">'
-      + '<input type="text" id="cli-' + list.id + '" placeholder="Lisää kohta..." onkeydown="if(event.key==='Enter')addCI('' + list.id + '')">'
-      + '<button class="btn btn-sm btn-accent" onclick="addCI('' + list.id + '')">+</button>'
-      + '</div></div></div>';
-  }).join('');
+    var panel = document.createElement("div");
+    panel.className = "checklist-panel";
+    var hdr = document.createElement("div");
+    hdr.className = "checklist-header";
+    hdr.addEventListener("click", function() { toggleCL(list.id); });
+    var htitle = document.createElement("span");
+    htitle.className = "checklist-header-title";
+    htitle.textContent = list.name;
+    var hprog = document.createElement("span");
+    hprog.className = "checklist-progress";
+    hprog.textContent = done + "/" + total;
+    var hdel = document.createElement("button");
+    hdel.textContent = "X";
+    hdel.style.cssText = "background:none;border:none;cursor:pointer;color:var(--text-dim);margin-left:8px;";
+    hdel.addEventListener("click", function(e) { e.stopPropagation(); deleteCL(list.id); });
+    hdr.appendChild(htitle);
+    hdr.appendChild(hprog);
+    hdr.appendChild(hdel);
+    var body = document.createElement("div");
+    body.className = "checklist-body";
+    body.id = "cl-" + list.id;
+    list.items.forEach(function(item) {
+      var row = document.createElement("div");
+      row.className = "checklist-item" + (item.done ? " done" : "");
+      var icb = document.createElement("input");
+      icb.type = "checkbox";
+      icb.style.cssText = "accent-color:var(--accent);width:auto;cursor:pointer;";
+      icb.checked = !!item.done;
+      icb.addEventListener("change", function() { toggleCI(list.id, item.id, this.checked); });
+      var itext = document.createElement("span");
+      itext.className = "checklist-item-text";
+      itext.textContent = item.text;
+      var idel = document.createElement("button");
+      idel.className = "checklist-item-del";
+      idel.textContent = "x";
+      idel.addEventListener("click", function() { deleteCI(list.id, item.id); });
+      row.appendChild(icb);
+      row.appendChild(itext);
+      row.appendChild(idel);
+      body.appendChild(row);
+    });
+    var addRow = document.createElement("div");
+    addRow.className = "checklist-add";
+    var addInput = document.createElement("input");
+    addInput.type = "text";
+    addInput.id = "cli-" + list.id;
+    addInput.placeholder = "Lisaa kohta...";
+    addInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") addCI(list.id);
+    });
+    var addBtn = document.createElement("button");
+    addBtn.className = "btn btn-sm btn-accent";
+    addBtn.textContent = "+";
+    addBtn.addEventListener("click", function() { addCI(list.id); });
+    addRow.appendChild(addInput);
+    addRow.appendChild(addBtn);
+    body.appendChild(addRow);
+    panel.appendChild(hdr);
+    panel.appendChild(body);
+    container.appendChild(panel);
+  });
 }
 
 function toggleCL(id) {
-  var b = document.getElementById('cl-' + id);
-  if (b) b.style.display = b.style.display === 'none' ? '' : 'none';
+  var b = document.getElementById("cl-" + id);
+  if (b) b.style.display = b.style.display === "none" ? "" : "none";
 }
 function toggleCI(lid, iid, done) {
   var l = checklists.find(function(x) { return x.id === lid; });
@@ -389,14 +443,14 @@ function toggleCI(lid, iid, done) {
   saveChecklists(); renderChecklists();
 }
 function addCI(lid) {
-  var inp = document.getElementById('cli-' + lid);
-  var text = inp ? inp.value.trim() : '';
+  var inp = document.getElementById("cli-" + lid);
+  var text = inp ? inp.value.trim() : "";
   if (!text) return;
   var l = checklists.find(function(x) { return x.id === lid; });
   if (!l) return;
   l.items.push({ id: Date.now().toString(), text: text, done: false });
   saveChecklists(); renderChecklists();
-  setTimeout(function() { var n = document.getElementById('cli-' + lid); if (n) n.focus(); }, 50);
+  setTimeout(function() { var n = document.getElementById("cli-" + lid); if (n) n.focus(); }, 50);
 }
 function deleteCI(lid, iid) {
   var l = checklists.find(function(x) { return x.id === lid; });
@@ -405,27 +459,31 @@ function deleteCI(lid, iid) {
   saveChecklists(); renderChecklists();
 }
 function deleteCL(id) {
-  if (!confirm('Poistetaanko lista?')) return;
+  if (!confirm("Poistetaanko lista?")) return;
   checklists = checklists.filter(function(l) { return l.id !== id; });
   saveChecklists(); renderChecklists();
-  showToast('Lista poistettu', 'success');
+  showToast("Lista poistettu", "success");
 }
 
 function openNewListModal(shared) {
   newListShared = shared;
-  document.getElementById('fListName').value = '';
-  document.getElementById('listModal').classList.add('open');
-  setTimeout(function() { document.getElementById('fListName').focus(); }, 100);
+  document.getElementById("fListName").value = "";
+  document.getElementById("listModal").classList.add("open");
+  setTimeout(function() { document.getElementById("fListName").focus(); }, 100);
 }
-function closeListModal() { document.getElementById('listModal').classList.remove('open'); }
-document.getElementById('listModal').addEventListener('click', function(e) { if (e.target === document.getElementById('listModal')) closeListModal(); });
-document.getElementById('fListName').addEventListener('keydown', function(e) { if (e.key === 'Enter') saveNewList(); });
+function closeListModal() { document.getElementById("listModal").classList.remove("open"); }
+document.getElementById("listModal").addEventListener("click", function(e) {
+  if (e.target === document.getElementById("listModal")) closeListModal();
+});
+document.getElementById("fListName").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") saveNewList();
+});
 function saveNewList() {
-  var name = document.getElementById('fListName').value.trim();
-  if (!name) { showToast('Anna nimi', 'error'); return; }
+  var name = document.getElementById("fListName").value.trim();
+  if (!name) { showToast("Anna nimi", "error"); return; }
   checklists.push({ id: Date.now().toString(), name: name, is_shared: newListShared, items: [] });
   saveChecklists(); renderChecklists(); closeListModal();
-  showToast('Lista luotu ✓', 'success');
+  showToast("Lista luotu!", "success");
 }
 
 function getWeekKey(date) {
@@ -434,16 +492,19 @@ function getWeekKey(date) {
   d.setUTCDate(d.getUTCDate() + 4 - dn);
   var ys = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   var wk = Math.ceil((((d - ys) / 86400000) + 1) / 7);
-  return d.getUTCFullYear() + '-' + String(wk).padStart(2, '0');
+  return d.getUTCFullYear() + "-" + String(wk).padStart(2, "0");
 }
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) {
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
 var toastTimer;
 function showToast(msg, type) {
   clearTimeout(toastTimer);
-  var t = document.getElementById('toast');
-  t.textContent = msg; t.className = type || ''; t.style.display = 'block';
-  toastTimer = setTimeout(function() { t.style.display = 'none'; }, 3000);
+  var t = document.getElementById("toast");
+  t.textContent = msg; t.className = type || ""; t.style.display = "block";
+  toastTimer = setTimeout(function() { t.style.display = "none"; }, 3000);
 }
+init();
 </script>
 </body>
 </html>
