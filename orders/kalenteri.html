@@ -392,7 +392,6 @@
   </div>
   <h1>Kalenteri</h1>
   <div class="header-right">
-    <button class="btn btn-accent" onclick="openAbsenceModal()">+ Poissaolo</button>
   </div>
 </header>
 
@@ -414,10 +413,6 @@
       <div class="legend-item">
         <div class="legend-dot" style="background:var(--completed-bg);border-left:3px solid var(--completed-fg);"></div>
         Valmis
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:var(--absence-bg);border-left:3px solid var(--absence-fg);"></div>
-        Poissaolo
       </div>
       <div class="legend-item">
         <div class="legend-dot" style="background:var(--todo-bg);border-left:3px solid var(--todo-fg);"></div>
@@ -447,37 +442,6 @@
     <!-- JS täyttää -->
   </div>
 
-</div>
-
-<!-- POISSAOLO MODAL -->
-<div class="modal-backdrop" id="absenceModal">
-  <div class="modal">
-    <h2>Lisää poissaolo</h2>
-    <div class="form-group">
-      <label>Henkilö / selite</label>
-      <input type="text" id="absNotes" placeholder="esim. Tuomo loma">
-    </div>
-    <div class="form-group">
-      <label>Alkaa</label>
-      <input type="date" id="absStart">
-    </div>
-    <div class="form-group">
-      <label>Päättyy</label>
-      <input type="date" id="absEnd">
-    </div>
-    <div class="form-group">
-      <label>Tyyppi</label>
-      <select id="absType">
-        <option value="loma">Loma</option>
-        <option value="sairaus">Sairaus</option>
-        <option value="muu">Muu</option>
-      </select>
-    </div>
-    <div class="form-actions">
-      <button class="btn" onclick="closeAbsenceModal()">Peruuta</button>
-      <button class="btn btn-accent" onclick="saveAbsence()">Tallenna</button>
-    </div>
-  </div>
 </div>
 
 <!-- TODO MODAL -->
@@ -525,7 +489,6 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 let viewYear  = new Date().getFullYear();
 let viewMonth = new Date().getMonth(); // 0-11
 let quotes    = [];
-let absences  = [];
 let todos     = [];
 
 const MONTHS_FI = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
@@ -555,13 +518,6 @@ async function loadData() {
       .in('status', ['ORDERED', 'COMPLETED'])
       .not('delivery_week', 'is', null);
     quotes = qData || [];
-
-    // Hae poissaolot
-    const { data: aData } = await db
-      .from('absences')
-      .select('*')
-      .order('start_date');
-    absences = aData || [];
 
     // Hae todot joilla on due_week — omat + jaetut
     const userId = window._currentUser?.id;
@@ -667,31 +623,24 @@ function buildDayCell(date, otherMonth, today) {
       ev.title = (q.quote_number || '') + ' · ' + (q.customers?.name || '') + ' · vko ' + weekKey.split('-')[1];
       cell.appendChild(ev);
     });
-
-    // Tehtävät tällä viikolla
-    const weekTodos = todos.filter(t => t.due_week === weekKey);
-    weekTodos.forEach(t => {
-      const ev = document.createElement('div');
-      ev.className = 'event event-todo';
-      ev.textContent = (t.is_done ? '✓ ' : '') + t.title;
-      ev.title = t.title + (t.notes ? '\n' + t.notes : '');
-      if (t.is_done) ev.style.opacity = '0.55';
-      ev.onclick = () => openTodoModal(t);
-      cell.appendChild(ev);
-    });
   }
 
-  // Poissaolot tänä päivänä
+  // Tehtävät — due_date:lla oikealle päivälle, muuten viikon maanantaille
   const dateStr = date.toISOString().slice(0, 10);
-  absences
-    .filter(a => a.start_date <= dateStr && a.end_date >= dateStr)
-    .forEach(a => {
-      const ev = document.createElement('div');
-      ev.className = 'event event-absence';
-      ev.textContent = a.notes || a.type;
-      ev.title = a.notes || a.type;
-      cell.appendChild(ev);
-    });
+  const dayTodos = todos.filter(t => {
+    if (t.due_date) return t.due_date === dateStr;
+    return t.due_week === weekKey && (isMonday || date.getDate() === 1);
+  });
+  dayTodos.forEach(t => {
+    const ev = document.createElement('div');
+    ev.className = 'event event-todo';
+    const timePrefix = t.due_time ? t.due_time.slice(0,5) + ' ' : '';
+    ev.textContent = (t.is_done ? '✓ ' : '') + timePrefix + t.title;
+    ev.title = t.title + (t.notes ? '\n' + t.notes : '');
+    if (t.is_done) ev.style.opacity = '0.55';
+    ev.onclick = () => openTodoModal(t);
+    cell.appendChild(ev);
+  });
 
   return cell;
 }
@@ -777,47 +726,6 @@ function nextMonth() {
 function goToday() {
   viewYear  = new Date().getFullYear();
   viewMonth = new Date().getMonth();
-  renderCalendar();
-}
-
-// ── Poissaolo modal ────────────────────────────────────
-function openAbsenceModal() {
-  const today = new Date().toISOString().slice(0, 10);
-  document.getElementById('absStart').value = today;
-  document.getElementById('absEnd').value   = today;
-  document.getElementById('absNotes').value = '';
-  document.getElementById('absType').value  = 'loma';
-  document.getElementById('absenceModal').classList.add('open');
-}
-function closeAbsenceModal() {
-  document.getElementById('absenceModal').classList.remove('open');
-}
-document.getElementById('absenceModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('absenceModal')) closeAbsenceModal();
-});
-
-async function saveAbsence() {
-  const start = document.getElementById('absStart').value;
-  const end   = document.getElementById('absEnd').value;
-  const notes = document.getElementById('absNotes').value.trim();
-  const type  = document.getElementById('absType').value;
-
-  if (!start || !end) { showToast('Valitse päivämäärät', 'error'); return; }
-  if (end < start)    { showToast('Päättymispäivä ennen alkua', 'error'); return; }
-
-  const { data: { session } } = await db.auth.getSession();
-  const { error } = await db.from('absences').insert([{
-    start_date: start,
-    end_date:   end,
-    notes:      notes || type,
-    type:       type,
-    user_id:    session?.user?.id || null,
-  }]);
-
-  if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
-  showToast('Poissaolo tallennettu ✓', 'success');
-  closeAbsenceModal();
-  await loadData();
   renderCalendar();
 }
 
