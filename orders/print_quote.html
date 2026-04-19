@@ -84,6 +84,8 @@
   .btn-print:hover { background: #b45309; }
   .loading { text-align: center; padding: 40px; font-size: 14px; color: #888; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
 </head>
 <body>
 
@@ -91,8 +93,6 @@
 
 <div id="root" class="loading">Ladataan tarjousta...</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="auth-guard.js"></script>
 <script>
 const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
@@ -114,6 +114,7 @@ function fmtDate(s) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  await window._authReady;
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   const showPrices = params.get('prices') !== '0';
