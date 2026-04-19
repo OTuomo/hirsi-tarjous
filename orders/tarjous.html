@@ -149,14 +149,16 @@
   .product-card label { min-width: 60px; }
 
   /* VIIKKOSELAIN */
-  .week-picker { display: flex; align-items: center; gap: 4px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; height: 32px; }
-  .week-arrow { background: none; border: none; color: var(--text-dim); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 3px; font-family: inherit; }
+  .week-picker { display: flex; align-items: center; gap: 4px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; height: 32px; }
+  .week-picker:focus-within { border-color: var(--accent); }
+  .week-arrow { background: none; border: none; color: var(--text-dim); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 3px; border-radius: 3px; font-family: inherit; flex-shrink: 0; }
   .week-arrow:hover { color: var(--accent); background: var(--accent-glow); }
-  .week-display { flex: 1; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text); white-space: nowrap; cursor: pointer; user-select: none; min-width: 160px; }
-  .week-display:hover { color: var(--text-dim); }
-  .week-display.empty { color: var(--text-dim); }
+  .week-input { background: transparent; border: none; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13px; width: 28px; text-align: center; padding: 0; outline: none; }
+  .week-input::placeholder { color: var(--text-dim); }
+  .week-dates { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); white-space: nowrap; flex: 1; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
 </head>
 <body>
 
@@ -297,9 +299,11 @@
         <div class="field">
           <label>Toimitusviikko</label>
           <div class="week-picker" id="weekPickerWrap">
-            <button type="button" class="week-arrow" id="weekPrev" onclick="stepWeek(-1)" title="Edellinen viikko">&#8249;</button>
-            <span class="week-display" id="weekDisplay" onclick="clearWeek()" title="Tyhjennä klikkaamalla">—</span>
-            <button type="button" class="week-arrow" id="weekNext" onclick="stepWeek(1)" title="Seuraava viikko">&#8250;</button>
+            <button type="button" class="week-arrow" onclick="stepWeek(-1)" title="Edellinen viikko">&#8249;</button>
+            <input type="text" id="weekInput" class="week-input" placeholder="vko" maxlength="2"
+              oninput="onWeekInput(this.value)" onblur="onWeekBlur(this.value)" onkeydown="if(event.key==='Enter'){onWeekBlur(this.value);this.blur();}">
+            <span class="week-dates" id="weekDates"></span>
+            <button type="button" class="week-arrow" onclick="stepWeek(1)" title="Seuraava viikko">&#8250;</button>
           </div>
           <input type="hidden" id="deliveryWeek">
         </div>
@@ -387,8 +391,6 @@
   </div>
 
 </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="auth-guard.js"></script>
 <script>
 // =============================================
 // SUPABASE
@@ -576,21 +578,16 @@ document.addEventListener('click', e => {
 // =============================================
 // VIIKKOSELAIN
 // =============================================
-// Palauttaa ISO viikkonumeron (1–53) ja vuoden Date-objektille
 function getISOWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = d.getUTCDay() || 7; // ma=1 ... su=7
+  const day = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
   return { week, year: d.getUTCFullYear() };
 }
 
-// Palauttaa maanantain Date-objektina viikkoavaimelle "2026-32"
-function mondayOfWeek(key) {
-  if (!key) return null;
-  const [year, week] = key.split('-').map(Number);
-  // ISO: vk1 on se viikko jossa vuoden ensimmäinen torstai on
+function mondayOfWeek(year, week) {
   const jan4 = new Date(Date.UTC(year, 0, 4));
   const jan4day = jan4.getUTCDay() || 7;
   const monday = new Date(jan4);
@@ -598,52 +595,73 @@ function mondayOfWeek(key) {
   return monday;
 }
 
-function formatWeekDisplay(key) {
-  if (!key) return '—';
-  const monday = mondayOfWeek(key);
-  if (!monday) return key;
+function weekDateRange(year, week) {
+  const monday = mondayOfWeek(year, week);
   const sunday = new Date(monday);
   sunday.setUTCDate(monday.getUTCDate() + 6);
   const fmt = d => `${d.getUTCDate()}.${d.getUTCMonth()+1}.`;
-  const [year, week] = key.split('-');
-  return `Vko ${week} (${fmt(monday)}–${fmt(sunday)}${sunday.getUTCFullYear()})`;
+  // Näytä vuosi vain jos se poikkeaa maanantain vuodesta
+  const suffix = sunday.getUTCFullYear() !== monday.getUTCFullYear()
+    ? `${sunday.getUTCFullYear()}` : `${monday.getUTCFullYear()}`;
+  return `${fmt(monday)}–${fmt(sunday)}${suffix}`;
 }
 
-function setWeekValue(key) {
-  document.getElementById('deliveryWeek').value = key || '';
-  const display = document.getElementById('weekDisplay');
-  if (key) {
-    display.textContent = formatWeekDisplay(key);
-    display.classList.remove('empty');
-  } else {
-    display.textContent = '—';
-    display.classList.add('empty');
-  }
+// Asettaa viikkoselain-UI:n ja hidden inputin
+function setWeekValue(year, week) {
+  document.getElementById('deliveryWeek').value = `${year}-${week}`;
+  document.getElementById('weekInput').value = String(week);
+  document.getElementById('weekDates').textContent = weekDateRange(year, week);
 }
 
+function clearWeekValue() {
+  document.getElementById('deliveryWeek').value = '';
+  document.getElementById('weekInput').value = '';
+  document.getElementById('weekDates').textContent = '';
+}
+
+// Käyttäjä kirjoittaa viikkonumeron
+function onWeekInput(val) {
+  const w = parseInt(val, 10);
+  if (!val) { document.getElementById('weekDates').textContent = ''; return; }
+  if (isNaN(w) || w < 1 || w > 53) { document.getElementById('weekDates').textContent = ''; return; }
+  // Laske vuosi: jos viikko on jo mennyt tänä vuonna, ehdota ensi vuotta
+  const today = new Date();
+  const { week: curWeek, year: curYear } = getISOWeek(today);
+  const year = w < curWeek ? curYear + 1 : curYear;
+  document.getElementById('weekDates').textContent = weekDateRange(year, w);
+}
+
+// Käyttäjä poistuu kentästä — tallenna arvo
+function onWeekBlur(val) {
+  const w = parseInt(val, 10);
+  if (!val || isNaN(w) || w < 1 || w > 53) { clearWeekValue(); return; }
+  const today = new Date();
+  const { week: curWeek, year: curYear } = getISOWeek(today);
+  const year = w < curWeek ? curYear + 1 : curYear;
+  setWeekValue(year, w);
+}
+
+// Nuolinäppäimet
 function stepWeek(delta) {
   const current = document.getElementById('deliveryWeek').value;
-  let monday;
-  if (current) {
-    monday = mondayOfWeek(current);
+  let year, week;
+  if (current && current.includes('-')) {
+    [year, week] = current.split('-').map(Number);
   } else {
-    // Ei valittu → aloitetaan kuluvasta viikosta
-    const today = new Date();
-    const { week, year } = getISOWeek(today);
-    monday = mondayOfWeek(`${year}-${week}`);
+    const r = getISOWeek(new Date());
+    year = r.year; week = r.week;
   }
+  const monday = mondayOfWeek(year, week);
   monday.setUTCDate(monday.getUTCDate() + delta * 7);
-  const { week, year } = getISOWeek(monday);
-  setWeekValue(`${year}-${week}`);
+  const r = getISOWeek(monday);
+  setWeekValue(r.year, r.week);
 }
 
-function clearWeek() {
-  setWeekValue('');
-}
-
-// Lataa tallennettu toimitusviikko kenttään (kutsutaan loadQuote:sta)
+// Ladataan tallennettu arvo tarjouksesta
 function loadDeliveryWeek(key) {
-  setWeekValue(key || '');
+  if (!key || !key.includes('-')) { clearWeekValue(); return; }
+  const [year, week] = key.split('-').map(Number);
+  setWeekValue(year, week);
 }
 function openTextTemplateModal() {
   renderTplList();
