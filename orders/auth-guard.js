@@ -22,6 +22,11 @@
   // Pidetään sessio muistissa — ei kutsuta getSession() joka REST-pyynnöllä
   let _cachedSession = null;
 
+  // _authReady resolvoituu kun INITIAL_SESSION on käsitelty —
+  // sivujen init voi awaitata tätä ennen Supabase-kutsuja
+  let _authReadyResolve;
+  window._authReady = new Promise(resolve => { _authReadyResolve = resolve; });
+
   // ── Fetch-korjaus ──────────────────────────────────────────
   // Ylikirjoitetaan window.fetch niin että Supabase-kutsut saavat aina oikean tokenin
   const _originalFetch = window.fetch.bind(window);
@@ -59,6 +64,7 @@
       document.documentElement.style.visibility = '';
       window._currentUser = session.user;
       renderUserInfo(session.user);
+      _authReadyResolve(session);
       return;
     }
     // SIGNED_IN tai TOKEN_REFRESHED — päivitetään cache, ei muuta toimintaa
