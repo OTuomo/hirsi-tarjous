@@ -3,780 +3,552 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kalenteri — Okkosen Puutuote</title>
+<title>Muistilista — Okkosen Puutuote</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth-guard.js"></script>
 <style>
-  :root {
-    --bg:        #faf7f2;
-    --bg2:       #f3ede4;
-    --bg3:       #ede4d8;
-    --panel:     #ffffff;
-    --border:    #e0d4c4;
-    --border2:   #cfc0ac;
-    --accent:    #d97706;
-    --accent-dim:#b45309;
-    --accent-bg: rgba(217,119,6,0.10);
-    --text:      #2a1f14;
-    --text-mid:  #6b4f38;
-    --text-dim:  #a08878;
-    --today-bg:  rgba(217,119,6,0.12);
-    --ordered-bg:#dbeafe;
-    --ordered-fg:#1d4ed8;
-    --completed-bg:#dcfce7;
-    --completed-fg:#15803d;
-    --absence-bg:#fef3c7;
-    --absence-fg:#92400e;
-    --todo-bg:   #f3e8ff;
-    --todo-fg:   #7c3aed;
-    --shadow:    0 1px 4px rgba(100,60,20,0.08);
-    --radius:    6px;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 14px;
-    min-height: 100vh;
-  }
-
-  /* ── HEADER ───────────────────────────────────────────── */
-  header .logo { height: 32px; width: auto; }
-
-  header {
-    background: var(--panel);
-    border-bottom: 2px solid var(--accent);
-    padding: 10px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: var(--shadow);
-  }
-  .nav-menu-wrap { position: relative; }
-  .nav-btn {
-    background: var(--bg2);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    letter-spacing: .04em;
-  }
-  .nav-btn:hover { background: var(--bg3); }
-  .nav-dropdown {
-    display: none;
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    background: var(--panel);
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    min-width: 200px;
-    z-index: 999;
-    box-shadow: 0 4px 16px rgba(100,60,20,0.15);
-    overflow: hidden;
-  }
-  .nav-dropdown.open { display: block; }
-  .nav-section-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    padding: 8px 14px 4px;
-  }
-  .nav-item {
-    display: block;
-    padding: 8px 14px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    color: var(--text);
-    text-decoration: none;
-    transition: background .1s;
-  }
-  .nav-item:hover { background: var(--accent-bg); color: var(--accent); }
-  .nav-item.current { color: var(--accent); font-weight: 600; }
-  header h1 {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text);
-  }
-  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-
-  /* ── NAVIGAATIO ───────────────────────────────────────── */
-  .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
-
-  .cal-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .cal-nav-left { display: flex; align-items: center; gap: 10px; }
-  .cal-title {
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--text);
-    min-width: 220px;
-  }
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 14px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border2);
-    background: var(--panel);
-    color: var(--text-mid);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .15s;
-    letter-spacing: .03em;
-  }
-  .btn:hover { background: var(--bg2); color: var(--text); border-color: var(--accent); }
-  .btn-accent { background: var(--accent); color: white; border-color: var(--accent); }
-  .btn-accent:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: white; }
-
-  /* ── LEGENDA ──────────────────────────────────────────── */
-  .legend {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-mid);
-  }
-  .legend-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    flex-shrink: 0;
-  }
-
-  /* ── KALENTERI ────────────────────────────────────────── */
-  .cal-wrap {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-  }
-
-  .cal-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-  }
-  .cal-weekday {
-    padding: 10px 8px;
-    text-align: center;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--text-mid);
-  }
-  .cal-weekday.weekend { color: var(--text-dim); }
-
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-  }
-
-  .cal-day {
-    min-height: 100px;
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-    padding: 6px;
-    vertical-align: top;
-    transition: background .1s;
-  }
-  .cal-day:nth-child(7n) { border-right: none; }
-  .cal-day.other-month { background: var(--bg); }
-  .cal-day.today { background: var(--today-bg); }
-  .cal-day.weekend { background: var(--bg2); }
-  .cal-day.weekend.other-month { background: var(--bg3); }
-
-  .day-number {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-mid);
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .day-number.today-num {
-    color: var(--accent);
-  }
-  .week-num {
-    font-size: 10px;
-    color: var(--text-dim);
-    font-weight: 400;
-  }
-
-  /* ── TAPAHTUMAT ───────────────────────────────────────── */
-  .event {
-    display: block;
-    padding: 3px 6px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: 500;
-    margin-bottom: 3px;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: opacity .1s;
-    text-decoration: none;
-  }
-  .event:hover { opacity: .8; }
-  .event-ordered {
-    background: var(--ordered-bg);
-    color: var(--ordered-fg);
-    border-left: 3px solid var(--ordered-fg);
-  }
-  .event-completed {
-    background: var(--completed-bg);
-    color: var(--completed-fg);
-    border-left: 3px solid var(--completed-fg);
-  }
-  .event-absence {
-    background: var(--absence-bg);
-    color: var(--absence-fg);
-    border-left: 3px solid var(--absence-fg);
-  }
-  .event-todo {
-    background: var(--todo-bg);
-    color: var(--todo-fg);
-    border-left: 3px solid var(--todo-fg);
-    cursor: pointer;
-  }
-
-  /* ── LISÄÄ POISSAOLO MODAL ────────────────────────────── */
-  .modal-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.3);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-backdrop.open { display: flex; }
-  .modal {
-    background: var(--panel);
-    border: 1px solid var(--border2);
-    border-radius: 8px;
-    padding: 28px;
-    width: 420px;
-    max-width: 96vw;
-    box-shadow: 0 8px 32px rgba(100,60,20,0.15);
-  }
-  .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 18px; color: var(--text); }
-  .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
-  label { font-size: 12px; color: var(--text-mid); text-transform: uppercase; letter-spacing: .05em; font-family: 'IBM Plex Mono', monospace; }
-  input, select, textarea {
-    background: var(--bg2);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    border-radius: 4px;
-    padding: 7px 11px;
-    font-family: inherit;
-    font-size: 13px;
-    outline: none;
-    transition: border-color .15s;
-  }
-  input:focus, select:focus { border-color: var(--accent); }
-  select option { background: var(--panel); }
-  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-
-  /* ── TODO-MODAL ───────────────────────────────────────── */
-  .todo-modal-field { margin-bottom: 12px; }
-  .todo-modal-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; font-family: 'IBM Plex Mono', monospace; margin-bottom: 3px; }
-  .todo-modal-value { font-size: 14px; color: var(--text); }
-  .todo-modal-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
-  .todo-modal-badge.high   { background: #fee2e2; color: #dc2626; }
-  .todo-modal-badge.normal { background: #e0f2fe; color: #0369a1; }
-  .todo-modal-badge.low    { background: #f1f5f9; color: #64748b; }
-  .todo-modal-badge.shared { background: var(--todo-bg); color: var(--todo-fg); }
-  .todo-modal-badge.done   { background: #dcfce7; color: #15803d; }
-
-  /* ── TOAST ────────────────────────────────────────────── */
-  #toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--panel);
-    border: 1px solid var(--border2);
-    border-radius: var(--radius);
-    padding: 12px 18px;
-    font-size: 13px;
-    color: var(--text);
-    z-index: 999;
-    display: none;
-    box-shadow: var(--shadow);
-  }
-  #toast.success { border-color: #22c55e; color: #15803d; }
-  #toast.error { border-color: #ef4444; color: #dc2626; }
-
-  /* ── MOBIILI ──────────────────────────────────────────── */
-  .mobile-list { display: none; }
-
-  @media (max-width: 640px) {
-    .page { padding: 16px; }
-    .cal-wrap { display: none; }
-    .mobile-list { display: block; }
-    .cal-title { font-size: 18px; min-width: 0; }
-    .legend { display: none; }
-
-    .week-block {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 10px;
-      overflow: hidden;
-    }
-    .week-block-header {
-      background: var(--bg2);
-      padding: 8px 12px;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-mid);
-      border-bottom: 1px solid var(--border);
-    }
-    .week-block-body { padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
-    .week-block-empty { color: var(--text-dim); font-size: 12px; padding: 8px 12px; }
-  }
+:root{--bg:#faf7f2;--bg2:#f3ede4;--bg3:#ede4d8;--panel:#ffffff;--border:#e0d4c4;--border2:#cfc0ac;--accent:#d97706;--accent-dim:#b45309;--accent-bg:rgba(217,119,6,0.10);--text:#2a1f14;--text-mid:#6b4f38;--text-dim:#a08878;--shadow:0 1px 4px rgba(100,60,20,0.08);--radius:6px;--red:#dc2626;--yellow:#d97706;--green:#16a34a;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;min-height:100vh;}
+header{background:var(--panel);border-bottom:2px solid var(--accent);padding:10px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+header .logo{height:32px;width:auto;}
+.nav-menu-wrap{position:relative;}
+.nav-btn{background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:6px 12px;border-radius:4px;cursor:pointer;letter-spacing:.04em;}
+.nav-btn:hover{background:var(--bg3);}
+.nav-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--panel);border:1px solid var(--border2);border-radius:var(--radius);min-width:200px;z-index:999;box-shadow:0 4px 16px rgba(100,60,20,0.15);overflow:hidden;}
+.nav-dropdown.open{display:block;}
+.nav-section-label{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);padding:8px 14px 4px;}
+.nav-item{display:block;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);text-decoration:none;transition:background .1s;}
+.nav-item:hover{background:var(--accent-bg);color:var(--accent);}
+.nav-item.current{color:var(--accent);font-weight:600;}
+header h1{font-size:16px;font-weight:500;}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--panel);color:var(--text-mid);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.03em;white-space:nowrap;}
+.btn:hover{background:var(--bg2);color:var(--text);border-color:var(--accent);}
+.btn-accent{background:var(--accent);color:white;border-color:var(--accent);}
+.btn-accent:hover{background:var(--accent-dim);border-color:var(--accent-dim);color:white;}
+.btn-sm{padding:4px 10px;font-size:11px;}
+.page{max-width:1100px;margin:0 auto;padding:24px;}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;}
+.page-header h2{font-size:20px;font-weight:600;}
+.show-done-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);}
+.tab-btn{padding:8px 16px;border:none;background:none;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;letter-spacing:.04em;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.columns{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);}
+.col-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-mid);}
+.col-title.shared{color:var(--accent);}
+.todo-list{display:flex;flex-direction:column;gap:8px;min-height:40px;}
+.todo-item{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--border2);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:flex-start;gap:10px;box-shadow:var(--shadow);transition:opacity .2s;}
+.todo-item.done{opacity:.45;}
+.todo-item.priority-high{border-left-color:var(--red);}
+.todo-item.priority-normal{border-left-color:var(--yellow);}
+.todo-item.priority-low{border-left-color:var(--green);}
+.todo-check{width:18px;height:18px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--accent);}
+.todo-body{flex:1;min-width:0;}
+.todo-title{font-size:14px;font-weight:500;color:var(--text);line-height:1.4;}
+.todo-item.done .todo-title{text-decoration:line-through;color:var(--text-dim);}
+.todo-notes{font-size:12px;color:var(--text-dim);margin-top:2px;}
+.todo-meta{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;align-items:center;}
+.todo-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
+.todo-date.overdue{color:var(--red);font-weight:600;}
+.badge-priority{font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:99px;font-weight:600;}
+.badge-high{background:rgba(220,38,38,.12);color:var(--red);}
+.badge-normal{background:rgba(217,119,6,.12);color:var(--yellow);}
+.badge-low{background:rgba(22,163,74,.12);color:var(--green);}
+.todo-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;padding:2px 6px;border-radius:3px;flex-shrink:0;transition:color .1s;line-height:1;}
+.todo-del:hover{color:var(--red);}
+.todo-edit{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:15px;padding:2px 6px;border-radius:3px;flex-shrink:0;transition:color .1s;line-height:1;}
+.todo-edit:hover{color:var(--yellow);}
+.todo-empty{text-align:center;padding:32px 16px;color:var(--text-dim);font-size:13px;border:2px dashed var(--border);border-radius:var(--radius);}
+.checklist-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px;}
+.checklist-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+.checklist-header-title{font-weight:600;font-size:14px;flex:1;}
+.checklist-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
+.checklist-body{padding:8px 0;}
+.checklist-item{display:flex;align-items:center;gap:10px;padding:7px 14px;transition:background .1s;}
+.checklist-item:hover{background:var(--bg2);}
+.checklist-item.done .checklist-item-text{text-decoration:line-through;color:var(--text-dim);}
+.checklist-item-text{flex:1;font-size:13px;}
+.checklist-item-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:12px;padding:2px 6px;opacity:0;transition:opacity .1s;}
+.checklist-item:hover .checklist-item-del{opacity:1;}
+.checklist-item-del:hover{color:var(--red);}
+.checklist-add{display:flex;gap:8px;padding:8px 14px;border-top:1px solid var(--border);}
+.checklist-add input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:13px;font-family:inherit;color:var(--text);outline:none;}
+.checklist-add input:focus{border-color:var(--accent);}
+.new-checklist-btn{width:100%;margin-bottom:12px;padding:10px;border:2px dashed var(--border2);border-radius:var(--radius);background:none;color:var(--text-dim);font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit;}
+.new-checklist-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg);}
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:200;align-items:center;justify-content:center;}
+.modal-backdrop.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:28px;width:460px;max-width:96vw;box-shadow:0 8px 32px rgba(100,60,20,0.15);}
+.modal h2{font-size:16px;font-weight:600;margin-bottom:18px;}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+label{font-size:11px;color:var(--text-mid);text-transform:uppercase;letter-spacing:.05em;font-family:'IBM Plex Mono',monospace;}
+input[type=text],input[type=date],input[type=time],select,textarea{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:7px 11px;font-family:inherit;font-size:13px;outline:none;transition:border-color .15s;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+select option{background:var(--panel);}
+.shared-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;margin-top:4px;}
+.shared-toggle input{width:auto;accent-color:var(--accent);}
+.form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--text);z-index:999;display:none;box-shadow:var(--shadow);}
+#toast.success{border-color:#22c55e;color:#15803d;}
+#toast.error{border-color:#ef4444;color:#dc2626;}
+@media(max-width:640px){.page{padding:16px;}.columns{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
-
 <header>
   <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote" class="logo">
   <div class="nav-menu-wrap">
-    <button class="nav-btn" onclick="toggleNav(event)">☰ Valikko</button>
+    <button class="nav-btn" onclick="toggleNav(event)">&#9776; Valikko</button>
     <div class="nav-dropdown" id="navDropdown">
       <div class="nav-section-label">Sivut</div>
-      <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
-      <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
-      <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
-      <a class="nav-item" href="tarjous.html">✏️ Uusi tarjous</a>
-      <a class="nav-item current" href="kalenteri.html">📅 Kalenteri</a>
-      <a class="nav-item current" href="todo.html">✅ Muistilista</a>
+      <a class="nav-item" href="asiakkaat.html">Asiakkaat</a>
+      <a class="nav-item" href="hinnasto.html">Hinnasto</a>
+      <a class="nav-item" href="tarjoukset.html">Tarjoukset</a>
+      <a class="nav-item" href="tarjous.html">Uusi tarjous</a>
+      <a class="nav-item" href="kalenteri.html">Kalenteri</a>
+      <a class="nav-item current" href="todo.html">Muistilista</a>
     </div>
   </div>
-  <h1>Kalenteri</h1>
+  <h1>Muistilista</h1>
   <div class="header-right">
+    <label class="show-done-wrap">
+      <input type="checkbox" id="showDone" onchange="renderAll()" style="accent-color:var(--accent);width:auto;">
+      Nayta tehdyt
+    </label>
   </div>
 </header>
-
 <div class="page">
-
-  <!-- NAVIGAATIO -->
-  <div class="cal-nav">
-    <div class="cal-nav-left">
-      <button class="btn" onclick="prevMonth()">‹</button>
-      <div class="cal-title" id="calTitle">—</div>
-      <button class="btn" onclick="nextMonth()">›</button>
-      <button class="btn" onclick="goToday()">Tänään</button>
-    </div>
-    <div class="legend">
-      <div class="legend-item">
-        <div class="legend-dot" style="background:var(--ordered-bg);border-left:3px solid var(--ordered-fg);"></div>
-        Tilattu
+  <div class="page-header"><h2>Muistilista ja tehtavat</h2></div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-todos" onclick="switchTab('todos')">Tehtavat</button>
+    <button class="tab-btn" id="tab-lists" onclick="switchTab('lists')">Listat</button>
+  </div>
+  <div id="view-todos">
+    <div class="columns">
+      <div>
+        <div class="col-header">
+          <span class="col-title">Omat</span>
+          <button class="btn btn-sm btn-accent" onclick="openModal(false)">+ Lisaa</button>
+        </div>
+        <div class="todo-list" id="listOmat"></div>
       </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:var(--completed-bg);border-left:3px solid var(--completed-fg);"></div>
-        Valmis
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:var(--todo-bg);border-left:3px solid var(--todo-fg);"></div>
-        Tehtävä
+      <div>
+        <div class="col-header">
+          <span class="col-title shared">Yhteiset</span>
+          <button class="btn btn-sm btn-accent" onclick="openModal(true)">+ Lisaa</button>
+        </div>
+        <div class="todo-list" id="listYhteiset"></div>
       </div>
     </div>
   </div>
-
-  <!-- KALENTERI (desktop) -->
-  <div class="cal-wrap">
-    <div class="cal-weekdays">
-      <div class="cal-weekday">Ma</div>
-      <div class="cal-weekday">Ti</div>
-      <div class="cal-weekday">Ke</div>
-      <div class="cal-weekday">To</div>
-      <div class="cal-weekday">Pe</div>
-      <div class="cal-weekday weekend">La</div>
-      <div class="cal-weekday weekend">Su</div>
-    </div>
-    <div class="cal-grid" id="calGrid">
-      <!-- JS täyttää -->
+  <div id="view-lists" style="display:none;">
+    <div class="columns">
+      <div>
+        <div class="col-header"><span class="col-title">Omat listat</span></div>
+        <button class="new-checklist-btn" onclick="openNewListModal(false)">+ Uusi lista</button>
+        <div id="omatListat"></div>
+      </div>
+      <div>
+        <div class="col-header"><span class="col-title shared">Yhteiset listat</span></div>
+        <button class="new-checklist-btn" onclick="openNewListModal(true)">+ Uusi lista</button>
+        <div id="yhteisListat"></div>
+      </div>
     </div>
   </div>
-
-  <!-- MOBIILILISTA -->
-  <div class="mobile-list" id="mobileList">
-    <!-- JS täyttää -->
-  </div>
-
 </div>
-
-<!-- TODO MODAL -->
 <div class="modal-backdrop" id="todoModal">
   <div class="modal">
-    <h2 id="todoModalTitle">Tehtävä</h2>
-    <div class="todo-modal-field">
-      <div class="todo-modal-label">Kuvaus</div>
-      <div class="todo-modal-value" id="todoModalNotes" style="color:var(--text-mid);font-size:13px;"></div>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-      <div>
-        <div class="todo-modal-label">Prioriteetti</div>
-        <span class="todo-modal-badge" id="todoModalPriority"></span>
-      </div>
-      <div>
-        <div class="todo-modal-label">Tyyppi</div>
-        <span class="todo-modal-badge shared" id="todoModalType"></span>
-      </div>
-      <div>
-        <div class="todo-modal-label">Tila</div>
-        <span class="todo-modal-badge" id="todoModalDone"></span>
+    <h2 id="modalTitle">Uusi tehtava</h2>
+    <div class="form-group"><label>Tehtava *</label><input type="text" id="fTitle" placeholder="esim. Soita Jormalle"></div>
+    <div class="form-group"><label>Lisatiedot</label><textarea id="fNotes" rows="2" placeholder="Vapaaehtoinen..."></textarea></div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Paivamaara</label><input type="date" id="fDate"></div>
+      <div class="form-group"><label>Kellonaika</label><input type="time" id="fTime"></div>
+      <div class="form-group"><label>Tarkeys</label>
+        <select id="fPriority"><option value="high">Kiireellinen</option><option value="normal" selected>Normaali</option><option value="low">Ei kiireellinen</option></select>
       </div>
     </div>
-    <div class="todo-modal-field" id="todoModalDueDateWrap">
-      <div class="todo-modal-label">Ajankohta</div>
-      <div class="todo-modal-value" id="todoModalDueDate"></div>
-    </div>
+    <label class="shared-toggle"><input type="checkbox" id="fShared"> Nakyy kaikille</label>
     <div class="form-actions">
-      <button class="btn" onclick="closeTodoModal()">Sulje</button>
-      <a class="btn btn-accent" href="todo.html" id="todoModalLink">Avaa Muistilista →</a>
+      <button class="btn" onclick="closeModal()">Peruuta</button>
+      <button class="btn btn-accent" onclick="saveTodo()">Tallenna</button>
     </div>
   </div>
 </div>
-
+<div class="modal-backdrop" id="listModal">
+  <div class="modal">
+    <h2>Uusi lista</h2>
+    <div class="form-group"><label>Listan nimi *</label><input type="text" id="fListName" placeholder="esim. Ostoslista"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeListModal()">Peruuta</button>
+      <button class="btn btn-accent" onclick="saveNewList()">Luo lista</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
-
 <script>
-const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+var SURL = "https://iofjnoxvksbaqorqaydh.supabase.co";
+var SKEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo";
+var scl = supabase.createClient(SURL, SKEY);
+var todos = [];
+var checklists = [];
+var currentUserId = null;
+var newListShared = false;
+var currentEditId = null;
 
-// ── Tila ───────────────────────────────────────────────
-let viewYear  = new Date().getFullYear();
-let viewMonth = new Date().getMonth(); // 0-11
-let quotes    = [];
-let todos     = [];
-
-const MONTHS_FI = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
-                   'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
-
-// ── Nav ────────────────────────────────────────────────
 function toggleNav(e) {
   e.stopPropagation();
-  document.getElementById('navDropdown').classList.toggle('open');
+  document.getElementById("navDropdown").classList.toggle("open");
 }
-document.addEventListener('click', () => document.getElementById('navDropdown').classList.remove('open'));
-
-// ── Init ───────────────────────────────────────────────
-init();
-
-async function init() {
-  await loadData();
-  renderCalendar();
-}
-
-async function loadData() {
-  try {
-    // Hae tilatut ja valmiit tarjoukset joilla on toimitusviikko
-    const { data: qData } = await db
-      .from('quotes')
-      .select('id, quote_number, delivery_week, status, customers(name)')
-      .in('status', ['ORDERED', 'COMPLETED'])
-      .not('delivery_week', 'is', null);
-    quotes = qData || [];
-
-    // Hae todot joilla on due_week — omat + jaetut
-    const userId = window._currentUser?.id;
-    const { data: tData } = await db
-      .from('todos')
-      .select('id, title, notes, due_week, due_date, due_time, priority, is_shared, is_done, user_id')
-      .not('due_week', 'is', null)
-      .or(`is_shared.eq.true,user_id.eq.${userId}`);
-    todos = tData || [];
-  } catch(e) {
-    console.error('loadData:', e);
-  }
-}
-
-// ── Viikkonumero ───────────────────────────────────────
-function getWeekNumber(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return String(d.getUTCFullYear()) + '-' + String(Math.ceil((((d - yearStart) / 86400000) + 1) / 7)).padStart(2, '0');
-}
-
-function getWeekNum(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-// ── Renderöi kalenteri ─────────────────────────────────
-function renderCalendar() {
-  document.getElementById('calTitle').textContent = MONTHS_FI[viewMonth] + ' ' + viewYear;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Kuukauden ensimmäinen ja viimeinen päivä
-  const firstDay = new Date(viewYear, viewMonth, 1);
-  const lastDay  = new Date(viewYear, viewMonth + 1, 0);
-
-  // Maanantai = 0, ..., sunnuntai = 6
-  let startDow = firstDay.getDay() - 1;
-  if (startDow < 0) startDow = 6;
-
-  const grid = document.getElementById('calGrid');
-  grid.innerHTML = '';
-
-  // Edellisen kuun täytepäivät
-  for (let i = 0; i < startDow; i++) {
-    const d = new Date(viewYear, viewMonth, -(startDow - 1 - i));
-    grid.appendChild(buildDayCell(d, true, today));
-  }
-
-  // Tämän kuukauden päivät
-  for (let d = 1; d <= lastDay.getDate(); d++) {
-    const date = new Date(viewYear, viewMonth, d);
-    grid.appendChild(buildDayCell(date, false, today));
-  }
-
-  // Seuraavan kuun täytepäivät
-  const totalCells = startDow + lastDay.getDate();
-  const remainder  = totalCells % 7;
-  if (remainder > 0) {
-    for (let i = 1; i <= 7 - remainder; i++) {
-      const d = new Date(viewYear, viewMonth + 1, i);
-      grid.appendChild(buildDayCell(d, true, today));
-    }
-  }
-
-  renderMobileList();
-}
-
-function buildDayCell(date, otherMonth, today) {
-  const cell = document.createElement('div');
-  const dow  = date.getDay(); // 0=su, 6=la
-  const isWeekend = dow === 0 || dow === 6;
-  const isToday   = date.getTime() === today.getTime();
-  const weekKey   = getWeekNumber(date);
-  const isMonday  = (date.getDay() === 1);
-
-  cell.className = 'cal-day'
-    + (otherMonth ? ' other-month' : '')
-    + (isWeekend  ? ' weekend' : '')
-    + (isToday    ? ' today' : '');
-
-  // Päivänumero + viikkonumero maanantailla
-  const numDiv = document.createElement('div');
-  numDiv.className = 'day-number' + (isToday ? ' today-num' : '');
-  numDiv.innerHTML = date.getDate()
-    + (isMonday ? '<span class="week-num">vko ' + getWeekNum(date) + '</span>' : '');
-  cell.appendChild(numDiv);
-
-  // Toimitukset tällä viikolla — näytetään maanantailla
-  if (isMonday || date.getDate() === 1) {
-    const weekQuotes = quotes.filter(q => q.delivery_week === weekKey);
-    weekQuotes.forEach(q => {
-      const ev = document.createElement('a');
-      ev.className = 'event event-' + (q.status === 'COMPLETED' ? 'completed' : 'ordered');
-      ev.href = 'tarjous.html?id=' + q.id;
-      ev.textContent = (q.customers?.name || q.quote_number || '—');
-      ev.title = (q.quote_number || '') + ' · ' + (q.customers?.name || '') + ' · vko ' + weekKey.split('-')[1];
-      cell.appendChild(ev);
-    });
-  }
-
-  // Tehtävät — due_date:lla oikealle päivälle, muuten viikon maanantaille
-  const dateStr = date.toISOString().slice(0, 10);
-  const dayTodos = todos.filter(t => {
-    if (t.due_date) return t.due_date === dateStr;
-    return t.due_week === weekKey && (isMonday || date.getDate() === 1);
-  });
-  dayTodos.forEach(t => {
-    const ev = document.createElement('div');
-    ev.className = 'event event-todo';
-    const timePrefix = t.due_time ? t.due_time.slice(0,5) + ' ' : '';
-    ev.textContent = (t.is_done ? '✓ ' : '') + timePrefix + t.title;
-    ev.title = t.title + (t.notes ? '\n' + t.notes : '');
-    if (t.is_done) ev.style.opacity = '0.55';
-    ev.onclick = () => openTodoModal(t);
-    cell.appendChild(ev);
-  });
-
-  return cell;
-}
-
-// ── Mobiililista ───────────────────────────────────────
-function renderMobileList() {
-  const list = document.getElementById('mobileList');
-  list.innerHTML = '';
-
-  // Kerää kaikki viikot tässä kuukaudessa
-  const weeks = new Map();
-  const firstDay = new Date(viewYear, viewMonth, 1);
-  const lastDay  = new Date(viewYear, viewMonth + 1, 0);
-
-  for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
-    const wk = getWeekNumber(new Date(d));
-    if (!weeks.has(wk)) weeks.set(wk, []);
-  }
-
-  // Lisää toimitukset
-  quotes.forEach(q => {
-    if (weeks.has(q.delivery_week)) {
-      weeks.get(q.delivery_week).push({ type: q.status === 'COMPLETED' ? 'completed' : 'ordered', q });
-    }
-  });
-
-  // Lisää todot
-  todos.forEach(t => {
-    if (weeks.has(t.due_week)) {
-      weeks.get(t.due_week).push({ type: 'todo', t });
-    }
-  });
-
-  if (weeks.size === 0) {
-    list.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">Ei tapahtumia</div>';
-    return;
-  }
-
-  weeks.forEach((events, wk) => {
-    const block = document.createElement('div');
-    block.className = 'week-block';
-    const wkNum = wk.split('-')[1];
-    block.innerHTML = '<div class="week-block-header">Viikko ' + wkNum + ' · ' + wk.split('-')[0] + '</div>';
-
-    if (events.length === 0) {
-      block.innerHTML += '<div class="week-block-empty">Ei tapahtumia</div>';
-    } else {
-      const body = document.createElement('div');
-      body.className = 'week-block-body';
-      events.forEach(ev => {
-        if (ev.q) {
-          const a = document.createElement('a');
-          a.className = 'event event-' + ev.type;
-          a.href = 'tarjous.html?id=' + ev.q.id;
-          a.textContent = ev.q.customers?.name || ev.q.quote_number || '—';
-          body.appendChild(a);
-        } else if (ev.t) {
-          const d = document.createElement('div');
-          d.className = 'event event-todo';
-          d.textContent = (ev.t.is_done ? '✓ ' : '') + ev.t.title;
-          if (ev.t.is_done) d.style.opacity = '0.55';
-          d.onclick = () => openTodoModal(ev.t);
-          body.appendChild(d);
-        }
-      });
-      block.appendChild(body);
-    }
-    list.appendChild(block);
-  });
-}
-
-// ── Navigointi ─────────────────────────────────────────
-function prevMonth() {
-  viewMonth--;
-  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
-  renderCalendar();
-}
-function nextMonth() {
-  viewMonth++;
-  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
-  renderCalendar();
-}
-function goToday() {
-  viewYear  = new Date().getFullYear();
-  viewMonth = new Date().getMonth();
-  renderCalendar();
-}
-
-// ── Todo modal ─────────────────────────────────────────
-function openTodoModal(t) {
-  const PRIORITY_FI = { high: 'Korkea', normal: 'Normaali', low: 'Matala' };
-
-  document.getElementById('todoModalTitle').textContent = t.title;
-  document.getElementById('todoModalNotes').textContent = t.notes || '—';
-
-  const priEl = document.getElementById('todoModalPriority');
-  priEl.textContent = PRIORITY_FI[t.priority] || t.priority || 'Normaali';
-  priEl.className = 'todo-modal-badge ' + (t.priority || 'normal');
-
-  document.getElementById('todoModalType').textContent = t.is_shared ? 'Yhteinen' : 'Oma';
-
-  const doneEl = document.getElementById('todoModalDone');
-  doneEl.textContent = t.is_done ? 'Tehty' : 'Tekemättä';
-  doneEl.className = 'todo-modal-badge ' + (t.is_done ? 'done' : 'normal');
-
-  const dueDateEl = document.getElementById('todoModalDueDate');
-  if (t.due_date) {
-    const d = new Date(t.due_date);
-    dueDateEl.textContent = d.getDate() + '.' + (d.getMonth()+1) + '.' + d.getFullYear()
-      + (t.due_week ? ' (vko ' + t.due_week.split('-')[1] + ')' : '');
-  } else if (t.due_week) {
-    dueDateEl.textContent = 'Viikko ' + t.due_week.split('-')[1] + ' / ' + t.due_week.split('-')[0];
-  } else {
-    dueDateEl.textContent = '—';
-  }
-
-  document.getElementById('todoModal').classList.add('open');
-}
-
-function closeTodoModal() {
-  document.getElementById('todoModal').classList.remove('open');
-}
-document.getElementById('todoModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('todoModal')) closeTodoModal();
+document.addEventListener("click", function() {
+  document.getElementById("navDropdown").classList.remove("open");
 });
 
-// ── Toast ──────────────────────────────────────────────
-let toastTimer;
-function showToast(msg, type = '') {
-  clearTimeout(toastTimer);
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className   = type;
-  t.style.display = 'block';
-  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+function switchTab(tab) {
+  document.getElementById("tab-todos").classList.toggle("active", tab === "todos");
+  document.getElementById("tab-lists").classList.toggle("active", tab === "lists");
+  document.getElementById("view-todos").style.display = tab === "todos" ? "" : "none";
+  document.getElementById("view-lists").style.display = tab === "lists" ? "" : "none";
 }
+
+async function init() {
+  var s = await scl.auth.getSession();
+  currentUserId = (s.data && s.data.session) ? s.data.session.user.id : null;
+  await loadTodos();
+  await loadChecklists();
+  renderAll();
+}
+
+async function loadTodos() {
+  var r = await scl.from("todos").select("*").order("is_done").order("created_at");
+  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
+  todos = r.data || [];
+}
+
+function renderAll() {
+  var showDone = document.getElementById("showDone").checked;
+  var today = new Date().toISOString().slice(0, 10);
+  var omat = todos.filter(function(t) { return !t.is_shared && t.user_id === currentUserId && (showDone || !t.is_done); });
+  var yhteiset = todos.filter(function(t) { return t.is_shared && (showDone || !t.is_done); });
+  buildList(document.getElementById("listOmat"), omat, today);
+  buildList(document.getElementById("listYhteiset"), yhteiset, today);
+}
+
+var PLABEL = { high: "Kiireellinen", normal: "Normaali", low: "Ei kiireellinen" };
+
+function buildList(container, items, today) {
+  container.innerHTML = "";
+  if (!items.length) {
+    var empty = document.createElement("div");
+    empty.className = "todo-empty";
+    empty.textContent = "Ei tehtavia";
+    container.appendChild(empty);
+    return;
+  }
+  items.forEach(function(t) {
+    var p = t.priority || "normal";
+    var isOverdue = !t.is_done && t.due_date && t.due_date < today;
+    var div = document.createElement("div");
+    div.className = "todo-item priority-" + p + (t.is_done ? " done" : "");
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "todo-check";
+    cb.checked = !!t.is_done;
+    cb.addEventListener("change", function() { toggleDone(t.id, this.checked); });
+    var body = document.createElement("div");
+    body.className = "todo-body";
+    var title = document.createElement("div");
+    title.className = "todo-title";
+    title.textContent = t.title;
+    body.appendChild(title);
+    if (t.notes) {
+      var notes = document.createElement("div");
+      notes.className = "todo-notes";
+      notes.textContent = t.notes;
+      body.appendChild(notes);
+    }
+    var meta = document.createElement("div");
+    meta.className = "todo-meta";
+    if (t.due_date) {
+      var dateStr = t.due_date.split("-").reverse().join(".");
+      var timeStr = t.due_time ? " klo " + t.due_time.slice(0,5) : "";
+      var dateEl = document.createElement("span");
+      dateEl.className = "todo-date" + (isOverdue ? " overdue" : "");
+      dateEl.textContent = (isOverdue ? "! " : "") + dateStr + timeStr;
+      meta.appendChild(dateEl);
+    }
+    var badge = document.createElement("span");
+    badge.className = "badge-priority badge-" + p;
+    badge.textContent = PLABEL[p];
+    meta.appendChild(badge);
+    body.appendChild(meta);
+    var del = document.createElement("button");
+    del.className = "todo-del";
+    del.textContent = "X";
+    del.title = "Poista";
+    del.addEventListener("click", function() { deleteTodo(t.id); });
+    var edit = document.createElement("button");
+    edit.className = "todo-edit";
+    edit.textContent = "✎";
+    edit.title = "Muokkaa";
+    edit.addEventListener("click", function() { openModal(t.is_shared, t); });
+    div.appendChild(cb);
+    div.appendChild(body);
+    div.appendChild(edit);
+    div.appendChild(del);
+    container.appendChild(div);
+  });
+}
+
+async function toggleDone(id, done) {
+  await scl.from("todos").update({ is_done: done, done_at: done ? new Date().toISOString() : null }).eq("id", id);
+  var t = todos.find(function(x) { return x.id === id; });
+  if (t) t.is_done = done;
+  renderAll();
+}
+
+async function deleteTodo(id) {
+  if (!confirm("Poistetaanko tehtava?")) return;
+  await scl.from("todos").delete().eq("id", id);
+  todos = todos.filter(function(t) { return t.id !== id; });
+  renderAll();
+  showToast("Poistettu", "success");
+}
+
+function openModal(shared, todo) {
+  currentEditId = todo ? todo.id : null;
+  document.getElementById("modalTitle").textContent = todo ? "Muokkaa tehtavaa" : (shared ? "Uusi yhteinen tehtava" : "Uusi oma tehtava");
+  document.getElementById("fTitle").value = todo ? todo.title : "";
+  document.getElementById("fNotes").value = todo ? (todo.notes || "") : "";
+  document.getElementById("fDate").value = todo ? (todo.due_date || "") : "";
+  document.getElementById("fTime").value = todo ? (todo.due_time ? todo.due_time.slice(0,5) : "") : "";
+  document.getElementById("fPriority").value = todo ? (todo.priority || "normal") : "normal";
+  document.getElementById("fShared").checked = todo ? !!todo.is_shared : shared;
+  document.getElementById("todoModal").classList.add("open");
+  setTimeout(function() { document.getElementById("fTitle").focus(); }, 100);
+}
+function closeModal() { document.getElementById("todoModal").classList.remove("open"); }
+document.getElementById("todoModal").addEventListener("click", function(e) {
+  if (e.target === document.getElementById("todoModal")) closeModal();
+});
+document.getElementById("fTitle").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") saveTodo();
+});
+
+async function saveTodo() {
+  var title = document.getElementById("fTitle").value.trim();
+  if (!title) { showToast("Kirjoita tehtava", "error"); return; }
+  var due_date = document.getElementById("fDate").value || null;
+  var due_time = document.getElementById("fTime").value || null;
+  var payload = {
+    title: title,
+    notes: document.getElementById("fNotes").value.trim() || null,
+    due_date: due_date,
+    due_time: due_time,
+    due_week: due_date ? getWeekKey(new Date(due_date)) : null,
+    priority: document.getElementById("fPriority").value,
+    is_shared: document.getElementById("fShared").checked,
+  };
+  if (currentEditId) {
+    var r = await scl.from("todos").update(payload).eq("id", currentEditId).select();
+    if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
+    var idx = todos.findIndex(function(t) { return t.id === currentEditId; });
+    if (idx !== -1) todos[idx] = Object.assign(todos[idx], r.data[0]);
+    showToast("Tallennettu!", "success");
+  } else {
+    payload.user_id = currentUserId;
+    payload.is_done = false;
+    var r = await scl.from("todos").insert([payload]).select();
+    if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
+    todos.unshift(r.data[0]);
+    showToast("Lisatty!", "success");
+  }
+  renderAll();
+  closeModal();
+}
+
+async function loadChecklists() {
+  var r = await scl.from("checklists")
+    .select("*, checklist_items(*)")
+    .order("created_at");
+  if (r.error) { showToast("Virhe listojen latauksessa", "error"); return; }
+  checklists = (r.data || []).map(function(l) {
+    return {
+      id: l.id,
+      name: l.name,
+      is_shared: l.is_shared,
+      user_id: l.user_id,
+      items: (l.checklist_items || []).sort(function(a,b){ return a.sort_order - b.sort_order; }).map(function(i) {
+        return { id: i.id, text: i.text, done: i.is_done };
+      })
+    };
+  });
+  renderChecklists();
+}
+
+function renderChecklists() {
+  buildCLGroup("omatListat", checklists.filter(function(l) { return !l.is_shared; }));
+  buildCLGroup("yhteisListat", checklists.filter(function(l) { return l.is_shared; }));
+}
+
+function buildCLGroup(cid, lists) {
+  var container = document.getElementById(cid);
+  container.innerHTML = "";
+  lists.forEach(function(list) {
+    var done = list.items.filter(function(i) { return i.done; }).length;
+    var total = list.items.length;
+    var panel = document.createElement("div");
+    panel.className = "checklist-panel";
+    var hdr = document.createElement("div");
+    hdr.className = "checklist-header";
+    hdr.addEventListener("click", function() { toggleCL(list.id); });
+    var htitle = document.createElement("span");
+    htitle.className = "checklist-header-title";
+    htitle.textContent = list.name;
+    var hprog = document.createElement("span");
+    hprog.className = "checklist-progress";
+    hprog.textContent = done + "/" + total;
+    var hdel = document.createElement("button");
+    hdel.textContent = "X";
+    hdel.style.cssText = "background:none;border:none;cursor:pointer;color:var(--text-dim);margin-left:8px;";
+    hdel.addEventListener("click", function(e) { e.stopPropagation(); deleteCL(list.id); });
+    hdr.appendChild(htitle);
+    hdr.appendChild(hprog);
+    hdr.appendChild(hdel);
+    var body = document.createElement("div");
+    body.className = "checklist-body";
+    body.id = "cl-" + list.id;
+    list.items.forEach(function(item) {
+      var row = document.createElement("div");
+      row.className = "checklist-item" + (item.done ? " done" : "");
+      var icb = document.createElement("input");
+      icb.type = "checkbox";
+      icb.style.cssText = "accent-color:var(--accent);width:auto;cursor:pointer;";
+      icb.checked = !!item.done;
+      icb.addEventListener("change", function() { toggleCI(list.id, item.id, this.checked); });
+      var itext = document.createElement("span");
+      itext.className = "checklist-item-text";
+      itext.textContent = item.text;
+      var idel = document.createElement("button");
+      idel.className = "checklist-item-del";
+      idel.textContent = "x";
+      idel.addEventListener("click", function() { deleteCI(list.id, item.id); });
+      row.appendChild(icb);
+      row.appendChild(itext);
+      row.appendChild(idel);
+      body.appendChild(row);
+    });
+    var addRow = document.createElement("div");
+    addRow.className = "checklist-add";
+    var addInput = document.createElement("input");
+    addInput.type = "text";
+    addInput.id = "cli-" + list.id;
+    addInput.placeholder = "Lisaa kohta...";
+    addInput.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") addCI(list.id);
+    });
+    var addBtn = document.createElement("button");
+    addBtn.className = "btn btn-sm btn-accent";
+    addBtn.textContent = "+";
+    addBtn.addEventListener("click", function() { addCI(list.id); });
+    addRow.appendChild(addInput);
+    addRow.appendChild(addBtn);
+    body.appendChild(addRow);
+    panel.appendChild(hdr);
+    panel.appendChild(body);
+    container.appendChild(panel);
+  });
+}
+
+function toggleCL(id) {
+  var b = document.getElementById("cl-" + id);
+  if (b) b.style.display = b.style.display === "none" ? "" : "none";
+}
+async function toggleCI(lid, iid, done) {
+  await scl.from("checklist_items").update({ is_done: done }).eq("id", iid);
+  var l = checklists.find(function(x) { return x.id === lid; });
+  if (l) { var i = l.items.find(function(x) { return x.id === iid; }); if (i) i.done = done; }
+  renderChecklists();
+}
+async function addCI(lid) {
+  var inp = document.getElementById("cli-" + lid);
+  var text = inp ? inp.value.trim() : "";
+  if (!text) return;
+  var l = checklists.find(function(x) { return x.id === lid; });
+  if (!l) return;
+  var order = l.items.length;
+  var r = await scl.from("checklist_items").insert([{
+    checklist_id: lid, text: text, is_done: false, sort_order: order
+  }]).select();
+  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
+  l.items.push({ id: r.data[0].id, text: text, done: false });
+  renderChecklists();
+  setTimeout(function() { var n = document.getElementById("cli-" + lid); if (n) n.focus(); }, 50);
+}
+async function deleteCI(lid, iid) {
+  await scl.from("checklist_items").delete().eq("id", iid);
+  var l = checklists.find(function(x) { return x.id === lid; });
+  if (l) l.items = l.items.filter(function(i) { return i.id !== iid; });
+  renderChecklists();
+}
+async function deleteCL(id) {
+  if (!confirm("Poistetaanko lista?")) return;
+  await scl.from("checklists").delete().eq("id", id);
+  checklists = checklists.filter(function(l) { return l.id !== id; });
+  renderChecklists();
+  showToast("Lista poistettu", "success");
+}
+
+function openNewListModal(shared) {
+  newListShared = shared;
+  document.getElementById("fListName").value = "";
+  document.getElementById("listModal").classList.add("open");
+  setTimeout(function() { document.getElementById("fListName").focus(); }, 100);
+}
+function closeListModal() { document.getElementById("listModal").classList.remove("open"); }
+document.getElementById("listModal").addEventListener("click", function(e) {
+  if (e.target === document.getElementById("listModal")) closeListModal();
+});
+document.getElementById("fListName").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") saveNewList();
+});
+async function saveNewList() {
+  var name = document.getElementById("fListName").value.trim();
+  if (!name) { showToast("Anna nimi", "error"); return; }
+  var r = await scl.from("checklists").insert([{
+    name: name, is_shared: newListShared, user_id: currentUserId
+  }]).select();
+  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
+  checklists.push({ id: r.data[0].id, name: name, is_shared: newListShared, user_id: currentUserId, items: [] });
+  renderChecklists(); closeListModal();
+  showToast("Lista luotu!", "success");
+}
+
+function getWeekKey(date) {
+  var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  var dn = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dn);
+  var ys = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  var wk = Math.ceil((((d - ys) / 86400000) + 1) / 7);
+  return d.getUTCFullYear() + "-" + String(wk).padStart(2, "0");
+}
+function esc(s) {
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+var toastTimer;
+function showToast(msg, type) {
+  clearTimeout(toastTimer);
+  var t = document.getElementById("toast");
+  t.textContent = msg; t.className = type || ""; t.style.display = "block";
+  toastTimer = setTimeout(function() { t.style.display = "none"; }, 3000);
+}
+init();
 </script>
 </body>
 </html>
