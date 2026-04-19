@@ -523,7 +523,7 @@ async function loadData() {
     const userId = window._currentUser?.id;
     const { data: tData } = await db
       .from('todos')
-      .select('id, title, notes, due_week, due_date, priority, is_shared, is_done, user_id')
+      .select('id, title, notes, due_week, due_date, due_time, priority, is_shared, is_done, user_id')
       .not('due_week', 'is', null)
       .or(`is_shared.eq.true,user_id.eq.${userId}`);
     todos = tData || [];
