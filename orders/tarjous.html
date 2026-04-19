@@ -47,7 +47,10 @@
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
   .panel-header { background: var(--section-header); border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; padding: 10px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
   .panel-body { padding: 16px; }
-  .basics-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr; gap: 12px; }
+  .basics-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; }
+  .basics-row2 { display: flex; gap: 12px; margin-top: 12px; align-items: flex-end; }
+  .basics-row2 .field { flex: 0 0 180px; }
+  .basics-row2 .field-quotenum { margin-left: auto; flex: 0 0 160px; }
   .field { display: flex; flex-direction: column; gap: 3px; }
   label { font-size: 11px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
   input, select, textarea { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 7px 9px; border-radius: 4px; width: 100%; }
@@ -253,10 +256,6 @@
     <div class="panel-body">
       <div class="basics-grid">
         <div class="field">
-          <label>Tarjousnumero</label>
-          <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
-        </div>
-        <div class="field">
           <label>Asiakas *</label>
           <div class="customer-row">
             <div class="customer-search-wrap">
@@ -283,13 +282,17 @@
             <option value="hirsitoimitus">Hirsitoimitus</option>
             <option value="puuosatoimitus">Puuosatoimitus</option>
             <option value="valmistoimitus">Valmistoimitus</option>
-            <option value="nouto">Nouto tehtaalta</option>
-            <option value="toimitettu">Toimitettu</option>
           </select>
         </div>
+      </div>
+      <div class="basics-row2">
         <div class="field">
           <label>Toimitusviikko</label>
           <input type="text" id="deliveryWeek" placeholder="esim. 2026-32" maxlength="7">
+        </div>
+        <div class="field field-quotenum">
+          <label>Tarjousnumero</label>
+          <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
         </div>
       </div>
       <div class="field" style="margin-top:10px;">
