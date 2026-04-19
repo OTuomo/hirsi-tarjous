@@ -1,4 +1,4 @@
-[CLAUDE.md](https://github.com/user-attachments/files/26865637/CLAUDE.md)
+[CLAUDE.md](https://github.com/user-attachments/files/26870324/CLAUDE.md)
 # CLAUDE.md — Okkosen Puutuote Oy tarjousjärjestelmä
 
 Tämä tiedosto antaa Claudelle kontekstin projektista. Lue tämä aina ensin ennen kuin teet mitään.
@@ -89,11 +89,10 @@ is_shared, is_done, done_at, priority
 - `is_shared`: true = näkyy kaikille, false = vain omistajalle
 - `due_time` — kellonaika (time-tyyppi)
 
-### absences ✅ LUOTU
+### absences ✅ LUOTU (ei käytössä kalenterissa — toteutetaan myöhemmin tyoaika.html kautta)
 ```
 id, created_at, user_id, start_date, end_date, type, notes
 ```
-- `type`: 'loma' | 'sairaus' | 'muu'
 
 ### checklists ✅ LUOTU
 ```
@@ -117,15 +116,15 @@ id, created_at, checklist_id, text, is_done, sort_order
 | Sivu | Kuvaus |
 |------|--------|
 | login.html | Kirjautuminen |
-| auth-guard.js | Suojaus kaikille sivuille |
+| auth-guard.js | Suojaus + sessiokorjaus + uloskirjautumisnappi |
 | asiakkaat.html | Asiakashallinta |
 | hinnasto.html | Tuotteet, 2 hinnoittelumallia, mobiilikorttinäkymä |
-| tarjous.html | Tarjouslomake — sticky header, tuotantotäpät, toimitusviikko |
-| tarjoukset.html | Listaus, statukset, mallipohjat välilehdellä, mobiili ✅ |
-| print_quote.html | Tulostus asiakkaalle |
+| tarjous.html | Tarjouslomake — asiakas ensin, toimitusviikkoselain, tuotantotäpät |
+| tarjoukset.html | Listaus, statukset, mallipohjat välilehdellä, mobiili |
+| print_quote.html | Tulostus asiakkaalle — hintasarakkeet nowrap |
 | print_supply.html | Sisäinen tarvikkelista |
-| kalenteri.html | Kuukausikalenteri — toimitukset + poissaolot, vaalea teema ✅ |
-| todo.html | Muistilista — tehtävät + listat (Supabase) ✅ |
+| kalenteri.html | Kuukausikalenteri — toimitukset + tehtävät oikeille päiville, klikkaus avaa modalin |
+| todo.html | Muistilista — tehtävät + listat, muokkaus ✅ |
 
 ---
 
@@ -177,18 +176,16 @@ hinta = ostohinta × (1 + kate%) × kpl
 
 ## Tarjouslogiikka
 
-### Toimitusasteet ⚠️ KORJATTAVA
-Koodissa on vielä: Hirsitoimitus, Puuosatoimitus, Valmistoimitus, Nouto tehtaalta, Toimitettu
-**Pitää poistaa:** Nouto tehtaalta ja Toimitettu
-**Lopullinen lista:** Hirsitoimitus, Puuosatoimitus, Valmistoimitus
+### Toimitusasteet ✅ KORJATTU
+Lopullinen lista: **Hirsitoimitus, Puuosatoimitus, Valmistoimitus**
+(Nouto tehtaalta ja Toimitettu poistettu)
 
 ### Statukset
 `DRAFT` → `IN_PROGRESS` → `QUOTED` → `ORDERED` → `COMPLETED` → `ARCHIVED`
 Lisäksi: `MODEL` (mallipohjille, is_template=true)
 
-### Toimitusviikko
-Tallennetaan muodossa `2026-32`. Nyt vapaa tekstikenttä — **pitää muuttaa viikkoselaimen UI:ksi.**
-Viikkoselain: näyttää "Vko 32 (4.8.–10.8.2026)", nuolinapit ‹ ›, ottaa vuodenvaihteet huomioon.
+### Toimitusviikko ✅ KORJATTU
+Tallennetaan muodossa `2026-32`. Viikkoselain: kirjoita viikkonumero (esim. "28") → näyttää päivämäärät vierellä, nuolinapit ‹ › selaukseen, vuodenvaihde huomioitu.
 
 ### Tuotannon etenemistäpät
 Näkyy tarjous.html:ssä kun status on ORDERED tai COMPLETED:
@@ -201,43 +198,33 @@ Tallentuu automaattisesti heti täppäystä.
 
 ---
 
-## Kirjautumisongelmat ⚠️ SEURAAVAN CHATIN ENSIMMÄINEN TEHTÄVÄ
+## auth-guard.js — tärkeää
 
-**Ongelma 1:** Uloskirjautuminen puuttuu kokonaan kaikista sivuista.
-**Ongelma 2:** Järjestelmä kirjaa käyttäjän ulos yllättävissä tilanteissa — syy epäselvä, todennäköisesti auth-guard.js:n sessiotarkistuslogiikassa ongelma tai Supabase session refresh ei toimi.
-
-**Miten korjata:**
-1. Pyydä Tuomolta auth-guard.js tiedosto (ei ole chatissa)
-2. Tutki sessiotarkistuslogiikka — onko `onAuthStateChange` käytössä?
-3. Lisää logout-nappi nav-valikkoon jokaiselle sivulle
-4. Varmista että session refresh toimii (Supabase hoitaa automaattisesti jos `autoRefreshToken: true`)
+- Supabase-kirjasto ja auth-guard.js **täytyy olla `<head>`-tagissa**, ei bodyn lopussa
+- Kaikki sivut käyttävät `await window._authReady` ennen Supabase-kutsuja
+- `_authReady` resolvoituu kun INITIAL_SESSION-event on saatu — estää RLS-blokkauksen
+- Sessio cachetetaan `_cachedSession`-muuttujaan, ei kutsuta getSession() joka pyynnöllä
+- Uloskirjautumisnappi renderöidään automaattisesti `.header-right`-elementtiin
 
 ---
 
 ## TODO — Tärkeysjärjestyksessä
 
-### 1. KRIITTINEN — Kirjautumisongelmat
-- [ ] auth-guard.js: uloskirjautumisnappi + sessio-ongelma korjaus
+### 1. Seuraavaksi
+- [ ] **tuotanto.html** — tarjoukset.html-klooni, vain ORDERED+COMPLETED, ei muokkausnappeja. Tuotantoporukalle näkymä tilatuista töistä ja tuotannontäpistä.
+- [ ] **Vakiotekstien hallinta** — quote_text_templates CRUD-modaali tarjous.html:ssä
 
-### 2. tarjous.html
-- [ ] Toimitusviikkoselain (viikko-UI nuolilla, tallentaa 2026-32 muodossa)
-- [ ] Poista toimitusasteista Nouto tehtaalta + Toimitettu
+### 2. Odottaa Tuomolta
+- [ ] **Kadson nimien täsmäytys hinnastoon** — ilman tätä CSV-tuontia ei voi rakentaa
+- [ ] **koneet.html** — onko Accessissa konelista? Jos on, lähetetään se niin siirretään automaattisesti
 
-### 3. Uudet sivut
-- [ ] tuotanto.html — tarjoukset.html-klooni, vain ORDERED+COMPLETED, ei muokkausnapit
-- [ ] koneet.html — kysytään ensin Tuomolta Accessin konelista
-
-### 4. Integrointia
-- [ ] Kalenteri + todo linkitys — due_week näkyy kalenterissa
-- [ ] Vakiotekstien hallinta — quote_text_templates CRUD (modaali tarjous.html:ssä)
-
-### 5. Myöhemmin
-- [ ] Kadso CSV-tuonti — odottaa Tuomolta: täsmäävätkö koodit hinnastoon?
-- [ ] orders-taulu + tilausvirta
-- [ ] Työajanseuranta (tyoaika.html)
+### 3. Myöhemmin
+- [ ] Kadso CSV-tuonti tarjous.html:ään
+- [ ] orders-taulu + tilausvirta hyväksytystä tarjouksesta
+- [ ] tyoaika.html — työajanseuranta (korvaa myös absences-kalenterimerkinnät)
 - [ ] Access-historia import (Laskut1.txt + Myynnit1.txt)
 - [ ] Ulkoasun viimeistely (erillinen chat)
-- [ ] Roolipohjaiset oikeudet
+- [ ] Roolipohjaiset oikeudet kun tulee lisää käyttäjiä
 
 ---
 
@@ -248,4 +235,4 @@ Tallentuu automaattisesti heti täppäystä.
 - Claude Code käytössä isompiin muutoksiin — CLAUDE.md on Coden kontekstitiedosto
 - Supabase ilmainen: 500MB, 2GB kaistaa/kk
 - Yritys vaihtoi Tmi → Oy vuodenvaihteessa 2025→2026
-- Toimitusviikko muodossa `2026-32` — käyttäjät eivät aina muista tätä, siksi viikkoselain tärkeä
+- Toimitusviikko muodossa `2026-32` — viikkoselain tehty, ei enää vapaa tekstikenttä
