@@ -218,7 +218,7 @@ async function init() {
   var s = await scl.auth.getSession();
   currentUserId = (s.data && s.data.session) ? s.data.session.user.id : null;
   await loadTodos();
-  loadChecklists();
+  await loadChecklists();
   renderAll();
 }
 
@@ -350,12 +350,24 @@ async function saveTodo() {
   showToast("Lisatty!", "success");
 }
 
-function loadChecklists() {
-  try { checklists = JSON.parse(localStorage.getItem("okkonen_checklists") || "[]"); }
-  catch(e) { checklists = []; }
+async function loadChecklists() {
+  var r = await scl.from("checklists")
+    .select("*, checklist_items(*)")
+    .order("created_at");
+  if (r.error) { showToast("Virhe listojen latauksessa", "error"); return; }
+  checklists = (r.data || []).map(function(l) {
+    return {
+      id: l.id,
+      name: l.name,
+      is_shared: l.is_shared,
+      user_id: l.user_id,
+      items: (l.checklist_items || []).sort(function(a,b){ return a.sort_order - b.sort_order; }).map(function(i) {
+        return { id: i.id, text: i.text, done: i.is_done };
+      })
+    };
+  });
   renderChecklists();
 }
-function saveChecklists() { localStorage.setItem("okkonen_checklists", JSON.stringify(checklists)); }
 
 function renderChecklists() {
   buildCLGroup("omatListat", checklists.filter(function(l) { return !l.is_shared; }));
@@ -435,33 +447,38 @@ function toggleCL(id) {
   var b = document.getElementById("cl-" + id);
   if (b) b.style.display = b.style.display === "none" ? "" : "none";
 }
-function toggleCI(lid, iid, done) {
+async function toggleCI(lid, iid, done) {
+  await scl.from("checklist_items").update({ is_done: done }).eq("id", iid);
   var l = checklists.find(function(x) { return x.id === lid; });
-  if (!l) return;
-  var i = l.items.find(function(x) { return x.id === iid; });
-  if (i) i.done = done;
-  saveChecklists(); renderChecklists();
+  if (l) { var i = l.items.find(function(x) { return x.id === iid; }); if (i) i.done = done; }
+  renderChecklists();
 }
-function addCI(lid) {
+async function addCI(lid) {
   var inp = document.getElementById("cli-" + lid);
   var text = inp ? inp.value.trim() : "";
   if (!text) return;
   var l = checklists.find(function(x) { return x.id === lid; });
   if (!l) return;
-  l.items.push({ id: Date.now().toString(), text: text, done: false });
-  saveChecklists(); renderChecklists();
+  var order = l.items.length;
+  var r = await scl.from("checklist_items").insert([{
+    checklist_id: lid, text: text, is_done: false, sort_order: order
+  }]).select();
+  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
+  l.items.push({ id: r.data[0].id, text: text, done: false });
+  renderChecklists();
   setTimeout(function() { var n = document.getElementById("cli-" + lid); if (n) n.focus(); }, 50);
 }
-function deleteCI(lid, iid) {
+async function deleteCI(lid, iid) {
+  await scl.from("checklist_items").delete().eq("id", iid);
   var l = checklists.find(function(x) { return x.id === lid; });
-  if (!l) return;
-  l.items = l.items.filter(function(i) { return i.id !== iid; });
-  saveChecklists(); renderChecklists();
+  if (l) l.items = l.items.filter(function(i) { return i.id !== iid; });
+  renderChecklists();
 }
-function deleteCL(id) {
+async function deleteCL(id) {
   if (!confirm("Poistetaanko lista?")) return;
+  await scl.from("checklists").delete().eq("id", id);
   checklists = checklists.filter(function(l) { return l.id !== id; });
-  saveChecklists(); renderChecklists();
+  renderChecklists();
   showToast("Lista poistettu", "success");
 }
 
@@ -478,11 +495,15 @@ document.getElementById("listModal").addEventListener("click", function(e) {
 document.getElementById("fListName").addEventListener("keydown", function(e) {
   if (e.key === "Enter") saveNewList();
 });
-function saveNewList() {
+async function saveNewList() {
   var name = document.getElementById("fListName").value.trim();
   if (!name) { showToast("Anna nimi", "error"); return; }
-  checklists.push({ id: Date.now().toString(), name: name, is_shared: newListShared, items: [] });
-  saveChecklists(); renderChecklists(); closeListModal();
+  var r = await scl.from("checklists").insert([{
+    name: name, is_shared: newListShared, user_id: currentUserId
+  }]).select();
+  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
+  checklists.push({ id: r.data[0].id, name: name, is_shared: newListShared, user_id: currentUserId, items: [] });
+  renderChecklists(); closeListModal();
   showToast("Lista luotu!", "success");
 }
 
