@@ -270,9 +270,9 @@
   /* Status popup */
   .status-wrap { position: relative; display: inline-block; }
   .status-menu {
-    display: none; position: absolute; top: calc(100% + 4px); left: 0;
+    display: none; position: fixed;
     background: var(--panel2); border: 1px solid var(--border);
-    border-radius: 5px; z-index: 50;
+    border-radius: 5px; z-index: 500;
     box-shadow: 0 4px 14px rgba(0,0,0,0.5); min-width: 130px; overflow: hidden;
   }
   .status-menu.open { display: block; }
@@ -324,10 +324,10 @@
       <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
       <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
       <hr class="nav-divider">
-      <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
-      <a class="nav-item current" href="tarjous.html">✏️ Uusi Tarjous</a>
+      <a class="nav-item current" href="tarjoukset.html">📋 Tarjoukset</a>
+      <a class="nav-item" href="tarjous.html">✏️ Uusi tarjous</a>
       <a class="nav-item" href="kalenteri.html">📅 Kalenteri</a>
-      <a class="nav-item current" href="todo.html">✅ Muistilista</a>
+      <a class="nav-item" href="todo.html">✅ Muistilista</a>
       
      
     </div>
@@ -353,10 +353,6 @@
 
   <!-- SUMMARY -->
   <div class="summary-row">
-    <div class="summary-card active" id="card-active" onclick="setFilter('active')">
-      <div class="card-label">Avoimet</div>
-      <div class="card-number" id="cnt-active">—</div>
-    </div>
     <div class="summary-card" id="card-in_progress" onclick="setFilter('in_progress')">
       <div class="card-label">Kesken</div>
       <div class="card-number" id="cnt-in_progress">—</div>
@@ -377,7 +373,7 @@
       <div class="card-label">Arkisto</div>
       <div class="card-number" id="cnt-archived">—</div>
     </div>
-    <div class="summary-card" id="card-all" onclick="setFilter('all')">
+    <div class="summary-card active" id="card-all" onclick="setFilter('all')">
       <div class="card-label">Kaikki</div>
       <div class="card-number" id="cnt-all">—</div>
     </div>
@@ -387,14 +383,13 @@
   <div class="filter-bar">
     <span class="filter-label">STATUS</span>
     <div class="filter-btns">
-      <button class="fbtn active" data-filter="active" onclick="setStatusBtn(this,'active')">Avoimet</button>
+      <button class="fbtn active" data-filter="all" onclick="setStatusBtn(this,'all')">Kaikki</button>
       <button class="fbtn" data-filter="draft" onclick="setStatusBtn(this,'draft')">Luonnos</button>
       <button class="fbtn" data-filter="in_progress" onclick="setStatusBtn(this,'in_progress')">Kesken</button>
       <button class="fbtn" data-filter="quoted" onclick="setStatusBtn(this,'quoted')">Lähetetty</button>
       <button class="fbtn" data-filter="ordered" onclick="setStatusBtn(this,'ordered')">Tilattu</button>
       <button class="fbtn" data-filter="completed" onclick="setStatusBtn(this,'completed')">Valmis</button>
       <button class="fbtn arch-btn" data-filter="archived" onclick="setStatusBtn(this,'archived')">Arkisto</button>
-      <button class="fbtn" data-filter="all" onclick="setStatusBtn(this,'all')">Kaikki</button>
     </div>
     <input class="filter-search" id="searchInput" placeholder="Hae asiakas / tarjousnro..." oninput="applyFilters()">
   </div>
@@ -460,7 +455,7 @@ const STATUS_CLASS = {
 const ACTIVE_STATUSES = ['DRAFT', 'IN_PROGRESS', 'QUOTED'];
 
 let allQuotes = [];
-let currentFilter = 'active';
+let currentFilter = 'all';
 let sortField = 'created_at';
 let sortDir = 'desc';
 
@@ -714,20 +709,21 @@ function toggleMenu(id, e) {
   const wasOpen = menu.classList.contains('open');
   document.querySelectorAll('.status-menu').forEach(m => {
     m.classList.remove('open');
-    m.style.top = '';
-    m.style.bottom = '';
   });
   if (!wasOpen) {
-    // Ensin näkyviin jotta getBoundingClientRect toimii
-    menu.style.top = 'calc(100% + 4px)';
-    menu.style.bottom = 'auto';
-    menu.classList.add('open');
-    // Nyt mitataan mahtuuko alas
-    const rect = menu.getBoundingClientRect();
-    if (rect.bottom > window.innerHeight - 8) {
+    const btn = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    const menuH = 7 * 37; // arvioidaan korkeus: 7 valinttaa × ~37px
+    const goUp = rect.bottom + menuH > window.innerHeight - 8;
+    menu.style.left = rect.left + 'px';
+    if (goUp) {
+      menu.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
       menu.style.top = 'auto';
-      menu.style.bottom = 'calc(100% + 4px)';
+    } else {
+      menu.style.top = (rect.bottom + 4) + 'px';
+      menu.style.bottom = 'auto';
     }
+    menu.classList.add('open');
   }
 }
 
