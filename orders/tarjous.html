@@ -383,7 +383,11 @@
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-left:4px;">
       <input type="checkbox" id="showPrices" checked style="width:auto;cursor:pointer;">
-      <label for="showPrices" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä rivihinnat tulosteessa</label>
+      <label for="showPrices" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä rivihinnat</label>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:4px;">
+      <input type="checkbox" id="showQty" checked style="width:auto;cursor:pointer;">
+      <label for="showQty" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä määrä ja yksikkö</label>
     </div>
     <div class="spacer"></div>
     <button class="btn btn-ghost" onclick="printQuote()">🖨 Tulosta tarjous</button>
@@ -833,7 +837,8 @@ function renderSections() {
       <div class="product-rows">
         <table class="product-table">
           <thead><tr>
-            <th style="width:200px">Nimike</th>
+            <th style="width:160px">Kohde</th>
+            <th style="width:160px">Hinnasto</th>
             <th>Kuvaus / lisätiedot</th>
             <th style="width:60px" class="right">Määrä</th>
             <th style="width:55px">Yks</th>
@@ -863,13 +868,20 @@ function renderRowHTML(secId, row) {
   return `
     <tr id="row-${secId}-${row.id}">
       <td>
+        <input type="text" id="kohde-${secId}-${row.id}"
+          value="${esc(row.nimikeTeksti||'')}"
+          oninput="onRowInput(${secId},${row.id},'nimikeTeksti',this.value)"
+          placeholder="Kohde / tuotenimi"
+          style="min-width:140px;">
+      </td>
+      <td>
         <div class="nimike-wrap">
           <input type="text" id="nimike-${secId}-${row.id}"
-            value="${esc(row.nimikeTeksti||'')}"
+            value="${esc(row.hinnastoTeksti||'')}"
             oninput="onNimikeInput(${secId},${row.id},this.value)"
             onfocus="onNimikeFocus(${secId},${row.id})"
-            placeholder="Hae nimikettä..."
-            style="min-width:180px;">
+            placeholder="Hae hinnastosta..."
+            style="min-width:140px;">
           <div class="nimike-dropdown" id="nimike-dd-${secId}-${row.id}"></div>
         </div>
       </td>
@@ -897,9 +909,14 @@ function renderCardHTML(secId, row) {
   return `
     <div class="product-card">
       <div class="card-row">
-        <label>Nimike</label>
+        <label>Kohde</label>
         <input type="text" value="${esc(row.nimikeTeksti||'')}" style="flex:1;"
-          oninput="onNimikeInput(${secId},${row.id},this.value)" placeholder="Hae...">
+          oninput="onRowInput(${secId},${row.id},'nimikeTeksti',this.value)" placeholder="Kohde / tuotenimi">
+      </div>
+      <div class="card-row">
+        <label>Hinnasto</label>
+        <input type="text" value="${esc(row.hinnastoTeksti||'')}" style="flex:1;"
+          oninput="onNimikeInput(${secId},${row.id},this.value)" placeholder="Hae hinnastosta...">
       </div>
       <div class="card-row"><label>Kuvaus</label>
         <input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" style="flex:1;"></div>
@@ -944,7 +961,7 @@ function onNimikeInput(secId, rowId, val) {
   const sec = sections.find(s => s.id === secId);
   const row = sec && sec.rows.find(r => r.id === rowId);
   if (!row) return;
-  row.nimikeTeksti = val;
+  row.hinnastoTeksti = val;
   const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
   if (!dd) return;
   positionNimikeDropdown(secId, rowId);
@@ -982,7 +999,7 @@ function selectNimike(secId, rowId, productId) {
   const prod = products.find(p => p.id === productId || String(p.id) === String(productId));
   if (prod) {
     row.productId = prod.id;
-    row.nimikeTeksti = (prod.code ? prod.code + ' – ' : '') + prod.name;
+    row.hinnastoTeksti = (prod.code ? prod.code + ' – ' : '') + prod.name;
     if (!row.desc) row.desc = prod.name;
     row.unit = prod.unit || row.unit;
     row.basePrice = prod.price != null ? parseFloat(prod.price) : null;
@@ -996,7 +1013,7 @@ function selectNimike(secId, rowId, productId) {
 function addRow(secId) {
   const sec = sections.find(s => s.id === secId);
   if (!sec) return;
-  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null });
+  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null });
   renderSections();
 }
 
@@ -1258,7 +1275,8 @@ function updateStatusBadge() {
 function printQuote() {
   if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
   const showPrices = document.getElementById('showPrices').checked ? '1' : '0';
-  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}`, '_blank');
+  const showQty = document.getElementById('showQty').checked ? '1' : '0';
+  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}&qty=${showQty}`, '_blank');
 }
 
 function printSupply() {
