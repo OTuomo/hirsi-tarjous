@@ -118,6 +118,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   const showPrices = params.get('prices') !== '0';
+  const showQty = params.get('qty') !== '0';
   if (!id) { document.getElementById('root').textContent = 'Tarjousnumero puuttuu URL:sta.'; return; }
 
   const [quoteArr, custArr] = await Promise.all([
@@ -142,48 +143,33 @@ window.addEventListener('DOMContentLoaded', async () => {
   const vat = noTax * 0.255;
   const total = noTax + vat;
 
-  const colspanSec = showPrices ? 5 : 3;
+  // colspan: showPrices lisää 2, showQty lisää 2
+  const colspanSec = 1 + (showQty ? 2 : 0) + (showPrices ? 2 : 0);
 
   let rowsHTML = '';
   sections.forEach(sec => {
     if (!sec.active) return;
     rowsHTML += `<tr class="section-hdr"><td colspan="${colspanSec}">${sec.name}</td></tr>`;
     sec.rows.forEach(row => {
-      if (!row.desc && !row.nimikeTeksti && !row.qty) return;
+      if (!row.nimikeTeksti && !row.desc && !row.qty) return;
+      const kohde = row.nimikeTeksti || '';
+      const kuvaus = row.desc || '';
+      const teksti = kohde && kuvaus ? `${kohde} ${kuvaus}` : kohde || kuvaus;
       const rs = (parseFloat(row.qty)||0) * (parseFloat(row.price)||0);
-      if (showPrices) {
-        rowsHTML += `
-          <tr>
-            <td>${row.desc || row.nimikeTeksti || ''}</td>
-            <td class="right">${row.qty || ''}</td>
-            <td>${row.unit || ''}</td>
-            <td class="right">${row.price ? fmt(row.price) + ' €' : ''}</td>
-            <td class="right">${rs ? fmt(rs) + ' €' : ''}</td>
-          </tr>`;
-      } else {
-        rowsHTML += `
-          <tr>
-            <td>${row.desc || row.nimikeTeksti || ''}</td>
-            <td class="right">${row.qty || ''}</td>
-            <td>${row.unit || ''}</td>
-          </tr>`;
-      }
+      rowsHTML += `<tr>
+        <td>${teksti}</td>
+        ${showQty ? `<td class="right">${row.qty || ''}</td><td>${row.unit || ''}</td>` : ''}
+        ${showPrices ? `<td class="right">${row.price ? fmt(row.price) + ' €' : ''}</td><td class="right">${rs ? fmt(rs) + ' €' : ''}</td>` : ''}
+      </tr>`;
     });
   });
 
-  const theadHTML = showPrices ? `
-    <tr>
-      <th>Tuote ja lisätiedot</th>
-      <th class="right" style="width:9%">Määrä</th>
-      <th style="width:7%">Yksikkö</th>
-      <th class="right" style="width:17%">Alv 0%</th>
-      <th class="right" style="width:17%">Rivihinta</th>
-    </tr>` : `
-    <tr>
-      <th>Tuote ja lisätiedot</th>
-      <th class="right" style="width:12%">Määrä</th>
-      <th style="width:10%">Yksikkö</th>
-    </tr>`;
+  const theadCols = `
+    <th>Tuote ja lisätiedot</th>
+    ${showQty ? `<th class="right" style="width:9%">Määrä</th><th style="width:7%">Yksikkö</th>` : ''}
+    ${showPrices ? `<th class="right" style="width:17%">Alv 0%</th><th class="right" style="width:17%">Rivihinta</th>` : ''}
+  `;
+  const theadHTML = `<tr>${theadCols}</tr>`;
 
   document.getElementById('root').innerHTML = `
   <div class="page-wrap">
