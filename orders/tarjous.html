@@ -280,15 +280,15 @@
         </div>
         <div class="field">
           <label>Päivämäärä</label>
-          <input type="date" id="quoteDate">
+          <input type="date" id="quoteDate" onchange="autoSave()">
         </div>
         <div class="field">
           <label>Voimassa</label>
-          <input type="date" id="quoteValid">
+          <input type="date" id="quoteValid" onchange="autoSave()">
         </div>
         <div class="field">
           <label>Toimitusaste</label>
-          <select id="deliveryType">
+          <select id="deliveryType" onchange="autoSave()">
             <option value="">— valitse —</option>
             <option value="hirsitoimitus">Hirsitoimitus</option>
             <option value="puuosatoimitus">Puuosatoimitus</option>
@@ -315,7 +315,7 @@
       </div>
       <div class="field" style="margin-top:10px;">
         <label>Kohde / viite</label>
-        <input type="text" id="quoteRef" placeholder="Esim. kohteen nimi tai viite">
+        <input type="text" id="quoteRef" placeholder="Esim. kohteen nimi tai viite" oninput="autoSave()">
       </div>
     </div>
   </div>
@@ -338,7 +338,7 @@
       <tr><td class="label">Välisumma</td><td class="value" id="sumSubtotal">0,00 €</td></tr>
       <tr>
         <td class="label">Pyöristys / alennus</td>
-        <td class="value"><input class="adj" type="number" id="adjAmount" value="0" step="0.01" oninput="recalcTotals()"></td>
+        <td class="value"><input class="adj" type="number" id="adjAmount" value="0" step="0.01" oninput="recalcTotals();autoSave()"></td>
       </tr>
       <tr><td class="label">Veroton yhteensä</td><td class="value" id="sumNoTax">0,00 €</td></tr>
       <tr><td class="label">ALV 25,5%</td><td class="value" id="sumVat">0,00 €</td></tr>
@@ -359,7 +359,7 @@
       <button onclick="openTextTemplateModal()" style="margin-left:8px;padding:2px 8px;font-size:11px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;" title="Hallitse tekstipohjia">✎ Muokkaa pohjia</button>
     </div>
     <div class="panel-body default-text-wrap">
-      <textarea id="defaultText" placeholder="Vakioteksti tai toimitushuomiot..."></textarea>
+      <textarea id="defaultText" oninput="autoSave()" placeholder="Vakioteksti tai toimitushuomiot..."></textarea>
     </div>
   </div>
 
@@ -383,11 +383,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-left:4px;">
       <input type="checkbox" id="showPrices" checked style="width:auto;cursor:pointer;">
-      <label for="showPrices" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä rivihinnat</label>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-left:4px;">
-      <input type="checkbox" id="showQty" checked style="width:auto;cursor:pointer;">
-      <label for="showQty" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä määrä ja yksikkö</label>
+      <label for="showPrices" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä rivihinnat tulosteessa</label>
     </div>
     <div class="spacer"></div>
     <button class="btn btn-ghost" onclick="printQuote()">🖨 Tulosta tarjous</button>
@@ -572,6 +568,7 @@ function setCustomer(id, name) {
   document.getElementById('customerId').value = id;
   document.getElementById('customerSearch').value = name;
   document.getElementById('customerDropdown').classList.remove('open');
+  autoSave();
 }
 
 document.addEventListener('click', e => {
@@ -837,8 +834,7 @@ function renderSections() {
       <div class="product-rows">
         <table class="product-table">
           <thead><tr>
-            <th style="width:160px">Kohde</th>
-            <th style="width:160px">Hinnasto</th>
+            <th style="width:200px">Nimike</th>
             <th>Kuvaus / lisätiedot</th>
             <th style="width:60px" class="right">Määrä</th>
             <th style="width:55px">Yks</th>
@@ -868,20 +864,13 @@ function renderRowHTML(secId, row) {
   return `
     <tr id="row-${secId}-${row.id}">
       <td>
-        <input type="text" id="kohde-${secId}-${row.id}"
-          value="${esc(row.nimikeTeksti||'')}"
-          oninput="onRowInput(${secId},${row.id},'nimikeTeksti',this.value)"
-          placeholder="Kohde / tuotenimi"
-          style="min-width:140px;">
-      </td>
-      <td>
         <div class="nimike-wrap">
           <input type="text" id="nimike-${secId}-${row.id}"
-            value="${esc(row.hinnastoTeksti||'')}"
+            value="${esc(row.nimikeTeksti||'')}"
             oninput="onNimikeInput(${secId},${row.id},this.value)"
             onfocus="onNimikeFocus(${secId},${row.id})"
-            placeholder="Hae hinnastosta..."
-            style="min-width:140px;">
+            placeholder="Hae nimikettä..."
+            style="min-width:180px;">
           <div class="nimike-dropdown" id="nimike-dd-${secId}-${row.id}"></div>
         </div>
       </td>
@@ -909,14 +898,9 @@ function renderCardHTML(secId, row) {
   return `
     <div class="product-card">
       <div class="card-row">
-        <label>Kohde</label>
+        <label>Nimike</label>
         <input type="text" value="${esc(row.nimikeTeksti||'')}" style="flex:1;"
-          oninput="onRowInput(${secId},${row.id},'nimikeTeksti',this.value)" placeholder="Kohde / tuotenimi">
-      </div>
-      <div class="card-row">
-        <label>Hinnasto</label>
-        <input type="text" value="${esc(row.hinnastoTeksti||'')}" style="flex:1;"
-          oninput="onNimikeInput(${secId},${row.id},this.value)" placeholder="Hae hinnastosta...">
+          oninput="onNimikeInput(${secId},${row.id},this.value)" placeholder="Hae...">
       </div>
       <div class="card-row"><label>Kuvaus</label>
         <input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" style="flex:1;"></div>
@@ -961,7 +945,7 @@ function onNimikeInput(secId, rowId, val) {
   const sec = sections.find(s => s.id === secId);
   const row = sec && sec.rows.find(r => r.id === rowId);
   if (!row) return;
-  row.hinnastoTeksti = val;
+  row.nimikeTeksti = val;
   const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
   if (!dd) return;
   positionNimikeDropdown(secId, rowId);
@@ -999,7 +983,7 @@ function selectNimike(secId, rowId, productId) {
   const prod = products.find(p => p.id === productId || String(p.id) === String(productId));
   if (prod) {
     row.productId = prod.id;
-    row.hinnastoTeksti = (prod.code ? prod.code + ' – ' : '') + prod.name;
+    row.nimikeTeksti = (prod.code ? prod.code + ' – ' : '') + prod.name;
     if (!row.desc) row.desc = prod.name;
     row.unit = prod.unit || row.unit;
     row.basePrice = prod.price != null ? parseFloat(prod.price) : null;
@@ -1008,6 +992,7 @@ function selectNimike(secId, rowId, productId) {
   const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
   if (dd) dd.classList.remove('open');
   renderSections();
+  autoSave();
 }
 
 function addRow(secId) {
@@ -1015,6 +1000,7 @@ function addRow(secId) {
   if (!sec) return;
   sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null });
   renderSections();
+  autoSave();
 }
 
 function removeRow(secId, rowId) {
@@ -1022,6 +1008,7 @@ function removeRow(secId, rowId) {
   if (!sec) return;
   sec.rows = sec.rows.filter(r => r.id !== rowId);
   renderSections();
+  autoSave();
 }
 
 function removeSection(id) {
@@ -1029,16 +1016,17 @@ function removeSection(id) {
   if (!confirm('Poistetaanko osio ja kaikki sen rivit?')) return;
   sections = sections.filter(s => s.id !== id);
   renderSections();
+  autoSave();
 }
 
 function toggleSection(id) {
   const sec = sections.find(s => s.id === id);
-  if (sec) { sec.active = !sec.active; renderSections(); }
+  if (sec) { sec.active = !sec.active; renderSections(); autoSave(); }
 }
 
 function renameSection(id, val) {
   const sec = sections.find(s => s.id === id);
-  if (sec) sec.name = val;
+  if (sec) { sec.name = val; autoSave(); }
 }
 
 function moveSection(id, dir) {
@@ -1047,6 +1035,7 @@ function moveSection(id, dir) {
   if (nIdx < 0 || nIdx >= sections.length) return;
   [sections[idx], sections[nIdx]] = [sections[nIdx], sections[idx]];
   renderSections();
+  autoSave();
 }
 
 function onProductSelect(secId, rowId, productId) {
@@ -1056,7 +1045,7 @@ function onProductSelect(secId, rowId, productId) {
 function onRowInput(secId, rowId, field, val) {
   const sec = sections.find(s => s.id === secId);
   const row = sec && sec.rows.find(r => r.id === rowId);
-  if (row) { row[field] = val; updateRowSum(secId, rowId); }
+  if (row) { row[field] = val; updateRowSum(secId, rowId); autoSave(); }
 }
 
 function onPriceInput(secId, rowId, val) {
@@ -1066,6 +1055,7 @@ function onPriceInput(secId, rowId, val) {
   row.price = val;
   row.priceManual = (row.basePrice !== null && parseFloat(val) !== parseFloat(row.basePrice));
   updateRowSum(secId, rowId);
+  autoSave();
 }
 
 function restorePrice(secId, rowId) {
@@ -1075,6 +1065,7 @@ function restorePrice(secId, rowId) {
   row.price = row.basePrice;
   row.priceManual = false;
   renderSections();
+  autoSave();
 }
 
 function updateRowSum(secId, rowId) {
@@ -1153,10 +1144,28 @@ async function saveDraft() {
       if (result && result[0]) currentQuoteId = result[0].id;
     }
     el.className = 'saving ok'; el.textContent = '✓ Tallennettu';
-    setTimeout(() => el.textContent = '', 2500);
+    setTimeout(() => { if (el.textContent === '✓ Tallennettu') el.textContent = ''; }, 2500);
   } catch(e) {
     el.className = 'saving err'; el.textContent = 'Virhe tallennuksessa';
   }
+}
+
+// =============================================
+// AUTO-SAVE
+// =============================================
+let _autoSaveTimer = null;
+
+function autoSave() {
+  const el = document.getElementById('saveStatus');
+  // Jos ei vielä ID:tä, tallenna heti (uusi tarjous)
+  if (!currentQuoteId) {
+    saveDraft();
+    return;
+  }
+  // Muuten debounce 2 sekuntia
+  el.className = 'saving'; el.textContent = 'Muokattu...';
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => saveDraft(), 2000);
 }
 
 
@@ -1275,8 +1284,7 @@ function updateStatusBadge() {
 function printQuote() {
   if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
   const showPrices = document.getElementById('showPrices').checked ? '1' : '0';
-  const showQty = document.getElementById('showQty').checked ? '1' : '0';
-  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}&qty=${showQty}`, '_blank');
+  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}`, '_blank');
 }
 
 function printSupply() {
