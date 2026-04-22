@@ -1009,10 +1009,28 @@ function selectNimike(secId, rowId, productId) {
     row.unit = prod.unit || row.unit;
     row.basePrice = prod.price != null ? parseFloat(prod.price) : null;
     if (!row.priceManual && row.basePrice !== null) row.price = row.basePrice;
+
+    // Päivitä kentät suoraan DOM:iin ilman renderSections() — säilyttää fokuksen
+    const nimikeInput = document.getElementById(`nimike-${secId}-${rowId}`);
+    if (nimikeInput) nimikeInput.value = row.hinnastoTeksti;
+
+    const priceInput = document.getElementById(`price-${secId}-${rowId}`);
+    if (priceInput) priceInput.value = row.price || '';
+
+    const rowSumEl = document.getElementById(`rowsum-${secId}-${rowId}`);
+    if (rowSumEl) rowSumEl.textContent = fmt(rowSum(row)) + ' €';
+
+    recalcTotals();
   }
   const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
   if (dd) dd.classList.remove('open');
-  renderSections();
+
+  // Siirrä fokus kuvaus-kenttään
+  setTimeout(() => {
+    const descInputs = document.querySelectorAll(`#row-${secId}-${rowId} input[placeholder="Kuvaus"]`);
+    if (descInputs[0]) descInputs[0].focus();
+  }, 50);
+
   autoSave();
 }
 
