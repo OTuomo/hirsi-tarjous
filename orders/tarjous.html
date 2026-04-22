@@ -964,14 +964,13 @@ function onNimikeInput(secId, rowId, val) {
     return;
   }
   const q = val.toLowerCase().trim();
+  console.log('Haku:', JSON.stringify(q), 'Tuotteita:', products.length, 'Esim. koodi:', products[0] ? JSON.stringify(products[0].code) + ' tyyppi:' + typeof products[0].code : 'ei tuotteita');
   const hits = q.length >= 1
     ? products.filter(p => {
         const code = String(p.code || '');
         const name = (p.name || '').toLowerCase();
         const cat  = (p.category || '').toLowerCase();
-        // Koodi: täsmäytys alusta (esim. "2" löytää "2", "20", "200" mutta ei "1200")
         const codeMatch = code === q || code.startsWith(q);
-        // Nimi ja kategoria: sisältöhaku
         const nameMatch = name.includes(q) || cat.includes(q);
         return codeMatch || nameMatch;
       }).slice(0, 25)
