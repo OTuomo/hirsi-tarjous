@@ -877,6 +877,7 @@ function renderRowHTML(secId, row) {
             value="${esc(row.hinnastoTeksti||'')}"
             oninput="onNimikeInput(${secId},${row.id},this.value)"
             onfocus="onNimikeFocus(${secId},${row.id})"
+            onblur="setTimeout(()=>{ const d=document.getElementById('nimike-dd-${secId}-${row.id}'); if(d) d.classList.remove('open'); },150)"
             placeholder="Hae hinnastosta..."
             style="min-width:130px;">
           <div class="nimike-dropdown" id="nimike-dd-${secId}-${row.id}"></div>
@@ -964,11 +965,16 @@ function onNimikeInput(secId, rowId, val) {
   }
   const q = val.toLowerCase().trim();
   const hits = q.length >= 1
-    ? products.filter(p =>
-        (p.name||'').toLowerCase().includes(q) ||
-        (p.code||'').toLowerCase().includes(q) ||
-        (p.category||'').toLowerCase().includes(q)
-      ).slice(0, 25)
+    ? products.filter(p => {
+        const code = String(p.code || '');
+        const name = (p.name || '').toLowerCase();
+        const cat  = (p.category || '').toLowerCase();
+        // Koodi: täsmäytys alusta (esim. "2" löytää "2", "20", "200" mutta ei "1200")
+        const codeMatch = code === q || code.startsWith(q);
+        // Nimi ja kategoria: sisältöhaku
+        const nameMatch = name.includes(q) || cat.includes(q);
+        return codeMatch || nameMatch;
+      }).slice(0, 25)
     : products.slice(0, 25);
   if (!hits.length) {
     dd.innerHTML = '<div class="nimike-option" style="color:var(--text-dim)">Ei tuloksia</div>';
