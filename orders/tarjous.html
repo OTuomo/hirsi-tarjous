@@ -966,7 +966,14 @@ function onNimikeInput(secId, rowId, val) {
   const q = val.toLowerCase().trim();
   if (q === '2') {
     const t = products.find(p => String(p.code||'') === '2');
-    console.log('Tuote koodilla 2:', t ? JSON.stringify({id:t.id, code:t.code, name:t.name, active:t.active}) : 'EI LÖYDY');
+    console.log('Tuote koodilla 2:', t ? JSON.stringify({id:t.id, code:t.code, name:t.name}) : 'EI LÖYDY');
+    const testHits = products.filter(p => {
+      const code = String(p.code || '');
+      return code === '2' || code.startsWith('2');
+    });
+    console.log('Osumia koodihaulle "2":', testHits.length, testHits.map(p=>p.code+':'+p.name).join(', '));
+    const dd2 = document.getElementById(`nimike-dd-${secId}-${rowId}`);
+    console.log('Dropdown elementti:', dd2 ? 'löytyy' : 'EI LÖYDY', `nimike-dd-${secId}-${rowId}`);
   }
   const hits = q.length >= 1
     ? products.filter(p => {
