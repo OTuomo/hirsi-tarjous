@@ -964,7 +964,10 @@ function onNimikeInput(secId, rowId, val) {
     return;
   }
   const q = val.toLowerCase().trim();
-  console.log('Haku:', JSON.stringify(q), 'Tuotteita:', products.length, 'Esim. koodi:', products[0] ? JSON.stringify(products[0].code) + ' tyyppi:' + typeof products[0].code : 'ei tuotteita');
+  if (q === '2') {
+    const t = products.find(p => String(p.code||'') === '2');
+    console.log('Tuote koodilla 2:', t ? JSON.stringify({id:t.id, code:t.code, name:t.name, active:t.active}) : 'EI LÖYDY');
+  }
   const hits = q.length >= 1
     ? products.filter(p => {
         const code = String(p.code || '');
