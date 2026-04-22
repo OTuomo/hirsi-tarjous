@@ -964,17 +964,7 @@ function onNimikeInput(secId, rowId, val) {
     return;
   }
   const q = val.toLowerCase().trim();
-  if (q === '2') {
-    const t = products.find(p => String(p.code||'') === '2');
-    console.log('Tuote koodilla 2:', t ? JSON.stringify({id:t.id, code:t.code, name:t.name}) : 'EI LÖYDY');
-    const testHits = products.filter(p => {
-      const code = String(p.code || '');
-      return code === '2' || code.startsWith('2');
-    });
-    console.log('Osumia koodihaulle "2":', testHits.length, testHits.map(p=>p.code+':'+p.name).join(', '));
-    const dd2 = document.getElementById(`nimike-dd-${secId}-${rowId}`);
-    console.log('Dropdown elementti:', dd2 ? 'löytyy' : 'EI LÖYDY', `nimike-dd-${secId}-${rowId}`);
-  }
+  const q = val.toLowerCase().trim();
   const hits = q.length >= 1
     ? products.filter(p => {
         const code = String(p.code || '');
@@ -983,7 +973,16 @@ function onNimikeInput(secId, rowId, val) {
         const codeMatch = code === q || code.startsWith(q);
         const nameMatch = name.includes(q) || cat.includes(q);
         return codeMatch || nameMatch;
-      }).slice(0, 25)
+      })
+      .sort((a, b) => {
+        // Täsmällinen koodivastaavuus ensin
+        const aExact = String(a.code||'') === q ? 0 : 1;
+        const bExact = String(b.code||'') === q ? 0 : 1;
+        if (aExact !== bExact) return aExact - bExact;
+        // Sitten koodin pituus (lyhyemmät ensin)
+        return String(a.code||'').length - String(b.code||'').length;
+      })
+      .slice(0, 25)
     : products.slice(0, 25);
   if (!hits.length) {
     dd.innerHTML = '<div class="nimike-option" style="color:var(--text-dim)">Ei tuloksia</div>';
