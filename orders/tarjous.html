@@ -834,7 +834,8 @@ function renderSections() {
       <div class="product-rows">
         <table class="product-table">
           <thead><tr>
-            <th style="width:200px">Nimike</th>
+            <th style="width:150px">Kohde</th>
+            <th style="width:150px">Hinnasto</th>
             <th>Kuvaus / lisätiedot</th>
             <th style="width:60px" class="right">Määrä</th>
             <th style="width:55px">Yks</th>
@@ -864,13 +865,20 @@ function renderRowHTML(secId, row) {
   return `
     <tr id="row-${secId}-${row.id}">
       <td>
+        <input type="text" id="kohde-${secId}-${row.id}"
+          value="${esc(row.nimikeTeksti||'')}"
+          oninput="onRowInput(${secId},${row.id},'nimikeTeksti',this.value)"
+          placeholder="Kohde / tuotenimi"
+          style="min-width:130px;">
+      </td>
+      <td>
         <div class="nimike-wrap">
           <input type="text" id="nimike-${secId}-${row.id}"
-            value="${esc(row.nimikeTeksti||'')}"
+            value="${esc(row.hinnastoTeksti||'')}"
             oninput="onNimikeInput(${secId},${row.id},this.value)"
             onfocus="onNimikeFocus(${secId},${row.id})"
-            placeholder="Hae nimikettä..."
-            style="min-width:180px;">
+            placeholder="Hae hinnastosta..."
+            style="min-width:130px;">
           <div class="nimike-dropdown" id="nimike-dd-${secId}-${row.id}"></div>
         </div>
       </td>
@@ -945,7 +953,7 @@ function onNimikeInput(secId, rowId, val) {
   const sec = sections.find(s => s.id === secId);
   const row = sec && sec.rows.find(r => r.id === rowId);
   if (!row) return;
-  row.nimikeTeksti = val;
+  row.hinnastoTeksti = val;
   const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
   if (!dd) return;
   positionNimikeDropdown(secId, rowId);
@@ -983,7 +991,7 @@ function selectNimike(secId, rowId, productId) {
   const prod = products.find(p => p.id === productId || String(p.id) === String(productId));
   if (prod) {
     row.productId = prod.id;
-    row.nimikeTeksti = (prod.code ? prod.code + ' – ' : '') + prod.name;
+    row.hinnastoTeksti = (prod.code ? prod.code + ' – ' : '') + prod.name;
     if (!row.desc) row.desc = prod.name;
     row.unit = prod.unit || row.unit;
     row.basePrice = prod.price != null ? parseFloat(prod.price) : null;
