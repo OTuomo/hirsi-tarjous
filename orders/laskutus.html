@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laskutus — Okkosen Puutuote</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+<style>
+:root {
+  --bg:        #faf7f2;
+  --bg2:       #f3ede4;
+  --bg3:       #ede4d8;
+  --panel:     #ffffff;
+  --border:    #e0d4c4;
+  --border2:   #cfc0ac;
+  --accent:    #d97706;
+  --accent-dim:#b45309;
+  --accent-bg: rgba(217,119,6,0.10);
+  --text:      #2a1f14;
+  --text-mid:  #6b4f38;
+  --text-dim:  #a08878;
+  --shadow:    0 1px 4px rgba(100,60,20,0.08);
+  --radius:    6px;
+  --red:       #dc2626;
+  --red-bg:    #fee2e2;
+  --yellow:    #d97706;
+  --yellow-bg: #fef3c7;
+  --green:     #16a34a;
+  --green-bg:  #dcfce7;
+  --blue:      #1d4ed8;
+  --blue-bg:   #dbeafe;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; min-height: 100vh; }
+
+/* ── HEADER ── */
+header { background: var(--panel); border-bottom: 2px solid var(--accent); padding: 10px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+header .logo { height: 32px; width: auto; }
+.nav-menu-wrap { position: relative; }
+.nav-btn { background: var(--bg2); border: 1px solid var(--border2); color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 4px; cursor: pointer; letter-spacing: .04em; }
+.nav-btn:hover { background: var(--bg3); }
+.nav-dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; background: var(--panel); border: 1px solid var(--border2); border-radius: var(--radius); min-width: 200px; z-index: 999; box-shadow: 0 4px 16px rgba(100,60,20,0.15); overflow: hidden; }
+.nav-dropdown.open { display: block; }
+.nav-section-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); padding: 8px 14px 4px; }
+.nav-item { display: block; padding: 8px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text); text-decoration: none; transition: background .1s; }
+.nav-item:hover { background: var(--accent-bg); color: var(--accent); }
+.nav-item.current { color: var(--accent); font-weight: 600; }
+header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.btn-logout { background: none; border: 1px solid var(--border2); color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 4px; cursor: pointer; letter-spacing: .04em; transition: all .15s; }
+.btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+/* ── PAGE ── */
+.page { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+/* ── YHTEENVETO ── */
+.summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+.summary-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; box-shadow: var(--shadow); }
+.summary-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+.summary-value { font-size: 26px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; color: var(--text); }
+.summary-card.warning .summary-value { color: var(--red); }
+.summary-card.pending .summary-value { color: var(--yellow); }
+.summary-card.paid .summary-value { color: var(--green); }
+
+/* ── PROJEKTILISTA ── */
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.section-title { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mid); }
+
+.project-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: var(--shadow); }
+.project-table th { background: var(--bg2); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-mid); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+.project-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.project-table tr:last-child td { border-bottom: none; }
+.project-table tr:hover td { background: var(--bg); }
+.project-table tr { cursor: pointer; }
+
+.project-name { font-weight: 500; color: var(--text); }
+.project-num  { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.total-amount { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--text); }
+
+/* Progresspalkki */
+.progress-wrap { display: flex; align-items: center; gap: 8px; }
+.progress-bar  { flex: 1; height: 8px; background: var(--bg3); border-radius: 99px; overflow: hidden; min-width: 80px; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s; }
+.progress-pct  { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mid); min-width: 30px; text-align: right; }
+
+/* Seuraava vaihe -badge */
+.next-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; }
+.next-odottaa  { background: var(--bg3); color: var(--text-mid); }
+.next-lahetetty{ background: var(--blue-bg); color: var(--blue); }
+.next-maksettu { background: var(--green-bg); color: var(--green); }
+.next-valmis   { background: var(--green-bg); color: var(--green); }
+
+/* Mobiilikortti */
+.project-cards { display: none; }
+.project-card  { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); cursor: pointer; }
+.project-card:hover { border-color: var(--accent); }
+
+/* ── DETAIL MODAL ── */
+.modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+.modal-backdrop.open { display: flex; }
+.modal { background: var(--panel); border: 1px solid var(--border2); border-radius: 10px; padding: 28px; width: 580px; max-width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(100,60,20,0.15); }
+.modal-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.modal-sub    { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); margin-bottom: 20px; }
+.modal-total  { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--text-mid); margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+
+/* Vaiherivi */
+.stage-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.stage-row  { display: grid; grid-template-columns: 1fr 80px 110px 130px 36px; gap: 10px; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.stage-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.stage-pct  { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-mid); text-align: right; }
+.stage-amount { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: var(--text); text-align: right; }
+.stage-status { display: flex; align-items: center; gap: 6px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-odottaa   { background: var(--text-dim); }
+.dot-lahetetty { background: var(--blue); }
+.dot-maksettu  { background: var(--green); }
+.stage-action { display: flex; gap: 4px; }
+.btn-stage { background: none; border: 1px solid var(--border2); border-radius: 4px; padding: 3px 7px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; cursor: pointer; color: var(--text-mid); transition: all .15s; white-space: nowrap; }
+.btn-stage:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Senttilasku */
+.sent-info { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+
+/* Modal footer */
+.modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.modal-footer-left { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-mid); }
+
+/* Yhteenveto modalissa */
+.modal-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.modal-sum-card { background: var(--bg2); border-radius: 6px; padding: 10px 14px; text-align: center; }
+.modal-sum-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
+.modal-sum-value { font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; }
+.modal-sum-value.paid    { color: var(--green); }
+.modal-sum-value.pending { color: var(--yellow); }
+.modal-sum-value.total   { color: var(--text); }
+
+/* Päivämäärä modal */
+.date-modal { background: var(--panel); border: 1px solid var(--border2); border-radius: 8px; padding: 24px; width: 340px; max-width: 100%; box-shadow: 0 8px 32px rgba(100,60,20,0.15); }
+.date-modal h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+label { font-size: 11px; color: var(--text-mid); text-transform: uppercase; letter-spacing: .05em; font-family: 'IBM Plex Mono', monospace; }
+input[type=date], input[type=text], textarea { background: var(--bg2); border: 1px solid var(--border2); color: var(--text); border-radius: 4px; padding: 7px 11px; font-family: inherit; font-size: 13px; outline: none; transition: border-color .15s; width: 100%; }
+input:focus, textarea:focus { border-color: var(--accent); }
+.form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+
+/* Napit */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--panel); color: var(--text-mid); font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; letter-spacing: .03em; white-space: nowrap; }
+.btn:hover { background: var(--bg2); color: var(--text); border-color: var(--accent); }
+.btn-accent { background: var(--accent); color: white; border-color: var(--accent); }
+.btn-accent:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: white; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* Toast */
+#toast { position: fixed; bottom: 24px; right: 24px; background: var(--panel); border: 1px solid var(--border2); border-radius: var(--radius); padding: 12px 18px; font-size: 13px; color: var(--text); z-index: 9999; display: none; box-shadow: var(--shadow); }
+#toast.success { border-color: #22c55e; color: #15803d; }
+#toast.error   { border-color: #ef4444; color: #dc2626; }
+
+/* Tyhjä tila */
+.empty-state { text-align: center; padding: 48px 16px; color: var(--text-dim); font-size: 13px; border: 2px dashed var(--border); border-radius: 8px; }
+
+/* ── MOBIILI ── */
+@media (max-width: 640px) {
+  .page { padding: 16px; }
+  .summary-grid { grid-template-columns: 1fr 1fr; }
+  .summary-grid .summary-card:last-child { grid-column: span 2; }
+  .project-table { display: none; }
+  .project-cards { display: block; }
+  .stage-row { grid-template-columns: 1fr; gap: 6px; }
+  .modal-summary { grid-template-columns: 1fr 1fr; }
+  .modal { padding: 20px 16px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote" class="logo">
+  <div class="nav-menu-wrap">
+    <button class="nav-btn" onclick="toggleNav(event)">☰ Valikko</button>
+    <div class="nav-dropdown" id="navDropdown">
+      <div class="nav-section-label">Sivut</div>
+      <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
+      <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
+      <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
+      <a class="nav-item" href="tarjous.html">✏️ Uusi tarjous</a>
+      <a class="nav-item" href="kalenteri.html">📅 Kalenteri</a>
+      <a class="nav-item" href="todo.html">✅ Muistilista</a>
+      <a class="nav-item current" href="laskutus.html">💰 Laskutus</a>
+    </div>
+  </div>
+  <h1>Laskutus</h1>
+  <div class="header-right">
+    <button class="btn-logout" onclick="logout()">Kirjaudu ulos</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- YHTEENVETO -->
+  <div class="summary-grid">
+    <div class="summary-card paid">
+      <div class="summary-label">Laskutettu</div>
+      <div class="summary-value" id="sumLaskutettu">—</div>
+    </div>
+    <div class="summary-card pending">
+      <div class="summary-label">Odottaa laskutusta</div>
+      <div class="summary-value" id="sumOdottaa">—</div>
+    </div>
+    <div class="summary-card warning">
+      <div class="summary-label">Myöhässä / Maksamatta</div>
+      <div class="summary-value" id="sumMyohassa">—</div>
+    </div>
+  </div>
+
+  <!-- PROJEKTILISTA -->
+  <div class="section-header">
+    <div class="section-title">Tilatut projektit</div>
+  </div>
+
+  <!-- Desktop-taulukko -->
+  <table class="project-table" id="projectTable">
+    <thead>
+      <tr>
+        <th>Asiakas / Tarjous</th>
+        <th>Kokonaissumma</th>
+        <th>Laskutus</th>
+        <th>Seuraava vaihe</th>
+      </tr>
+    </thead>
+    <tbody id="projectTableBody">
+      <tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:32px;">Ladataan...</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Mobiilikorttinäkymä -->
+  <div class="project-cards" id="projectCards"></div>
+
+</div>
+
+<!-- PROJEKTIN DETALJIT MODAL -->
+<div class="modal-backdrop" id="detailModal">
+  <div class="modal">
+    <div class="modal-title" id="detailTitle">—</div>
+    <div class="modal-sub"   id="detailSub">—</div>
+    <div class="modal-total" id="detailTotal">—</div>
+
+    <div class="modal-summary">
+      <div class="modal-sum-card">
+        <div class="modal-sum-label">Laskutettu</div>
+        <div class="modal-sum-value paid" id="detailPaid">—</div>
+      </div>
+      <div class="modal-sum-card">
+        <div class="modal-sum-label">Odottaa</div>
+        <div class="modal-sum-value pending" id="detailPending">—</div>
+      </div>
+      <div class="modal-sum-card">
+        <div class="modal-sum-label">Yhteensä</div>
+        <div class="modal-sum-value total" id="detailTotalSum">—</div>
+      </div>
+    </div>
+
+    <div class="stage-list" id="stageList"></div>
+
+    <div class="modal-footer">
+      <div class="modal-footer-left">
+        <a id="detailLink" href="#" style="color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:12px;text-decoration:none;">
+          Avaa tarjous →
+        </a>
+      </div>
+      <button class="btn" onclick="closeDetail()">Sulje</button>
+    </div>
+  </div>
+</div>
+
+<!-- LÄHETYS-MODAL -->
+<div class="modal-backdrop" id="sentModal">
+  <div class="date-modal">
+    <h3 id="sentModalTitle">Merkitse lähetetyksi</h3>
+    <div class="form-group">
+      <label>Lähetyspäivä</label>
+      <input type="date" id="sentDate">
+    </div>
+    <div class="form-group">
+      <label>Muistiinpano (valinnainen)</label>
+      <textarea id="sentNotes" rows="2" placeholder="esim. laskunumero, lisätiedot..."></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeSentModal()">Peruuta</button>
+      <button class="btn btn-accent" onclick="saveSent()">Tallenna</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAKSETTU-MODAL -->
+<div class="modal-backdrop" id="paidModal">
+  <div class="date-modal">
+    <h3>Merkitse maksetuksi</h3>
+    <div class="form-group">
+      <label>Maksupäivä</label>
+      <input type="date" id="paidDate">
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closePaidModal()">Peruuta</button>
+      <button class="btn btn-accent" onclick="savePaid()">Tallenna</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SURL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
+const db = supabase.createClient(SURL, SKEY);
+
+let projects = [];      // quotes ORDERED/COMPLETED
+let invoiceItems = {};  // quote_id → [items]
+let templates = [];
+let activeQuoteId = null;
+let activeSentItemId = null;
+let activePaidItemId = null;
+
+// ── Nav ──────────────────────────────────────────────
+function toggleNav(e) {
+  e.stopPropagation();
+  document.getElementById('navDropdown').classList.toggle('open');
+}
+document.addEventListener('click', () => document.getElementById('navDropdown').classList.remove('open'));
+
+async function logout() {
+  await db.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+// ── Init ─────────────────────────────────────────────
+async function init() {
+  await window._authReady;
+  await loadData();
+  renderSummary();
+  renderProjects();
+}
+
+async function loadData() {
+  // Lataa tilatut projektit
+  const { data: qData, error: qErr } = await db
+    .from('quotes')
+    .select('id, quote_number, total_gross, status, customers(name)')
+    .in('status', ['ORDERED', 'COMPLETED'])
+    .order('created_at', { ascending: false });
+
+  if (qErr) { showToast('Virhe projektien latauksessa', 'error'); return; }
+  projects = qData || [];
+
+  if (!projects.length) return;
+
+  // Lataa laskutuserät
+  const ids = projects.map(p => p.id);
+  const { data: iData, error: iErr } = await db
+    .from('invoice_items')
+    .select('*')
+    .in('quote_id', ids)
+    .order('sort_order');
+
+  if (iErr) { showToast('Virhe laskuerien latauksessa', 'error'); return; }
+
+  // Ryhmitä quote_id:n mukaan
+  invoiceItems = {};
+  (iData || []).forEach(item => {
+    if (!invoiceItems[item.quote_id]) invoiceItems[item.quote_id] = [];
+    invoiceItems[item.quote_id].push(item);
+  });
+
+  // Jos projektilla ei ole vielä invoice_items, luo ne templateista
+  const { data: tmpl } = await db
+    .from('invoice_stage_templates')
+    .select('*')
+    .order('sort_order');
+  templates = tmpl || [];
+
+  for (const project of projects) {
+    if (!invoiceItems[project.id] || invoiceItems[project.id].length === 0) {
+      await createInvoiceItems(project);
+    }
+  }
+}
+
+async function createInvoiceItems(project) {
+  if (!templates.length) return;
+  const rows = templates.map(t => ({
+    quote_id:   project.id,
+    name:       t.name,
+    percent:    t.default_percent,
+    amount:     project.total_gross ? Math.round(project.total_gross * t.default_percent) / 100 : null,
+    status:     'odottaa',
+    sort_order: t.sort_order
+  }));
+  const { data, error } = await db.from('invoice_items').insert(rows).select();
+  if (!error && data) {
+    invoiceItems[project.id] = data;
+  }
+}
+
+// ── Yhteenveto ────────────────────────────────────────
+function renderSummary() {
+  let laskutettu = 0, odottaa = 0, myohassa = 0;
+  const today = new Date().toISOString().slice(0, 10);
+
+  projects.forEach(p => {
+    const items = invoiceItems[p.id] || [];
+    items.forEach(it => {
+      const amt = it.amount || 0;
+      if (it.status === 'maksettu') {
+        laskutettu += amt;
+      } else if (it.status === 'lahetetty') {
+        laskutettu += amt; // lähetetty lasketaan laskutettuihin
+        // Jos lähetetty yli 30 pv sitten → myöhässä
+        if (it.sent_date) {
+          const sent = new Date(it.sent_date);
+          const diff = (new Date() - sent) / 86400000;
+          if (diff > 30) myohassa += amt;
+        }
+      } else {
+        odottaa += amt;
+      }
+    });
+  });
+
+  document.getElementById('sumLaskutettu').textContent = formatEur(laskutettu);
+  document.getElementById('sumOdottaa').textContent    = formatEur(odottaa);
+  document.getElementById('sumMyohassa').textContent   = myohassa > 0 ? formatEur(myohassa) : '0 €';
+}
+
+// ── Projektilista ─────────────────────────────────────
+function renderProjects() {
+  const tbody = document.getElementById('projectTableBody');
+  const cards = document.getElementById('projectCards');
+  tbody.innerHTML = '';
+  cards.innerHTML = '';
+
+  if (!projects.length) {
+    tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state">Ei tilattuja projekteja</div></td></tr>';
+    return;
+  }
+
+  projects.forEach(p => {
+    const items = invoiceItems[p.id] || [];
+    const total = p.total_gross || 0;
+    const paid  = items.filter(i => i.status === 'maksettu' || i.status === 'lahetetty')
+                       .reduce((s, i) => s + (i.amount || 0), 0);
+    const pct   = total > 0 ? Math.round(paid / total * 100) : 0;
+    const next  = items.find(i => i.status === 'odottaa');
+    const customerName = p.customers?.name || '—';
+
+    // Desktop-rivi
+    const tr = document.createElement('tr');
+    tr.onclick = () => openDetail(p.id);
+    tr.innerHTML = `
+      <td>
+        <div class="project-name">${esc(customerName)}</div>
+        <div class="project-num">${esc(p.quote_number || '')}</div>
+      </td>
+      <td><span class="total-amount">${formatEur(total)}</span></td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <span class="progress-pct">${pct}%</span>
+        </div>
+      </td>
+      <td>${next
+        ? `<span class="next-badge next-odottaa">${esc(next.name)} — ${formatEur(next.amount || 0)}</span>`
+        : `<span class="next-badge next-valmis">✓ Kaikki laskutettu</span>`
+      }</td>
+    `;
+    tbody.appendChild(tr);
+
+    // Mobiilikortti
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    card.onclick = () => openDetail(p.id);
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div>
+          <div class="project-name">${esc(customerName)}</div>
+          <div class="project-num">${esc(p.quote_number || '')}</div>
+        </div>
+        <span class="total-amount">${formatEur(total)}</span>
+      </div>
+      <div class="progress-wrap" style="margin-bottom:8px;">
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <span class="progress-pct">${pct}%</span>
+      </div>
+      ${next
+        ? `<span class="next-badge next-odottaa">${esc(next.name)} — ${formatEur(next.amount || 0)}</span>`
+        : `<span class="next-badge next-valmis">✓ Kaikki laskutettu</span>`
+      }
+    `;
+    cards.appendChild(card);
+  });
+}
+
+// ── Detaljit ──────────────────────────────────────────
+function openDetail(quoteId) {
+  activeQuoteId = quoteId;
+  const project = projects.find(p => p.id === quoteId);
+  if (!project) return;
+
+  const items = invoiceItems[quoteId] || [];
+  const total = project.total_gross || 0;
+  const paid  = items.filter(i => i.status === 'maksettu').reduce((s, i) => s + (i.amount || 0), 0);
+  const sent  = items.filter(i => i.status === 'lahetetty').reduce((s, i) => s + (i.amount || 0), 0);
+  const odottaa = items.filter(i => i.status === 'odottaa').reduce((s, i) => s + (i.amount || 0), 0);
+
+  document.getElementById('detailTitle').textContent   = project.customers?.name || '—';
+  document.getElementById('detailSub').textContent     = project.quote_number || '';
+  document.getElementById('detailTotal').textContent   = 'Kokonaissumma: ' + formatEur(total);
+  document.getElementById('detailPaid').textContent    = formatEur(paid + sent);
+  document.getElementById('detailPending').textContent = formatEur(odottaa);
+  document.getElementById('detailTotalSum').textContent= formatEur(total);
+  document.getElementById('detailLink').href           = 'tarjous.html?id=' + quoteId;
+
+  const list = document.getElementById('stageList');
+  list.innerHTML = '';
+
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'stage-row';
+
+    const statusLabel = { odottaa: 'Odottaa', lahetetty: 'Lähetetty', maksettu: 'Maksettu' };
+    const dotClass    = { odottaa: 'dot-odottaa', lahetetty: 'dot-lahetetty', maksettu: 'dot-maksettu' };
+
+    let sentInfoHtml = '';
+    if (item.sent_date) {
+      sentInfoHtml = `<div class="sent-info">Lähetetty ${formatDate(item.sent_date)}${item.notes ? ' · ' + esc(item.notes) : ''}</div>`;
+    }
+
+    // Napit tilasiirtymiin
+    let actionHtml = '';
+    if (item.status === 'odottaa') {
+      actionHtml = `<button class="btn-stage" onclick="openSentModal('${item.id}',event)">Lähetä</button>`;
+    } else if (item.status === 'lahetetty') {
+      actionHtml = `<button class="btn-stage" onclick="openPaidModal('${item.id}',event)">Maksettu</button>`;
+    } else {
+      actionHtml = `<button class="btn-stage" onclick="resetStatus('${item.id}',event)">Peru</button>`;
+    }
+
+    row.innerHTML = `
+      <div>
+        <div class="stage-name">${esc(item.name)}</div>
+        ${sentInfoHtml}
+      </div>
+      <div class="stage-pct">${item.percent}%</div>
+      <div class="stage-amount">${formatEur(item.amount || 0)}</div>
+      <div class="stage-status">
+        <div class="status-dot ${dotClass[item.status] || 'dot-odottaa'}"></div>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-mid);">
+          ${statusLabel[item.status] || item.status}
+        </span>
+      </div>
+      <div class="stage-action">${actionHtml}</div>
+    `;
+    list.appendChild(row);
+  });
+
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('open');
+  activeQuoteId = null;
+}
+document.getElementById('detailModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('detailModal')) closeDetail();
+});
+
+// ── Tila-muutokset ────────────────────────────────────
+function openSentModal(itemId, e) {
+  if (e) e.stopPropagation();
+  activeSentItemId = itemId;
+  document.getElementById('sentDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('sentNotes').value = '';
+  document.getElementById('sentModal').classList.add('open');
+}
+function closeSentModal() {
+  document.getElementById('sentModal').classList.remove('open');
+  activeSentItemId = null;
+}
+document.getElementById('sentModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('sentModal')) closeSentModal();
+});
+
+async function saveSent() {
+  if (!activeSentItemId) return;
+  const date  = document.getElementById('sentDate').value;
+  const notes = document.getElementById('sentNotes').value.trim();
+
+  const { error } = await db.from('invoice_items')
+    .update({ status: 'lahetetty', sent_date: date || null, notes: notes || null })
+    .eq('id', activeSentItemId);
+
+  if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
+
+  // Luo muistutus todo 14 pv päähän
+  await createReminder(activeSentItemId, date);
+
+  updateLocalItem(activeSentItemId, { status: 'lahetetty', sent_date: date, notes });
+  closeSentModal();
+  showToast('Merkitty lähetetyksi!', 'success');
+  refreshModal();
+}
+
+async function createReminder(itemId, sentDate) {
+  // Etsi projekti ja vaihe
+  for (const qid of Object.keys(invoiceItems)) {
+    const item = invoiceItems[qid]?.find(i => i.id === itemId);
+    if (item) {
+      const project = projects.find(p => p.id === qid);
+      if (!project) break;
+
+      const dueDate = new Date(sentDate);
+      dueDate.setDate(dueDate.getDate() + 14);
+      const dueDateStr = dueDate.toISOString().slice(0, 10);
+
+      await db.from('todos').insert([{
+        title:     'Tarkista maksu — ' + (project.customers?.name || project.quote_number),
+        notes:     'Laskutusvaihe: ' + item.name + ' (' + formatEur(item.amount || 0) + ')',
+        due_date:  dueDateStr,
+        due_week:  getWeekKey(dueDate),
+        is_shared: true,
+        is_done:   false,
+        priority:  'normal',
+        user_id:   (await db.auth.getUser()).data?.user?.id
+      }]);
+      break;
+    }
+  }
+}
+
+function openPaidModal(itemId, e) {
+  if (e) e.stopPropagation();
+  activePaidItemId = itemId;
+  document.getElementById('paidDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('paidModal').classList.add('open');
+}
+function closePaidModal() {
+  document.getElementById('paidModal').classList.remove('open');
+  activePaidItemId = null;
+}
+document.getElementById('paidModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('paidModal')) closePaidModal();
+});
+
+async function savePaid() {
+  if (!activePaidItemId) return;
+  const date = document.getElementById('paidDate').value;
+  const { error } = await db.from('invoice_items')
+    .update({ status: 'maksettu', paid_date: date || null })
+    .eq('id', activePaidItemId);
+
+  if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
+  updateLocalItem(activePaidItemId, { status: 'maksettu', paid_date: date });
+  closePaidModal();
+  showToast('Merkitty maksetuksi!', 'success');
+  refreshModal();
+}
+
+async function resetStatus(itemId, e) {
+  if (e) e.stopPropagation();
+  if (!confirm('Palautetaanko odottaa-tilaan?')) return;
+  const { error } = await db.from('invoice_items')
+    .update({ status: 'odottaa', sent_date: null, paid_date: null, notes: null })
+    .eq('id', itemId);
+  if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
+  updateLocalItem(itemId, { status: 'odottaa', sent_date: null, paid_date: null, notes: null });
+  refreshModal();
+}
+
+function updateLocalItem(itemId, changes) {
+  for (const qid of Object.keys(invoiceItems)) {
+    const idx = invoiceItems[qid]?.findIndex(i => i.id === itemId);
+    if (idx !== undefined && idx >= 0) {
+      Object.assign(invoiceItems[qid][idx], changes);
+      break;
+    }
+  }
+}
+
+function refreshModal() {
+  renderSummary();
+  renderProjects();
+  if (activeQuoteId) openDetail(activeQuoteId);
+}
+
+// ── Apufunktiot ───────────────────────────────────────
+function formatEur(n) {
+  if (!n && n !== 0) return '—';
+  return n.toLocaleString('fi-FI', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+}
+function formatDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.getDate() + '.' + (dt.getMonth() + 1) + '.' + dt.getFullYear();
+}
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function getWeekKey(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dn = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dn);
+  const ys = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const wk = Math.ceil((((d - ys) / 86400000) + 1) / 7);
+  return d.getUTCFullYear() + '-' + String(wk).padStart(2, '0');
+}
+
+let toastTimer;
+function showToast(msg, type = '') {
+  clearTimeout(toastTimer);
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = type; t.style.display = 'block';
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+init();
+</script>
+</body>
+</html>
