@@ -97,6 +97,8 @@ select option{background:var(--panel);}
 #toast{position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--text);z-index:999;display:none;box-shadow:var(--shadow);}
 #toast.success{border-color:#22c55e;color:#15803d;}
 #toast.error{border-color:#ef4444;color:#dc2626;}
+.btn-logout{background:none;border:1px solid var(--border2);color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:5px 12px;border-radius:4px;cursor:pointer;letter-spacing:.04em;transition:all .15s;}
+.btn-logout:hover{border-color:#dc2626;color:#dc2626;}
 @media(max-width:640px){.page{padding:16px;}.columns{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -113,6 +115,7 @@ select option{background:var(--panel);}
       <a class="nav-item" href="tarjous.html">Uusi tarjous</a>
       <a class="nav-item" href="kalenteri.html">Kalenteri</a>
       <a class="nav-item current" href="todo.html">Muistilista</a>
+      <a class="nav-item" href="laskutus.html">💰 Laskutus</a>
     </div>
   </div>
   <h1>Muistilista</h1>
@@ -121,6 +124,7 @@ select option{background:var(--panel);}
       <input type="checkbox" id="showDone" onchange="renderAll()" style="accent-color:var(--accent);width:auto;">
       Nayta tehdyt
     </label>
+    <button class="btn-logout" onclick="logout()">Kirjaudu ulos</button>
   </div>
 </header>
 <div class="page">
@@ -209,6 +213,11 @@ function toggleNav(e) {
 document.addEventListener("click", function() {
   document.getElementById("navDropdown").classList.remove("open");
 });
+
+async function logout() {
+  await scl.auth.signOut();
+  window.location.href = 'login.html';
+}
 
 function switchTab(tab) {
   document.getElementById("tab-todos").classList.toggle("active", tab === "todos");
