@@ -113,6 +113,8 @@
     color: var(--text);
   }
   .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .btn-logout { background: none; border: 1px solid var(--border2); color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 4px; cursor: pointer; letter-spacing: .04em; transition: all .15s; }
+  .btn-logout:hover { border-color: #dc2626; color: #dc2626; }
 
   /* ── NAVIGAATIO ───────────────────────────────────────── */
   .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
@@ -387,11 +389,13 @@
       <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
       <a class="nav-item" href="tarjous.html">✏️ Uusi tarjous</a>
       <a class="nav-item current" href="kalenteri.html">📅 Kalenteri</a>
-      <a class="nav-item current" href="todo.html">✅ Muistilista</a>
+      <a class="nav-item" href="todo.html">✅ Muistilista</a>
+      <a class="nav-item" href="laskutus.html">💰 Laskutus</a>
     </div>
   </div>
   <h1>Kalenteri</h1>
   <div class="header-right">
+    <button class="btn-logout" onclick="logout()">Kirjaudu ulos</button>
   </div>
 </header>
 
@@ -500,6 +504,11 @@ function toggleNav(e) {
   document.getElementById('navDropdown').classList.toggle('open');
 }
 document.addEventListener('click', () => document.getElementById('navDropdown').classList.remove('open'));
+
+async function logout() {
+  await db.auth.signOut();
+  window.location.href = 'login.html';
+}
 
 // ── Init ───────────────────────────────────────────────
 init();
