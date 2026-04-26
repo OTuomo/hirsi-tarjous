@@ -26,8 +26,10 @@
     --ordered-fg:#1d4ed8;
     --completed-bg:#dcfce7;
     --completed-fg:#15803d;
-    --absence-bg:#fef3c7;
-    --absence-fg:#92400e;
+    --invoice-bg: #fef3c7;
+    --invoice-fg: #92400e;
+    --invoice-overdue-bg: #fee2e2;
+    --invoice-overdue-fg: #dc2626;
     --todo-bg:   #f3e8ff;
     --todo-fg:   #7c3aed;
     --shadow:    0 1px 4px rgba(100,60,20,0.08);
@@ -277,6 +279,17 @@
     border-left: 3px solid var(--todo-fg);
     cursor: pointer;
   }
+  .event-invoice {
+    background: var(--invoice-bg);
+    color: var(--invoice-fg);
+    border-left: 3px solid var(--invoice-fg);
+    cursor: pointer;
+  }
+  .event-invoice.overdue {
+    background: var(--invoice-overdue-bg);
+    color: var(--invoice-overdue-fg);
+    border-left-color: var(--invoice-overdue-fg);
+  }
 
   /* ── LISÄÄ POISSAOLO MODAL ────────────────────────────── */
   .modal-backdrop {
@@ -419,8 +432,12 @@
         Valmis
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:var(--todo-bg);border-left:3px solid var(--todo-fg);"></div>
-        Tehtävä
+        <div class="legend-dot" style="background:var(--invoice-bg);border-left:3px solid var(--invoice-fg);"></div>
+        Lasku erääntyy
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--invoice-overdue-bg);border-left:3px solid var(--invoice-overdue-fg);"></div>
+        Erääntynyt
       </div>
     </div>
   </div>
@@ -494,6 +511,7 @@ let viewYear  = new Date().getFullYear();
 let viewMonth = new Date().getMonth(); // 0-11
 let quotes    = [];
 let todos     = [];
+let invoices  = []; // laskutuserät joilla on due_date
 
 const MONTHS_FI = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
                    'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
@@ -536,6 +554,13 @@ async function loadData() {
       .not('due_week', 'is', null)
       .or(`is_shared.eq.true,user_id.eq.${userId}`);
     todos = tData || [];
+    // Hae laskutuserät joilla on eräpäivä (lähetetty, ei maksettu)
+    const { data: iData } = await db
+      .from('invoice_items')
+      .select('id, name, amount, due_date, status, quote_id, quotes(quote_number, customers(name))')
+      .eq('status', 'lahetetty')
+      .not('due_date', 'is', null);
+    invoices = iData || [];
   } catch(e) {
     console.error('loadData:', e);
   }
@@ -634,7 +659,21 @@ function buildDayCell(date, otherMonth, today) {
     });
   }
 
-  // Tehtävät — due_date:lla oikealle päivälle, muuten viikon maanantaille
+  // Laskutuserien eräpäivät
+  const dayInvoices = invoices.filter(i => i.due_date === dateStr);
+  dayInvoices.forEach(inv => {
+    const isOverdue = inv.due_date < new Date().toISOString().slice(0,10);
+    const ev = document.createElement('a');
+    ev.className = 'event event-invoice' + (isOverdue ? ' overdue' : '');
+    ev.href = 'laskutus.html';
+    const customerName = inv.quotes?.customers?.name || inv.quotes?.quote_number || '—';
+    const amt = inv.amount ? ' · ' + Math.round(inv.amount).toLocaleString('fi-FI') + ' €' : '';
+    ev.textContent = '💰 ' + customerName + amt;
+    ev.title = inv.name + ' · ' + customerName + (isOverdue ? ' · ERÄÄNTYNYT' : '');
+    cell.appendChild(ev);
+  });
+
+  // Tehtävät
   const dateStr = date.toISOString().slice(0, 10);
   const dayTodos = todos.filter(t => {
     if (t.due_date) return t.due_date === dateStr;
