@@ -122,6 +122,14 @@ header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
 
 /* Senttilasku */
 .sent-info { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.due-info { font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin-top: 2px; color: var(--text-dim); }
+.due-info.overdue { color: var(--red); font-weight: 600; }
+
+/* Mobiili: stage-action nappi ei ylitä reunaa */
+@media (max-width: 640px) {
+  .stage-action { flex-wrap: wrap; }
+  .btn-stage { font-size: 10px; padding: 3px 6px; }
+}
 
 /* Modal footer */
 .modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
@@ -280,7 +288,14 @@ input:focus, textarea:focus { border-color: var(--accent); }
     <h3 id="sentModalTitle">Merkitse lähetetyksi</h3>
     <div class="form-group">
       <label>Lähetyspäivä</label>
-      <input type="date" id="sentDate">
+      <input type="date" id="sentDate" oninput="updateDuePreview()">
+    </div>
+    <div class="form-group">
+      <label>Maksuaika (päivää)</label>
+      <input type="number" id="sentPaymentDays" value="7" min="1" max="90" oninput="updateDuePreview()">
+    </div>
+    <div id="duePreview" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-mid);margin:-6px 0 10px;padding:6px 10px;background:var(--bg2);border-radius:4px;">
+      Eräpäivä: —
     </div>
     <div class="form-group">
       <label>Muistiinpano (valinnainen)</label>
@@ -414,13 +429,9 @@ function renderSummary() {
       if (it.status === 'maksettu') {
         laskutettu += amt;
       } else if (it.status === 'lahetetty') {
-        laskutettu += amt; // lähetetty lasketaan laskutettuihin
-        // Jos lähetetty yli 30 pv sitten → myöhässä
-        if (it.sent_date) {
-          const sent = new Date(it.sent_date);
-          const diff = (new Date() - sent) / 86400000;
-          if (diff > 30) myohassa += amt;
-        }
+        laskutettu += amt;
+        // Myöhässä jos due_date mennyt ohi
+        if (it.due_date && it.due_date < today) myohassa += amt;
       } else {
         odottaa += amt;
       }
@@ -532,7 +543,14 @@ function openDetail(quoteId) {
 
     let sentInfoHtml = '';
     if (item.sent_date) {
+      const today = new Date().toISOString().slice(0, 10);
+      const isOverdue = item.due_date && item.due_date < today && item.status === 'lahetetty';
       sentInfoHtml = `<div class="sent-info">Lähetetty ${formatDate(item.sent_date)}${item.notes ? ' · ' + esc(item.notes) : ''}</div>`;
+      if (item.due_date) {
+        sentInfoHtml += `<div class="due-info${isOverdue ? ' overdue' : ''}">
+          ${isOverdue ? '⚠ ' : ''}Eräpäivä: ${formatDate(item.due_date)}
+        </div>`;
+      }
     }
 
     // Napit tilasiirtymiin
@@ -579,8 +597,20 @@ function openSentModal(itemId, e) {
   if (e) e.stopPropagation();
   activeSentItemId = itemId;
   document.getElementById('sentDate').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('sentPaymentDays').value = 7;
   document.getElementById('sentNotes').value = '';
+  updateDuePreview();
   document.getElementById('sentModal').classList.add('open');
+}
+
+function updateDuePreview() {
+  const dateVal = document.getElementById('sentDate').value;
+  const days    = parseInt(document.getElementById('sentPaymentDays').value) || 7;
+  if (!dateVal) { document.getElementById('duePreview').textContent = 'Eräpäivä: —'; return; }
+  const due = new Date(dateVal);
+  due.setDate(due.getDate() + days);
+  document.getElementById('duePreview').textContent =
+    'Eräpäivä: ' + due.getDate() + '.' + (due.getMonth()+1) + '.' + due.getFullYear();
 }
 function closeSentModal() {
   document.getElementById('sentModal').classList.remove('open');
@@ -592,44 +622,53 @@ document.getElementById('sentModal').addEventListener('click', e => {
 
 async function saveSent() {
   if (!activeSentItemId) return;
-  const date  = document.getElementById('sentDate').value;
-  const notes = document.getElementById('sentNotes').value.trim();
+  const date        = document.getElementById('sentDate').value;
+  const paymentDays = parseInt(document.getElementById('sentPaymentDays').value) || 7;
+  const notes       = document.getElementById('sentNotes').value.trim();
+
+  // Laske eräpäivä
+  const dueDate = new Date(date);
+  dueDate.setDate(dueDate.getDate() + paymentDays);
+  const dueDateStr = dueDate.toISOString().slice(0, 10);
 
   const { error } = await db.from('invoice_items')
-    .update({ status: 'lahetetty', sent_date: date || null, notes: notes || null })
+    .update({
+      status:       'lahetetty',
+      sent_date:    date || null,
+      due_date:     dueDateStr,
+      payment_days: paymentDays,
+      notes:        notes || null
+    })
     .eq('id', activeSentItemId);
 
   if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
 
-  // Luo muistutus todo 14 pv päähän
-  await createReminder(activeSentItemId, date);
+  // Luo muistutus todo eräpäiväksi
+  await createReminder(activeSentItemId, dueDateStr);
 
-  updateLocalItem(activeSentItemId, { status: 'lahetetty', sent_date: date, notes });
+  updateLocalItem(activeSentItemId, {
+    status: 'lahetetty', sent_date: date, due_date: dueDateStr, payment_days: paymentDays, notes
+  });
   closeSentModal();
   showToast('Merkitty lähetetyksi!', 'success');
   refreshModal();
 }
 
-async function createReminder(itemId, sentDate) {
-  // Etsi projekti ja vaihe
+async function createReminder(itemId, dueDateStr) {
   for (const qid of Object.keys(invoiceItems)) {
     const item = invoiceItems[qid]?.find(i => i.id === itemId);
     if (item) {
       const project = projects.find(p => p.id === qid);
       if (!project) break;
-
-      const dueDate = new Date(sentDate);
-      dueDate.setDate(dueDate.getDate() + 14);
-      const dueDateStr = dueDate.toISOString().slice(0, 10);
-
+      const dueDate = new Date(dueDateStr);
       await db.from('todos').insert([{
-        title:     'Tarkista maksu — ' + (project.customers?.name || project.quote_number),
-        notes:     'Laskutusvaihe: ' + item.name + ' (' + formatEur(item.amount || 0) + ')',
+        title:     'Lasku erääntyi — ' + (project.customers?.name || project.quote_number),
+        notes:     item.name + ' · ' + formatEur(item.amount || 0),
         due_date:  dueDateStr,
         due_week:  getWeekKey(dueDate),
         is_shared: true,
         is_done:   false,
-        priority:  'normal',
+        priority:  'high',
         user_id:   (await db.auth.getUser()).data?.user?.id
       }]);
       break;
