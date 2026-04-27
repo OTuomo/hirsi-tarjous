@@ -326,7 +326,7 @@
       <div class="field">
         <label>Sijainti</label>
         <button id="gps-btn" onclick="getGPS()">📍 Käytä nykyistä sijaintia</button>
-        <div class="coord-display" id="coord-display">Ei sijaintia — klikkaa kartalta</div>
+        <div class="coord-display" id="coord-display">Klikkaa karttaa tai käytä GPS</div>
         <input type="hidden" id="f-lat">
         <input type="hidden" id="f-lng">
       </div>
@@ -355,7 +355,13 @@ function initMap() {
     attribution: '© OpenStreetMap', maxZoom: 19
   }).addTo(map);
   map.on('click', function(e) {
-    if (document.getElementById('modal-backdrop').classList.contains('hidden')) return;
+    // Jos modal on jo auki, päivitä vain koordinaatit
+    if (!document.getElementById('modal-backdrop').classList.contains('hidden')) {
+      setCoords(e.latlng.lat, e.latlng.lng);
+      return;
+    }
+    // Muuten avaa uusi modal ja aseta koordinaatit
+    openAddModal();
     setCoords(e.latlng.lat, e.latlng.lng);
   });
 }
@@ -402,6 +408,9 @@ function renderList() {
         ${s.laatu ? `<span class="tag" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1">${s.laatu}</span>` : ''}
       </div>
       ${s.pickup_date ? `<div class="spot-card-pickup">📅 Nouto: ${fmtDate(s.pickup_date)}</div>` : ''}
+      <div style="margin-top:6px;text-align:right">
+        <button class="btn btn-sm" onclick="event.stopPropagation();openEditModal('${s.id}')">Muokkaa</button>
+      </div>
     </div>
   `).join('');
 }
@@ -482,7 +491,7 @@ function clearForm() {
   document.getElementById('f-laji').value = 'mänty';
   document.getElementById('f-laatu').value = 'tukki';
   document.getElementById('f-tila').value = 'odottaa';
-  document.getElementById('coord-display').textContent = 'Ei sijaintia — klikkaa kartalta';
+  document.getElementById('coord-display').textContent = 'Klikkaa karttaa tai käytä GPS';
 }
 
 function getGPS() {
