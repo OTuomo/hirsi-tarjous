@@ -285,6 +285,12 @@
     border-left: 3px solid var(--invoice-fg);
     cursor: pointer;
   }
+  .event-forest {
+    background: #fef9ec;
+    color: #92400e;
+    border-left: 3px solid #d97706;
+    cursor: pointer;
+  }
   .event-invoice.overdue {
     background: var(--invoice-overdue-bg);
     color: var(--invoice-overdue-fg);
@@ -404,6 +410,7 @@
       <a class="nav-item current" href="kalenteri.html">📅 Kalenteri</a>
       <a class="nav-item" href="todo.html">✅ Muistilista</a>
       <a class="nav-item" href="laskutus.html">💰 Laskutus</a>
+      <a class="nav-item" href="metsalog.html">🌲 Metsälog</a>
     </div>
   </div>
   <h1>Kalenteri</h1>
@@ -438,6 +445,10 @@
       <div class="legend-item">
         <div class="legend-dot" style="background:var(--invoice-overdue-bg);border-left:3px solid var(--invoice-overdue-fg);"></div>
         Erääntynyt
+      </div>
+          <div class="legend-item">
+        <div class="legend-dot" style="background:#fef9ec;border-left:3px solid #d97706;"></div>
+        Puunnouto
       </div>
     </div>
   </div>
@@ -512,6 +523,7 @@ let viewMonth = new Date().getMonth(); // 0-11
 let quotes    = [];
 let todos     = [];
 let invoices  = []; // laskutuserät joilla on due_date
+let forestSpots = []; // puukasat joilla on pickup_date
 
 const MONTHS_FI = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
                    'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
@@ -561,6 +573,13 @@ async function loadData() {
       .eq('status', 'lahetetty')
       .not('due_date', 'is', null);
     invoices = iData || [];
+    // Hae puukasat joilla on sovittu noutopäivä
+    const { data: fData } = await db
+      .from('forest_spots')
+      .select('id, kauppa_numero, nimi, maara_m3, puulaji, tila, pickup_date')
+      .not('pickup_date', 'is', null)
+      .neq('tila', 'noudettu');
+    forestSpots = fData || [];
   } catch(e) {
     console.error('loadData:', e);
   }
@@ -690,6 +709,18 @@ function buildDayCell(date, otherMonth, today) {
     cell.appendChild(ev);
   });
 
+  // Puukasojen noudot
+  const dayForest = forestSpots.filter(s => s.pickup_date === dateStr);
+  dayForest.forEach(s => {
+    const ev = document.createElement('a');
+    ev.className = 'event event-forest';
+    ev.href = 'metsalog.html';
+    const vol = s.maara_m3 ? ' · ' + s.maara_m3 + ' m³' : '';
+    ev.textContent = '🌲 #' + (s.kauppa_numero || '?') + ' ' + (s.nimi || s.puulaji || '') + vol;
+    ev.title = (s.nimi || '') + vol + ' · ' + (s.puulaji || '');
+    cell.appendChild(ev);
+  });
+
   return cell;
 }
 
@@ -712,6 +743,16 @@ function renderMobileList() {
   quotes.forEach(q => {
     if (weeks.has(q.delivery_week)) {
       weeks.get(q.delivery_week).push({ type: q.status === 'COMPLETED' ? 'completed' : 'ordered', q });
+    }
+  });
+
+  // Lisää puukasojen noudot päivämäärän mukaan
+  forestSpots.forEach(s => {
+    if (!s.pickup_date) return;
+    const d = new Date(s.pickup_date);
+    const wk = getWeekNumber(d);
+    if (weeks.has(wk)) {
+      weeks.get(wk).push({ type: 'forest', s });
     }
   });
 
@@ -752,6 +793,13 @@ function renderMobileList() {
           if (ev.t.is_done) d.style.opacity = '0.55';
           d.onclick = () => openTodoModal(ev.t);
           body.appendChild(d);
+        } else if (ev.s) {
+          const a = document.createElement('a');
+          a.className = 'event event-forest';
+          a.href = 'metsalog.html';
+          const vol = ev.s.maara_m3 ? ' · ' + ev.s.maara_m3 + ' m³' : '';
+          a.textContent = '🌲 #' + (ev.s.kauppa_numero || '?') + ' ' + (ev.s.nimi || ev.s.puulaji || '') + vol;
+          body.appendChild(a);
         }
       });
       block.appendChild(body);
