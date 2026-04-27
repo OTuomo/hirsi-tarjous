@@ -73,7 +73,7 @@
 
   /* NIMIKEHAKU */
   .nimike-wrap { position: relative; }
-  .nimike-dropdown { display: none; position: fixed; min-width: 320px; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 500; max-height: 220px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+  .nimike-dropdown { display: none; position: fixed; min-width: 320px; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 500; max-height: 400px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
   .nimike-dropdown.open { display: block; }
   .nimike-option { padding: 6px 10px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nimike-option:hover { background: var(--accent-glow); color: var(--accent); }
@@ -984,8 +984,8 @@ function onNimikeInput(secId, rowId, val) {
         if (aExact !== bExact) return aExact - bExact;
         return parseInt(a.code||0) - parseInt(b.code||0);
       })
-      .slice(0, 25)
-    : products.slice().sort((a,b) => parseInt(a.code||0) - parseInt(b.code||0)).slice(0, 25);
+      .slice(0, 122)
+    : products.slice().sort((a,b) => parseInt(a.code||0) - parseInt(b.code||0));
   if (!hits.length) {
     dd.innerHTML = '<div class="nimike-option" style="color:var(--text-dim)">Ei tuloksia</div>';
     dd.classList.add('open');
