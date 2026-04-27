@@ -964,22 +964,25 @@ function onNimikeInput(secId, rowId, val) {
     return;
   }
   const q = val.toLowerCase().trim();
+  const isNumeric = /^\d+$/.test(q);
   const hits = q.length >= 1
     ? products.filter(p => {
         const code = String(p.code || '');
-        const name = (p.name || '').toLowerCase();
-        const cat  = (p.category || '').toLowerCase();
-        const codeMatch = code === q || code.startsWith(q);
-        const nameMatch = name.includes(q) || cat.includes(q);
-        return codeMatch || nameMatch;
+        if (isNumeric) {
+          // Numerohaulla vain koodi
+          return code === q || code.startsWith(q);
+        } else {
+          // Tekstihaulla nimi ja kategoria
+          const name = (p.name || '').toLowerCase();
+          const cat  = (p.category || '').toLowerCase();
+          return name.includes(q) || cat.includes(q);
+        }
       })
       .sort((a, b) => {
-        // Täsmällinen koodivastaavuus ensin
         const aExact = String(a.code||'') === q ? 0 : 1;
         const bExact = String(b.code||'') === q ? 0 : 1;
         if (aExact !== bExact) return aExact - bExact;
-        // Sitten koodin pituus (lyhyemmät ensin)
-        return String(a.code||'').length - String(b.code||'').length;
+        return parseInt(a.code||0) - parseInt(b.code||0);
       })
       .slice(0, 25)
     : products.slice().sort((a,b) => parseInt(a.code||0) - parseInt(b.code||0)).slice(0, 25);
