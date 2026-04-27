@@ -4,306 +4,269 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Metsälog — Okkosen Puutuote</title>
-
-  <!-- Supabase + auth ladataan auth-guard.js:n kautta -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth-guard.js"></script>
-  <!-- auth-guard luo window._supabaseClient — käytetään sitä, ei luoda uutta instanssia -->
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- IBM Plex -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg:        #1c1a14;
-      --panel:     #2a2720;
-      --border:    #3d3a30;
-      --amber:     #d97706;
-      --amber-dim: #92500a;
-      --text:      #e8e0d0;
-      --muted:     #8a8070;
-      --danger:    #dc2626;
-      --green:     #16a34a;
-      --font:      'IBM Plex Sans', sans-serif;
-      --mono:      'IBM Plex Mono', monospace;
+      --bg:          #faf7f2;
+      --bg2:         #f3ede4;
+      --bg3:         #ede4d8;
+      --panel:       #ffffff;
+      --border:      #e0d4c4;
+      --border2:     #cfc0ac;
+      --accent:      #d97706;
+      --accent-dim:  #b45309;
+      --accent-bg:   rgba(217,119,6,0.10);
+      --text:        #2a1f14;
+      --text-mid:    #6b4f38;
+      --text-dim:    #a08878;
+      --shadow:      0 1px 4px rgba(100,60,20,0.08);
+      --radius:      6px;
+      --font:        'IBM Plex Sans', sans-serif;
+      --mono:        'IBM Plex Mono', monospace;
     }
-
-    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); }
-
-    /* ── LAYOUT ── */
+    html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
     #app { display: flex; flex-direction: column; height: 100vh; }
 
+    /* ── HEADER ── */
     header {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 16px;
       background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-      z-index: 1000;
+      border-bottom: 2px solid var(--accent);
+      padding: 10px 20px;
+      display: flex; align-items: center; gap: 14px;
+      flex-shrink: 0; z-index: 1000;
+      box-shadow: var(--shadow);
     }
-    header .logo { font-family: var(--mono); font-size: 13px; color: var(--amber); font-weight: 500; letter-spacing: .04em; }
-    header .title { font-size: 15px; font-weight: 600; }
-    header .spacer { flex: 1; }
-    header .count { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    header .logo { height: 30px; width: auto; }
+    header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .header-count { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
 
+    /* nav */
+    .nav-menu-wrap { position: relative; }
+    .nav-btn {
+      background: var(--bg2); border: 1px solid var(--border2); color: var(--text);
+      font-family: var(--mono); font-size: 12px; font-weight: 600;
+      padding: 6px 12px; border-radius: 4px; cursor: pointer; letter-spacing: .04em;
+    }
+    .nav-btn:hover { background: var(--bg3); }
+    .nav-dropdown {
+      display: none; position: absolute; top: calc(100% + 6px); left: 0;
+      background: var(--panel); border: 1px solid var(--border2);
+      border-radius: var(--radius); min-width: 200px; z-index: 999;
+      box-shadow: 0 4px 16px rgba(100,60,20,0.15); overflow: hidden;
+    }
+    .nav-dropdown.open { display: block; }
+    .nav-section-label {
+      font-family: var(--mono); font-size: 10px; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim);
+      padding: 8px 14px 4px;
+    }
+    .nav-item {
+      display: block; padding: 8px 14px; font-family: var(--mono);
+      font-size: 12px; color: var(--text); text-decoration: none; transition: background .1s;
+    }
+    .nav-item:hover { background: var(--accent-bg); color: var(--accent); }
+    .nav-item.current { color: var(--accent); font-weight: 600; }
+
+    /* ── MAIN ── */
     #main { display: flex; flex: 1; overflow: hidden; }
 
     /* ── MAP ── */
     #map { flex: 1; z-index: 1; }
-
-    /* Leaflet overrides */
-    .leaflet-container { background: #2a2720; font-family: var(--font); }
-    .leaflet-control-zoom a { background: var(--panel) !important; color: var(--text) !important; border-color: var(--border) !important; }
-    .leaflet-control-zoom a:hover { background: var(--border) !important; }
-    .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,.5); }
+    .leaflet-container { background: var(--bg2); font-family: var(--font); }
+    .leaflet-control-zoom a { background: var(--panel) !important; color: var(--text) !important; border-color: var(--border2) !important; }
+    .leaflet-control-zoom a:hover { background: var(--bg2) !important; }
+    .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 6px 24px rgba(100,60,20,.15); }
     .leaflet-popup-tip { background: var(--panel); }
     .leaflet-popup-content { margin: 0; font-family: var(--font); }
 
     /* ── SIDEBAR ── */
     #sidebar {
-      width: 320px;
-      background: var(--panel);
+      width: 300px; background: var(--panel);
       border-left: 1px solid var(--border);
-      display: flex; flex-direction: column;
-      overflow: hidden;
-      flex-shrink: 0;
+      display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
     }
-
     #sidebar-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
       display: flex; align-items: center; gap: 8px;
+      background: var(--bg2);
     }
-    #sidebar-header h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); flex: 1; }
-
+    #sidebar-header h2 {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em; color: var(--text-mid); flex: 1;
+    }
     #list { flex: 1; overflow-y: auto; padding: 8px; }
     #list::-webkit-scrollbar { width: 4px; }
-    #list::-webkit-scrollbar-track { background: transparent; }
-    #list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    #list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
     .spot-card {
-      padding: 10px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      margin-bottom: 6px;
-      cursor: pointer;
-      transition: border-color .15s, background .15s;
+      padding: 9px 12px; border-radius: var(--radius);
+      border: 1px solid var(--border); margin-bottom: 5px;
+      cursor: pointer; transition: border-color .15s, background .15s;
+      background: var(--panel);
     }
-    .spot-card:hover { border-color: var(--amber-dim); background: rgba(217,119,6,.06); }
-    .spot-card.active { border-color: var(--amber); background: rgba(217,119,6,.1); }
-
-    .spot-card-top { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
-    .spot-card-num { font-family: var(--mono); font-size: 11px; color: var(--amber); font-weight: 500; }
-    .spot-card-name { font-size: 13px; font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .spot-card-vol { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    .spot-card:hover { border-color: var(--accent-dim); background: var(--accent-bg); }
+    .spot-card.active { border-color: var(--accent); background: var(--accent-bg); }
+    .spot-card-top { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+    .spot-card-num { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; }
+    .spot-card-name { font-size: 13px; font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+    .spot-card-vol { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
     .spot-card-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+    .spot-card-pickup { font-size: 11px; color: var(--text-mid); margin-top: 3px; font-family: var(--mono); }
 
-    .tag {
-      font-size: 10px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase;
-      padding: 1px 6px; border-radius: 3px;
-    }
-    .tag-species { background: rgba(22,163,74,.15); color: #4ade80; border: 1px solid rgba(22,163,74,.2); }
-    .tag-status-odottaa   { background: rgba(234,179,8,.12);  color: #fbbf24; border: 1px solid rgba(234,179,8,.2); }
-    .tag-status-osittain  { background: rgba(249,115,22,.12); color: #fb923c; border: 1px solid rgba(249,115,22,.2); }
-    .tag-status-noudettu  { background: rgba(100,116,139,.12); color: #94a3b8; border: 1px solid rgba(100,116,139,.2); }
+    .tag { font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; }
+    .tag-species { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .tag-status-odottaa  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .tag-status-osittain { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+    .tag-status-noudettu { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
     /* ── FAB ── */
     #fab {
-      position: absolute;
-      bottom: 24px; right: 24px;
-      z-index: 1000;
-      width: 52px; height: 52px;
-      border-radius: 50%;
-      background: var(--amber);
-      color: #1c1a14;
-      border: none;
-      font-size: 26px;
-      cursor: pointer;
-      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+      position: absolute; bottom: 80px; right: 20px; z-index: 1000;
+      width: 50px; height: 50px; border-radius: 50%;
+      background: var(--accent); color: white; border: none;
+      font-size: 26px; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(217,119,6,.4);
       display: flex; align-items: center; justify-content: center;
       transition: transform .15s, background .15s;
     }
-    #fab:hover { transform: scale(1.08); background: #f59e0b; }
+    #fab:hover { transform: scale(1.08); background: var(--accent-dim); }
 
     /* ── MODAL ── */
     .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,.6);
-      z-index: 2000;
-      display: flex; align-items: center; justify-content: center;
-      padding: 16px;
+      position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 2000;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
     }
     .modal-backdrop.hidden { display: none; }
-
     .modal {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      width: 100%; max-width: 420px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 16px 48px rgba(0,0,0,.6);
+      background: var(--panel); border: 1px solid var(--border2);
+      border-radius: 10px; width: 100%; max-width: 420px;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 12px 40px rgba(100,60,20,.2);
     }
     .modal-header {
-      padding: 16px 20px 12px;
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 8px;
+      padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px; background: var(--bg2);
+      border-radius: 10px 10px 0 0;
     }
-    .modal-header h3 { font-size: 15px; font-weight: 600; flex: 1; }
-    .modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 2px 4px; }
+    .modal-header h3 { font-size: 15px; font-weight: 600; flex: 1; color: var(--text); }
+    .modal-close { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; }
     .modal-close:hover { color: var(--text); }
     .modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
     .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
 
     .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .field label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-mid); font-family: var(--mono); }
     .field input, .field select, .field textarea {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 5px;
-      padding: 8px 10px;
-      font-family: var(--font);
-      font-size: 14px;
-      transition: border-color .15s;
+      background: var(--bg2); border: 1px solid var(--border2); color: var(--text);
+      border-radius: 4px; padding: 7px 10px; font-family: var(--font); font-size: 13px;
+      transition: border-color .15s; outline: none;
     }
-    .field input:focus, .field select:focus, .field textarea:focus {
-      outline: none; border-color: var(--amber);
-    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
     .field textarea { resize: vertical; min-height: 60px; }
     .field select option { background: var(--panel); }
     .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-    .btn {
-      padding: 8px 18px;
-      border-radius: 5px;
-      border: none;
-      font-family: var(--font);
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity .15s, background .15s;
-    }
-    .btn:hover { opacity: .85; }
-    .btn-primary { background: var(--amber); color: #1c1a14; }
-    .btn-secondary { background: var(--border); color: var(--text); }
-    .btn-danger { background: rgba(220,38,38,.15); color: #f87171; border: 1px solid rgba(220,38,38,.25); }
-    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn { padding: 7px 16px; border-radius: var(--radius); border: 1px solid var(--border2); font-family: var(--mono); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; letter-spacing: .03em; background: var(--panel); color: var(--text-mid); }
+    .btn:hover { background: var(--bg2); color: var(--text); border-color: var(--accent); }
+    .btn-accent { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn-accent:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: white; }
+    .btn-danger { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-sm { padding: 5px 12px; font-size: 11px; }
 
-    /* ── POPUP ── */
+    /* popup */
     .popup-inner { padding: 12px 14px; min-width: 200px; }
-    .popup-num { font-family: var(--mono); font-size: 11px; color: var(--amber); margin-bottom: 4px; }
-    .popup-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
-    .popup-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; color: var(--muted); }
+    .popup-num { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 3px; }
+    .popup-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    .popup-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; color: var(--text-mid); }
     .popup-row span:last-child { color: var(--text); font-weight: 500; }
+    .popup-pickup { margin-top: 6px; font-size: 11px; font-family: var(--mono); color: var(--accent-dim); font-weight: 600; }
     .popup-actions { display: flex; gap: 6px; margin-top: 10px; }
 
-    /* ── GPS button ── */
+    /* gps */
     #gps-btn {
-      background: var(--border);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-radius: 5px;
-      padding: 6px 10px;
-      font-family: var(--font);
-      font-size: 12px;
-      cursor: pointer;
-      display: flex; align-items: center; gap: 5px;
+      background: var(--bg2); border: 1px solid var(--border2); color: var(--text-mid);
+      border-radius: 4px; padding: 6px 10px; font-family: var(--font); font-size: 12px;
+      cursor: pointer; display: flex; align-items: center; gap: 5px;
     }
-    #gps-btn:hover { border-color: var(--amber); color: var(--amber); }
-
-    .coord-display {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--muted);
-      padding: 6px 10px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      margin-top: 4px;
-    }
+    #gps-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .coord-display { font-family: var(--mono); font-size: 11px; color: var(--text-dim); padding: 5px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; margin-top: 4px; }
 
     /* ── MOBILE ── */
     @media (max-width: 640px) {
       #sidebar { display: none; }
-      #sidebar.show {
-        display: flex;
-        position: fixed; inset: 0;
-        z-index: 1500;
-        width: 100%;
-      }
+      #sidebar.show { display: flex; position: fixed; inset: 0; z-index: 1500; width: 100%; }
       #mob-list-btn {
-        position: absolute;
-        bottom: 88px; right: 24px;
-        z-index: 1000;
-        background: var(--panel);
-        border: 1px solid var(--border);
-        color: var(--text);
-        border-radius: 26px;
-        padding: 8px 14px;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,.4);
-        display: flex; align-items: center; gap: 6px;
+        position: absolute; bottom: 140px; right: 16px; z-index: 1000;
+        background: var(--panel); border: 1px solid var(--border2); color: var(--text);
+        border-radius: 20px; padding: 7px 14px; font-size: 13px; font-weight: 500;
+        cursor: pointer; box-shadow: var(--shadow); display: flex; align-items: center; gap: 6px;
+        font-family: var(--mono);
       }
+      #fab { bottom: 88px; right: 16px; }
       #sidebar-close { display: flex !important; }
     }
-    #sidebar-close {
-      display: none;
-      background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer;
-    }
+    #sidebar-close { display: none; background: none; border: none; color: var(--text-mid); font-size: 20px; cursor: pointer; }
 
-    .empty-state { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+    .empty-state { padding: 24px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
 
-    /* loading */
     #loading { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
     #loading.hidden { display: none; }
-    .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--amber); border-radius: 50%; animation: spin .7s linear infinite; }
+    .spinner { width: 28px; height: 28px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #loading p { font-size: 13px; color: var(--muted); }
+    #loading p { font-size: 13px; color: var(--text-dim); }
   </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="spinner"></div>
-  <p>Ladataan…</p>
-</div>
+<div id="loading"><div class="spinner"></div><p>Ladataan…</p></div>
 
 <div id="app">
   <header>
-    <span class="logo">OKKONEN</span>
-    <span class="title">Metsälog</span>
-    <span class="spacer"></span>
-    <span class="count" id="total-count"></span>
+    <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote" class="logo">
+    <div class="nav-menu-wrap">
+      <button class="nav-btn" onclick="toggleNav(event)">☰ Valikko</button>
+      <div class="nav-dropdown" id="navDropdown">
+        <div class="nav-section-label">Sivut</div>
+        <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
+        <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
+        <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
+        <a class="nav-item" href="tarjous.html">✏️ Uusi tarjous</a>
+        <a class="nav-item" href="kalenteri.html">📅 Kalenteri</a>
+        <a class="nav-item" href="todo.html">✅ Muistilista</a>
+        <a class="nav-item current" href="metsalog.html">🌲 Metsälog</a>
+      </div>
+    </div>
+    <h1>Metsälog</h1>
+    <div class="header-right">
+      <span class="header-count" id="total-count"></span>
+    </div>
   </header>
 
   <div id="main" style="position:relative;">
     <div id="map"></div>
-
     <div id="sidebar">
       <div id="sidebar-header">
         <h2>Puukasat</h2>
         <button id="sidebar-close" onclick="closeSidebar()">✕</button>
       </div>
-      <div id="list">
-        <div class="empty-state">Ladataan…</div>
-      </div>
+      <div id="list"><div class="empty-state">Ladataan…</div></div>
     </div>
-
     <button id="fab" onclick="openAddModal()" title="Lisää uusi puukasa">+</button>
     <button id="mob-list-btn" onclick="toggleSidebar()">☰ Lista</button>
   </div>
 </div>
 
-<!-- MODAL: Lisää / Muokkaa -->
+<!-- MODAL -->
 <div class="modal-backdrop hidden" id="modal-backdrop" onclick="backdropClick(event)">
-  <div class="modal" id="modal">
+  <div class="modal">
     <div class="modal-header">
       <h3 id="modal-title">Uusi puukasa</h3>
       <button class="modal-close" onclick="closeModal()">✕</button>
@@ -324,7 +287,7 @@
             <option value="mänty">Mänty</option>
             <option value="kuusi">Kuusi</option>
             <option value="koivu">Koivu</option>
-            <option value="sekä">Sekä</option>
+            <option value="seka">Seka</option>
             <option value="muu">Muu</option>
           </select>
         </div>
@@ -353,47 +316,44 @@
         </div>
       </div>
       <div class="field">
+        <label>Sovittu noutopäivä</label>
+        <input type="date" id="f-pickup">
+      </div>
+      <div class="field">
         <label>Lisätiedot</label>
         <textarea id="f-lisatiedot" placeholder="Vapaat muistiinpanot…"></textarea>
       </div>
       <div class="field">
         <label>Sijainti</label>
         <button id="gps-btn" onclick="getGPS()">📍 Käytä nykyistä sijaintia</button>
-        <div class="coord-display" id="coord-display">Ei sijaintia — klikkaa myös kartalta</div>
+        <div class="coord-display" id="coord-display">Ei sijaintia — klikkaa kartalta</div>
         <input type="hidden" id="f-lat">
         <input type="hidden" id="f-lng">
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-danger btn-sm" id="delete-btn" onclick="deleteSpot()" style="display:none; margin-right:auto;">Poista</button>
-      <button class="btn btn-secondary" onclick="closeModal()">Peruuta</button>
-      <button class="btn btn-primary" onclick="saveSpot()">Tallenna</button>
+      <button class="btn" onclick="closeModal()">Peruuta</button>
+      <button class="btn btn-accent" onclick="saveSpot()">Tallenna</button>
     </div>
   </div>
 </div>
 
 <script>
-// ── SUPABASE — käytetään auth-guard.js:n luomaa instanssia ──
-// (ei luoda uutta, koska se aiheuttaa "already declared" -virheen)
 const sb = window._supabaseClient;
+let spots = [], markers = {}, editingId = null, pendingLat = null, pendingLng = null, map;
 
-// ── STATE ──
-let spots = [];
-let markers = {};
-let editingId = null;
-let pendingLat = null, pendingLng = null;
-let map;
-let mapClickMode = false;
+function toggleNav(e) {
+  e.stopPropagation();
+  document.getElementById('navDropdown').classList.toggle('open');
+}
+document.addEventListener('click', () => document.getElementById('navDropdown').classList.remove('open'));
 
-// ── MAP ──
 function initMap() {
   map = L.map('map', { zoomControl: true }).setView([64.0, 26.0], 7);
-
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 19
+    attribution: '© OpenStreetMap', maxZoom: 19
   }).addTo(map);
-
   map.on('click', function(e) {
     if (document.getElementById('modal-backdrop').classList.contains('hidden')) return;
     setCoords(e.latlng.lat, e.latlng.lng);
@@ -401,42 +361,34 @@ function initMap() {
 }
 
 function makeIcon(tila) {
-  const colors = { odottaa: '#fbbf24', osittain: '#fb923c', noudettu: '#64748b' };
-  const c = colors[tila] || '#fbbf24';
+  const colors = { odottaa: '#d97706', osittain: '#f97316', noudettu: '#94a3b8' };
+  const c = colors[tila] || '#d97706';
   return L.divIcon({
     className: '',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${c};border:2px solid #1c1a14;box-shadow:0 2px 6px rgba(0,0,0,.5)"></div>`,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-    popupAnchor: [0, -10]
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:${c};border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,
+    iconSize: [14, 14], iconAnchor: [7, 7], popupAnchor: [0, -10]
   });
 }
 
-// ── LOAD ──
 async function loadSpots() {
   const { data, error } = await sb
     .from('forest_spots')
     .select('*')
     .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error(error);
-    document.getElementById('list').innerHTML = `<div class="empty-state">Virhe ladattaessa tietoja</div>`;
-    return;
-  }
-
+  if (error) { console.error(error); document.getElementById('list').innerHTML = '<div class="empty-state">Virhe ladattaessa tietoja</div>'; return; }
   spots = data || [];
-  renderList();
-  renderMarkers();
-  updateCount();
+  renderList(); renderMarkers(); updateCount();
+}
+
+function fmtDate(d) {
+  if (!d) return null;
+  const dt = new Date(d);
+  return dt.getDate() + '.' + (dt.getMonth()+1) + '.' + dt.getFullYear();
 }
 
 function renderList() {
   const el = document.getElementById('list');
-  if (!spots.length) {
-    el.innerHTML = '<div class="empty-state">Ei puukasooja vielä.<br>Lisää + -napilla.</div>';
-    return;
-  }
+  if (!spots.length) { el.innerHTML = '<div class="empty-state">Ei puukasooja vielä.<br>Lisää + -napilla.</div>'; return; }
   el.innerHTML = spots.map(s => `
     <div class="spot-card" id="card-${s.id}" onclick="selectSpot('${s.id}')">
       <div class="spot-card-top">
@@ -447,22 +399,19 @@ function renderList() {
       <div class="spot-card-tags">
         ${s.puulaji ? `<span class="tag tag-species">${s.puulaji}</span>` : ''}
         ${s.tila ? `<span class="tag tag-status-${s.tila}">${tilaLabel(s.tila)}</span>` : ''}
-        ${s.laatu ? `<span class="tag" style="background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.2)">${s.laatu}</span>` : ''}
+        ${s.laatu ? `<span class="tag" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1">${s.laatu}</span>` : ''}
       </div>
+      ${s.pickup_date ? `<div class="spot-card-pickup">📅 Nouto: ${fmtDate(s.pickup_date)}</div>` : ''}
     </div>
   `).join('');
 }
 
 function renderMarkers() {
-  // remove old
   Object.values(markers).forEach(m => map.removeLayer(m));
   markers = {};
-
   spots.forEach(s => {
     if (!s.lat || !s.lng) return;
-    const m = L.marker([s.lat, s.lng], { icon: makeIcon(s.tila) })
-      .addTo(map)
-      .bindPopup(makePopupHtml(s));
+    const m = L.marker([s.lat, s.lng], { icon: makeIcon(s.tila) }).addTo(map).bindPopup(makePopupHtml(s));
     m.on('click', () => highlightCard(s.id));
     markers[s.id] = m;
   });
@@ -476,116 +425,83 @@ function makePopupHtml(s) {
     <div class="popup-row"><span>Laatu</span><span>${s.laatu || '—'}</span></div>
     <div class="popup-row"><span>Määrä</span><span>${s.maara_m3 ? s.maara_m3 + ' m³' : '—'}</span></div>
     <div class="popup-row"><span>Tila</span><span>${tilaLabel(s.tila)}</span></div>
-    ${s.lisatiedot ? `<div style="margin-top:8px;font-size:12px;color:#8a8070">${esc(s.lisatiedot)}</div>` : ''}
+    ${s.pickup_date ? `<div class="popup-pickup">📅 Nouto sovittu: ${fmtDate(s.pickup_date)}</div>` : ''}
+    ${s.lisatiedot ? `<div style="margin-top:6px;font-size:12px;color:var(--text-mid)">${esc(s.lisatiedot)}</div>` : ''}
     <div class="popup-actions">
-      <button class="btn btn-secondary btn-sm" onclick="openEditModal('${s.id}')">Muokkaa</button>
+      <button class="btn btn-sm" onclick="openEditModal('${s.id}')">Muokkaa</button>
     </div>
   </div>`;
 }
 
 function updateCount() {
   const total = spots.reduce((sum, s) => sum + (parseFloat(s.maara_m3) || 0), 0);
-  document.getElementById('total-count').textContent =
-    `${spots.length} kasaa · ${total.toFixed(1)} m³`;
+  document.getElementById('total-count').textContent = spots.length + ' kasaa · ' + total.toFixed(1) + ' m³';
 }
 
-// ── SELECT ──
 function selectSpot(id) {
   const s = spots.find(x => x.id === id);
   if (!s) return;
   highlightCard(id);
-  if (s.lat && s.lng) {
-    map.setView([s.lat, s.lng], 14);
-    markers[id]?.openPopup();
-  }
+  if (s.lat && s.lng) { map.setView([s.lat, s.lng], 14); markers[id]?.openPopup(); }
   closeSidebar();
 }
-
 function highlightCard(id) {
   document.querySelectorAll('.spot-card').forEach(c => c.classList.remove('active'));
   document.getElementById('card-' + id)?.classList.add('active');
 }
 
-// ── MODAL ──
 function openAddModal() {
-  editingId = null;
-  pendingLat = null; pendingLng = null;
+  editingId = null; pendingLat = null; pendingLng = null;
   document.getElementById('modal-title').textContent = 'Uusi puukasa';
   document.getElementById('delete-btn').style.display = 'none';
   clearForm();
   document.getElementById('modal-backdrop').classList.remove('hidden');
 }
-
 function openEditModal(id) {
   const s = spots.find(x => x.id === id);
   if (!s) return;
   editingId = id;
   document.getElementById('modal-title').textContent = 'Muokkaa puukasaa';
   document.getElementById('delete-btn').style.display = 'flex';
-
   document.getElementById('f-kauppa').value = s.kauppa_numero || '';
   document.getElementById('f-nimi').value = s.nimi || '';
   document.getElementById('f-laji').value = s.puulaji || 'mänty';
   document.getElementById('f-laatu').value = s.laatu || 'tukki';
   document.getElementById('f-maara').value = s.maara_m3 || '';
   document.getElementById('f-tila').value = s.tila || 'odottaa';
+  document.getElementById('f-pickup').value = s.pickup_date || '';
   document.getElementById('f-lisatiedot').value = s.lisatiedot || '';
-
-  if (s.lat && s.lng) {
-    setCoords(s.lat, s.lng);
-  } else {
-    pendingLat = null; pendingLng = null;
-    document.getElementById('coord-display').textContent = 'Ei sijaintia';
-  }
-
+  if (s.lat && s.lng) setCoords(s.lat, s.lng);
+  else { pendingLat = null; pendingLng = null; document.getElementById('coord-display').textContent = 'Ei sijaintia'; }
   document.getElementById('modal-backdrop').classList.remove('hidden');
 }
-
-function closeModal() {
-  document.getElementById('modal-backdrop').classList.add('hidden');
-  editingId = null;
-}
-
-function backdropClick(e) {
-  if (e.target === document.getElementById('modal-backdrop')) closeModal();
-}
-
+function closeModal() { document.getElementById('modal-backdrop').classList.add('hidden'); editingId = null; }
+function backdropClick(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
 function clearForm() {
-  ['f-kauppa','f-nimi','f-maara','f-lisatiedot','f-lat','f-lng'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
+  ['f-kauppa','f-nimi','f-maara','f-lisatiedot','f-lat','f-lng','f-pickup'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-laji').value = 'mänty';
   document.getElementById('f-laatu').value = 'tukki';
   document.getElementById('f-tila').value = 'odottaa';
   document.getElementById('coord-display').textContent = 'Ei sijaintia — klikkaa kartalta';
 }
 
-// ── GPS ──
 function getGPS() {
   const btn = document.getElementById('gps-btn');
   btn.textContent = '⏳ Haetaan…';
   navigator.geolocation.getCurrentPosition(
-    pos => {
-      setCoords(pos.coords.latitude, pos.coords.longitude);
-      btn.textContent = '📍 Käytä nykyistä sijaintia';
-    },
-    err => {
-      btn.textContent = '📍 Käytä nykyistä sijaintia';
-      alert('GPS ei saatavilla: ' + err.message);
-    },
+    pos => { setCoords(pos.coords.latitude, pos.coords.longitude); btn.textContent = '📍 Käytä nykyistä sijaintia'; },
+    err => { btn.textContent = '📍 Käytä nykyistä sijaintia'; alert('GPS ei saatavilla: ' + err.message); },
     { enableHighAccuracy: true, timeout: 10000 }
   );
 }
-
 function setCoords(lat, lng) {
-  pendingLat = parseFloat(lat.toFixed(6));
-  pendingLng = parseFloat(lng.toFixed(6));
+  pendingLat = parseFloat(parseFloat(lat).toFixed(6));
+  pendingLng = parseFloat(parseFloat(lng).toFixed(6));
   document.getElementById('f-lat').value = pendingLat;
   document.getElementById('f-lng').value = pendingLng;
-  document.getElementById('coord-display').textContent = `${pendingLat}, ${pendingLng}`;
+  document.getElementById('coord-display').textContent = pendingLat + ', ' + pendingLng;
 }
 
-// ── SAVE ──
 async function saveSpot() {
   const payload = {
     kauppa_numero: document.getElementById('f-kauppa').value.trim() || null,
@@ -594,59 +510,34 @@ async function saveSpot() {
     laatu: document.getElementById('f-laatu').value,
     maara_m3: parseFloat(document.getElementById('f-maara').value) || null,
     tila: document.getElementById('f-tila').value,
+    pickup_date: document.getElementById('f-pickup').value || null,
     lisatiedot: document.getElementById('f-lisatiedot').value.trim() || null,
-    lat: pendingLat,
-    lng: pendingLng,
+    lat: pendingLat, lng: pendingLng,
   };
-
   let error;
-  if (editingId) {
-    ({ error } = await sb.from('forest_spots').update(payload).eq('id', editingId));
-  } else {
-    ({ error } = await sb.from('forest_spots').insert(payload));
-  }
-
+  if (editingId) ({ error } = await sb.from('forest_spots').update(payload).eq('id', editingId));
+  else ({ error } = await sb.from('forest_spots').insert(payload));
   if (error) { alert('Tallennus epäonnistui: ' + error.message); return; }
-  closeModal();
-  await loadSpots();
+  closeModal(); await loadSpots();
 }
-
-// ── DELETE ──
 async function deleteSpot() {
-  if (!editingId) return;
-  if (!confirm('Poistetaanko tämä puukasa?')) return;
+  if (!editingId || !confirm('Poistetaanko tämä puukasa?')) return;
   const { error } = await sb.from('forest_spots').delete().eq('id', editingId);
   if (error) { alert('Poisto epäonnistui: ' + error.message); return; }
-  closeModal();
-  await loadSpots();
+  closeModal(); await loadSpots();
 }
 
-// ── MOBILE SIDEBAR ──
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('show');
-}
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('show');
-}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('show'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('show'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function tilaLabel(t) { return { odottaa: 'Odottaa', osittain: 'Osittain noudettu', noudettu: 'Noudettu' }[t] || t; }
 
-// ── UTILS ──
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function tilaLabel(t) {
-  return { odottaa: 'Odottaa', osittain: 'Osittain noudettu', noudettu: 'Noudettu' }[t] || t;
-}
-
-// ── INIT ──
 async function init() {
   initMap();
-  // auth-guard.js hoitaa kirjautumistarkistuksen.
-  // Odotetaan _authReady ennen Supabase-kutsuja.
   await window._authReady;
   await loadSpots();
   document.getElementById('loading').classList.add('hidden');
 }
-
 init();
 </script>
 </body>
