@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Metsälog — Okkosen Puutuote</title>
 
-  <!-- Supabase -->
+  <!-- Supabase + auth ladataan auth-guard.js:n kautta -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth-guard.js"></script>
+  <!-- auth-guard luo window._supabaseClient — käytetään sitä, ei luoda uutta instanssia -->
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -371,10 +373,9 @@
 </div>
 
 <script>
-// ── SUPABASE ──
-const SUPA_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
-const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+// ── SUPABASE — käytetään auth-guard.js:n luomaa instanssia ──
+// (ei luoda uutta, koska se aiheuttaa "already declared" -virheen)
+const sb = window._supabaseClient;
 
 // ── STATE ──
 let spots = [];
@@ -413,7 +414,7 @@ function makeIcon(tila) {
 
 // ── LOAD ──
 async function loadSpots() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('forest_spots')
     .select('*')
     .order('created_at', { ascending: false });
@@ -600,9 +601,9 @@ async function saveSpot() {
 
   let error;
   if (editingId) {
-    ({ error } = await supabase.from('forest_spots').update(payload).eq('id', editingId));
+    ({ error } = await sb.from('forest_spots').update(payload).eq('id', editingId));
   } else {
-    ({ error } = await supabase.from('forest_spots').insert(payload));
+    ({ error } = await sb.from('forest_spots').insert(payload));
   }
 
   if (error) { alert('Tallennus epäonnistui: ' + error.message); return; }
@@ -614,7 +615,7 @@ async function saveSpot() {
 async function deleteSpot() {
   if (!editingId) return;
   if (!confirm('Poistetaanko tämä puukasa?')) return;
-  const { error } = await supabase.from('forest_spots').delete().eq('id', editingId);
+  const { error } = await sb.from('forest_spots').delete().eq('id', editingId);
   if (error) { alert('Poisto epäonnistui: ' + error.message); return; }
   closeModal();
   await loadSpots();
@@ -639,14 +640,9 @@ function tilaLabel(t) {
 // ── INIT ──
 async function init() {
   initMap();
-
-  // Auth check
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    window.location.href = 'login.html';
-    return;
-  }
-
+  // auth-guard.js hoitaa kirjautumistarkistuksen.
+  // Odotetaan _authReady ennen Supabase-kutsuja.
+  await window._authReady;
   await loadSpots();
   document.getElementById('loading').classList.add('hidden');
 }
