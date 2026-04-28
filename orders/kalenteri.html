@@ -574,12 +574,13 @@ async function loadData() {
       .not('due_date', 'is', null);
     invoices = iData || [];
     // Hae puukasat joilla on sovittu noutopäivä
+    // Haetaan puukasat ja niiden puulajit joilla on noutopäivä
     const { data: fData } = await db
-      .from('forest_spots')
-      .select('id, kauppa_numero, nimi, maara_m3, puulaji, tila, pickup_date')
+      .from('forest_spot_items')
+      .select('id, puulaji, maara_m3, pickup_date, forest_spots(id, kauppa_numero, nimi, tila)')
       .not('pickup_date', 'is', null)
-      .neq('tila', 'noudettu');
-    forestSpots = fData || [];
+      .neq('forest_spots.tila', 'noudettu');
+    forestSpots = (fData || []).filter(i => i.forest_spots);
   } catch(e) {
     console.error('loadData:', e);
   }
@@ -710,14 +711,15 @@ function buildDayCell(date, otherMonth, today) {
   });
 
   // Puukasojen noudot
-  const dayForest = forestSpots.filter(s => s.pickup_date === dateStr);
-  dayForest.forEach(s => {
+  const dayForest = forestSpots.filter(i => i.pickup_date === dateStr);
+  dayForest.forEach(i => {
+    const spot = i.forest_spots;
     const ev = document.createElement('a');
     ev.className = 'event event-forest';
     ev.href = 'metsalog.html';
-    const vol = s.maara_m3 ? ' · ' + s.maara_m3 + ' m³' : '';
-    ev.textContent = '🌲 #' + (s.kauppa_numero || '?') + ' ' + (s.nimi || s.puulaji || '') + vol;
-    ev.title = (s.nimi || '') + vol + ' · ' + (s.puulaji || '');
+    const vol = i.maara_m3 ? ' ' + i.maara_m3 + ' m³' : '';
+    ev.textContent = '🌲 #' + (spot.kauppa_numero || '?') + ' ' + i.puulaji + vol;
+    ev.title = (spot.nimi || '') + ' · ' + i.puulaji + vol;
     cell.appendChild(ev);
   });
 
@@ -747,12 +749,12 @@ function renderMobileList() {
   });
 
   // Lisää puukasojen noudot päivämäärän mukaan
-  forestSpots.forEach(s => {
-    if (!s.pickup_date) return;
-    const d = new Date(s.pickup_date);
+  forestSpots.forEach(i => {
+    if (!i.pickup_date) return;
+    const d = new Date(i.pickup_date + 'T00:00:00');
     const wk = getWeekNumber(d);
     if (weeks.has(wk)) {
-      weeks.get(wk).push({ type: 'forest', s });
+      weeks.get(wk).push({ type: 'forest', s: { ...i.forest_spots, _puulaji: i.puulaji, _maara: i.maara_m3 } });
     }
   });
 
@@ -798,7 +800,8 @@ function renderMobileList() {
           a.className = 'event event-forest';
           a.href = 'metsalog.html';
           const vol = ev.s.maara_m3 ? ' · ' + ev.s.maara_m3 + ' m³' : '';
-          a.textContent = '🌲 #' + (ev.s.kauppa_numero || '?') + ' ' + (ev.s.nimi || ev.s.puulaji || '') + vol;
+          const vol2 = ev.s._maara ? ' ' + ev.s._maara + ' m³' : '';
+          a.textContent = '🌲 #' + (ev.s.kauppa_numero || '?') + ' ' + (ev.s._puulaji || '') + vol2;
           body.appendChild(a);
         }
       });
