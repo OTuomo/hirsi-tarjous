@@ -13,71 +13,46 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:          #faf7f2;
-      --bg2:         #f3ede4;
-      --bg3:         #ede4d8;
-      --panel:       #ffffff;
-      --border:      #e0d4c4;
-      --border2:     #cfc0ac;
-      --accent:      #d97706;
-      --accent-dim:  #b45309;
-      --accent-bg:   rgba(217,119,6,0.10);
-      --text:        #2a1f14;
-      --text-mid:    #6b4f38;
-      --text-dim:    #a08878;
-      --shadow:      0 1px 4px rgba(100,60,20,0.08);
-      --radius:      6px;
-      --font:        'IBM Plex Sans', sans-serif;
-      --mono:        'IBM Plex Mono', monospace;
+      --bg:         #faf7f2;
+      --bg2:        #f3ede4;
+      --bg3:        #ede4d8;
+      --panel:      #ffffff;
+      --border:     #e0d4c4;
+      --border2:    #cfc0ac;
+      --accent:     #d97706;
+      --accent-dim: #b45309;
+      --accent-bg:  rgba(217,119,6,0.10);
+      --text:       #2a1f14;
+      --text-mid:   #6b4f38;
+      --text-dim:   #a08878;
+      --shadow:     0 1px 4px rgba(100,60,20,0.08);
+      --radius:     6px;
+      --font:       'IBM Plex Sans', sans-serif;
+      --mono:       'IBM Plex Mono', monospace;
     }
     html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
     #app { display: flex; flex-direction: column; height: 100vh; }
 
-    /* ── HEADER ── */
-    header {
-      background: var(--panel);
-      border-bottom: 2px solid var(--accent);
-      padding: 10px 20px;
-      display: flex; align-items: center; gap: 14px;
-      flex-shrink: 0; z-index: 1000;
-      box-shadow: var(--shadow);
-    }
+    /* HEADER */
+    header { background: var(--panel); border-bottom: 2px solid var(--accent); padding: 10px 20px; display: flex; align-items: center; gap: 14px; flex-shrink: 0; z-index: 1000; box-shadow: var(--shadow); }
     header .logo { height: 30px; width: auto; }
-    header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
+    header h1 { font-size: 16px; font-weight: 500; }
     .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
     .header-count { font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
 
-    /* nav */
+    /* NAV */
     .nav-menu-wrap { position: relative; }
-    .nav-btn {
-      background: var(--bg2); border: 1px solid var(--border2); color: var(--text);
-      font-family: var(--mono); font-size: 12px; font-weight: 600;
-      padding: 6px 12px; border-radius: 4px; cursor: pointer; letter-spacing: .04em;
-    }
+    .nav-btn { background: var(--bg2); border: 1px solid var(--border2); color: var(--text); font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 4px; cursor: pointer; letter-spacing: .04em; }
     .nav-btn:hover { background: var(--bg3); }
-    .nav-dropdown {
-      display: none; position: absolute; top: calc(100% + 6px); left: 0;
-      background: var(--panel); border: 1px solid var(--border2);
-      border-radius: var(--radius); min-width: 200px; z-index: 999;
-      box-shadow: 0 4px 16px rgba(100,60,20,0.15); overflow: hidden;
-    }
+    .nav-dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; background: var(--panel); border: 1px solid var(--border2); border-radius: var(--radius); min-width: 200px; z-index: 999; box-shadow: 0 4px 16px rgba(100,60,20,0.15); overflow: hidden; }
     .nav-dropdown.open { display: block; }
-    .nav-section-label {
-      font-family: var(--mono); font-size: 10px; font-weight: 600;
-      letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim);
-      padding: 8px 14px 4px;
-    }
-    .nav-item {
-      display: block; padding: 8px 14px; font-family: var(--mono);
-      font-size: 12px; color: var(--text); text-decoration: none; transition: background .1s;
-    }
+    .nav-section-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); padding: 8px 14px 4px; }
+    .nav-item { display: block; padding: 8px 14px; font-family: var(--mono); font-size: 12px; color: var(--text); text-decoration: none; transition: background .1s; }
     .nav-item:hover { background: var(--accent-bg); color: var(--accent); }
     .nav-item.current { color: var(--accent); font-weight: 600; }
 
-    /* ── MAIN ── */
+    /* MAIN */
     #main { display: flex; flex: 1; overflow: hidden; }
-
-    /* ── MAP ── */
     #map { flex: 1; z-index: 1; }
     .leaflet-container { background: var(--bg2); font-family: var(--font); }
     .leaflet-control-zoom a { background: var(--panel) !important; color: var(--text) !important; border-color: var(--border2) !important; }
@@ -86,76 +61,48 @@
     .leaflet-popup-tip { background: var(--panel); }
     .leaflet-popup-content { margin: 0; font-family: var(--font); }
 
-    /* ── SIDEBAR ── */
-    #sidebar {
-      width: 300px; background: var(--panel);
-      border-left: 1px solid var(--border);
-      display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
-    }
-    #sidebar-header {
-      padding: 10px 14px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 8px;
-      background: var(--bg2);
-    }
-    #sidebar-header h2 {
-      font-family: var(--mono); font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: .06em; color: var(--text-mid); flex: 1;
-    }
+    /* KARTTAPOHJAVALITSIN */
+    #map-switcher { position: absolute; top: 10px; right: 10px; z-index: 1000; display: flex; border-radius: 5px; overflow: hidden; border: 1px solid var(--border2); box-shadow: var(--shadow); }
+    .map-sw-btn { padding: 6px 12px; font-family: var(--mono); font-size: 11px; font-weight: 600; border: none; cursor: pointer; transition: background .15s, color .15s; background: var(--panel); color: var(--text-mid); letter-spacing: .03em; }
+    .map-sw-btn:first-child { border-right: 1px solid var(--border2); }
+    .map-sw-btn.active { background: var(--accent); color: white; }
+    .map-sw-btn:hover:not(.active) { background: var(--bg2); color: var(--text); }
+
+    /* SIDEBAR */
+    #sidebar { width: 300px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+    #sidebar-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: var(--bg2); }
+    #sidebar-header h2 { font-family: var(--mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-mid); flex: 1; }
     #list { flex: 1; overflow-y: auto; padding: 8px; }
     #list::-webkit-scrollbar { width: 4px; }
     #list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
 
-    .spot-card {
-      padding: 9px 12px; border-radius: var(--radius);
-      border: 1px solid var(--border); margin-bottom: 5px;
-      cursor: pointer; transition: border-color .15s, background .15s;
-      background: var(--panel);
-    }
+    .spot-card { padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 5px; cursor: pointer; transition: border-color .15s, background .15s; background: var(--panel); }
     .spot-card:hover { border-color: var(--accent-dim); background: var(--accent-bg); }
     .spot-card.active { border-color: var(--accent); background: var(--accent-bg); }
-    .spot-card-top { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+    .spot-card-top { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
     .spot-card-num { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; }
-    .spot-card-name { font-size: 13px; font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
-    .spot-card-vol { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
-    .spot-card-tags { display: flex; gap: 4px; flex-wrap: wrap; }
-    .spot-card-pickup { font-size: 11px; color: var(--text-mid); margin-top: 3px; font-family: var(--mono); }
+    .spot-card-name { font-size: 13px; font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .spot-card-total { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+    .spot-card-items { margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+    .spot-card-item { font-size: 11px; font-family: var(--mono); color: var(--text-mid); display: flex; gap: 6px; }
+    .spot-card-item .laji { color: var(--accent-dim); font-weight: 600; min-width: 32px; }
+    .spot-card-item .pvm { color: var(--text-dim); margin-left: auto; }
 
     .tag { font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; }
-    .tag-species { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
     .tag-status-odottaa  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
     .tag-status-osittain { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
     .tag-status-noudettu { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
-    /* ── FAB ── */
-    #fab {
-      position: absolute; bottom: 80px; right: 20px; z-index: 1000;
-      width: 50px; height: 50px; border-radius: 50%;
-      background: var(--accent); color: white; border: none;
-      font-size: 26px; cursor: pointer;
-      box-shadow: 0 4px 14px rgba(217,119,6,.4);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform .15s, background .15s;
-    }
+    /* FAB */
+    #fab { position: absolute; bottom: 80px; right: 20px; z-index: 1000; width: 50px; height: 50px; border-radius: 50%; background: var(--accent); color: white; border: none; font-size: 26px; cursor: pointer; box-shadow: 0 4px 14px rgba(217,119,6,.4); display: flex; align-items: center; justify-content: center; transition: transform .15s, background .15s; }
     #fab:hover { transform: scale(1.08); background: var(--accent-dim); }
 
-    /* ── MODAL ── */
-    .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 2000;
-      display: flex; align-items: center; justify-content: center; padding: 16px;
-    }
+    /* MODAL */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; }
     .modal-backdrop.hidden { display: none; }
-    .modal {
-      background: var(--panel); border: 1px solid var(--border2);
-      border-radius: 10px; width: 100%; max-width: 420px;
-      max-height: 90vh; overflow-y: auto;
-      box-shadow: 0 12px 40px rgba(100,60,20,.2);
-    }
-    .modal-header {
-      padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; gap: 8px; background: var(--bg2);
-      border-radius: 10px 10px 0 0;
-    }
-    .modal-header h3 { font-size: 15px; font-weight: 600; flex: 1; color: var(--text); }
+    .modal { background: var(--panel); border: 1px solid var(--border2); border-radius: 10px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(100,60,20,.2); }
+    .modal-header { padding: 14px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: var(--bg2); border-radius: 10px 10px 0 0; }
+    .modal-header h3 { font-size: 15px; font-weight: 600; flex: 1; }
     .modal-close { background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; }
     .modal-close:hover { color: var(--text); }
     .modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
@@ -163,15 +110,24 @@
 
     .field { display: flex; flex-direction: column; gap: 4px; }
     .field label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-mid); font-family: var(--mono); }
-    .field input, .field select, .field textarea {
-      background: var(--bg2); border: 1px solid var(--border2); color: var(--text);
-      border-radius: 4px; padding: 7px 10px; font-family: var(--font); font-size: 13px;
-      transition: border-color .15s; outline: none;
-    }
+    .field input, .field select, .field textarea { background: var(--bg2); border: 1px solid var(--border2); color: var(--text); border-radius: 4px; padding: 7px 10px; font-family: var(--font); font-size: 13px; transition: border-color .15s; outline: none; }
     .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
-    .field textarea { resize: vertical; min-height: 60px; }
-    .field select option { background: var(--panel); }
+    .field textarea { resize: vertical; min-height: 55px; }
     .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* PUULAJI-RIVIT */
+    .items-section { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .items-header { background: var(--bg2); padding: 7px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .items-header span { font-family: var(--mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-mid); }
+    .items-total { font-family: var(--mono); font-size: 12px; color: var(--accent-dim); font-weight: 600; }
+    .item-row { display: grid; grid-template-columns: 90px 80px 1fr 28px; gap: 6px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+    .item-row:last-of-type { border-bottom: none; }
+    .item-row select, .item-row input { background: var(--bg2); border: 1px solid var(--border2); color: var(--text); border-radius: 4px; padding: 5px 7px; font-family: var(--mono); font-size: 12px; outline: none; width: 100%; }
+    .item-row select:focus, .item-row input:focus { border-color: var(--accent); }
+    .item-del { background: none; border: none; color: var(--text-dim); font-size: 16px; cursor: pointer; padding: 2px; line-height: 1; text-align: center; }
+    .item-del:hover { color: #dc2626; }
+    .add-item-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px; font-family: var(--mono); font-size: 12px; color: var(--accent-dim); background: none; border: none; cursor: pointer; width: 100%; border-top: 1px dashed var(--border2); }
+    .add-item-btn:hover { background: var(--accent-bg); color: var(--accent); }
 
     .btn { padding: 7px 16px; border-radius: var(--radius); border: 1px solid var(--border2); font-family: var(--mono); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; letter-spacing: .03em; background: var(--panel); color: var(--text-mid); }
     .btn:hover { background: var(--bg2); color: var(--text); border-color: var(--accent); }
@@ -181,66 +137,41 @@
     .btn-danger:hover { background: #fecaca; }
     .btn-sm { padding: 5px 12px; font-size: 11px; }
 
-    /* popup */
-    .popup-inner { padding: 12px 14px; min-width: 200px; }
+    /* POPUP */
+    .popup-inner { padding: 12px 14px; min-width: 210px; }
     .popup-num { font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 3px; }
-    .popup-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
-    .popup-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; color: var(--text-mid); }
-    .popup-row span:last-child { color: var(--text); font-weight: 500; }
-    .popup-pickup { margin-top: 6px; font-size: 11px; font-family: var(--mono); color: var(--accent-dim); font-weight: 600; }
+    .popup-name { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+    .popup-items { font-size: 12px; }
+    .popup-item-row { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; border-bottom: 1px solid var(--border); color: var(--text-mid); }
+    .popup-item-row:last-child { border-bottom: none; }
+    .popup-item-row .laji { font-family: var(--mono); font-weight: 600; color: var(--accent-dim); }
+    .popup-item-row .pvm { color: var(--text-dim); font-family: var(--mono); font-size: 11px; }
+    .popup-total { margin-top: 6px; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent-dim); }
     .popup-actions { display: flex; gap: 6px; margin-top: 10px; }
 
-    /* gps */
-    #gps-btn {
-      background: var(--bg2); border: 1px solid var(--border2); color: var(--text-mid);
-      border-radius: 4px; padding: 6px 10px; font-family: var(--font); font-size: 12px;
-      cursor: pointer; display: flex; align-items: center; gap: 5px;
-    }
+    /* GPS */
+    #gps-btn { background: var(--bg2); border: 1px solid var(--border2); color: var(--text-mid); border-radius: 4px; padding: 6px 10px; font-family: var(--font); font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
     #gps-btn:hover { border-color: var(--accent); color: var(--accent); }
     .coord-display { font-family: var(--mono); font-size: 11px; color: var(--text-dim); padding: 5px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; margin-top: 4px; }
 
-    /* ── MOBILE ── */
+    /* MOBILE */
     @media (max-width: 640px) {
       #sidebar { display: none; }
       #sidebar.show { display: flex; position: fixed; inset: 0; z-index: 1500; width: 100%; }
-      #mob-list-btn {
-        position: absolute; bottom: 140px; right: 16px; z-index: 1000;
-        background: var(--panel); border: 1px solid var(--border2); color: var(--text);
-        border-radius: 20px; padding: 7px 14px; font-size: 13px; font-weight: 500;
-        cursor: pointer; box-shadow: var(--shadow); display: flex; align-items: center; gap: 6px;
-        font-family: var(--mono);
-      }
+      #mob-list-btn { position: absolute; bottom: 140px; right: 16px; z-index: 1000; background: var(--panel); border: 1px solid var(--border2); color: var(--text); border-radius: 20px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; box-shadow: var(--shadow); display: flex; align-items: center; gap: 6px; font-family: var(--mono); }
       #fab { bottom: 88px; right: 16px; }
       #sidebar-close { display: flex !important; }
     }
     #sidebar-close { display: none; background: none; border: none; color: var(--text-mid); font-size: 20px; cursor: pointer; }
-
     .empty-state { padding: 24px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
-
     #loading { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
     #loading.hidden { display: none; }
     .spinner { width: 28px; height: 28px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     #loading p { font-size: 13px; color: var(--text-dim); }
-
-    /* karttapohjavalitsin */
-    #map-switcher {
-      position: absolute; top: 10px; right: 10px; z-index: 1000;
-      display: flex; border-radius: 5px; overflow: hidden;
-      border: 1px solid var(--border2); box-shadow: var(--shadow);
-    }
-    .map-sw-btn {
-      padding: 6px 12px; font-family: var(--mono); font-size: 11px; font-weight: 600;
-      border: none; cursor: pointer; transition: background .15s, color .15s;
-      background: var(--panel); color: var(--text-mid); letter-spacing: .03em;
-    }
-    .map-sw-btn:first-child { border-right: 1px solid var(--border2); }
-    .map-sw-btn.active { background: var(--accent); color: white; }
-    .map-sw-btn:hover:not(.active) { background: var(--bg2); color: var(--text); }
   </style>
 </head>
 <body>
-
 <div id="loading"><div class="spinner"></div><p>Ladataan…</p></div>
 
 <div id="app">
@@ -267,16 +198,16 @@
 
   <div id="main" style="position:relative;">
     <div id="map"></div>
+    <div id="map-switcher">
+      <button class="map-sw-btn active" id="sw-osm" onclick="setLayer('osm')">OSM</button>
+      <button class="map-sw-btn" id="sw-mml" onclick="setLayer('mml')">Maastokartta</button>
+    </div>
     <div id="sidebar">
       <div id="sidebar-header">
         <h2>Puukasat</h2>
         <button id="sidebar-close" onclick="closeSidebar()">✕</button>
       </div>
       <div id="list"><div class="empty-state">Ladataan…</div></div>
-    </div>
-    <div id="map-switcher">
-      <button class="map-sw-btn active" id="sw-osm" onclick="setLayer('osm')">OSM</button>
-      <button class="map-sw-btn" id="sw-mml" onclick="setLayer('mml')">Maastokartta</button>
     </div>
     <button id="fab" onclick="openAddModal()" title="Lisää uusi puukasa">+</button>
     <button id="mob-list-btn" onclick="toggleSidebar()">☰ Lista</button>
@@ -291,39 +222,10 @@
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field">
-        <label>Kaupan numero</label>
-        <input type="text" id="f-kauppa" placeholder="esim. 42">
-      </div>
-      <div class="field">
-        <label>Nimi / kuvaus</label>
-        <input type="text" id="f-nimi" placeholder="esim. Iso kasa tienristeyksessä">
-      </div>
       <div class="field-row">
         <div class="field">
-          <label>Puulaji</label>
-          <select id="f-laji">
-            <option value="mänty">Mänty</option>
-            <option value="kuusi">Kuusi</option>
-            <option value="koivu">Koivu</option>
-            <option value="seka">Seka</option>
-            <option value="muu">Muu</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Laatu</label>
-          <select id="f-laatu">
-            <option value="tukki">Tukki</option>
-            <option value="kuitupuu">Kuitupuu</option>
-            <option value="polttopuu">Polttopuu</option>
-            <option value="muu">Muu</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Määrä (m³)</label>
-          <input type="number" id="f-maara" placeholder="0" min="0" step="0.1">
+          <label>Kaupan numero</label>
+          <input type="text" id="f-kauppa" placeholder="esim. 42">
         </div>
         <div class="field">
           <label>Tila</label>
@@ -335,9 +237,20 @@
         </div>
       </div>
       <div class="field">
-        <label>Sovittu noutopäivä</label>
-        <input type="date" id="f-pickup">
+        <label>Nimi / kuvaus</label>
+        <input type="text" id="f-nimi" placeholder="esim. Iso kasa tienristeyksessä">
       </div>
+
+      <!-- PUULAJIT -->
+      <div class="items-section">
+        <div class="items-header">
+          <span>Puulajit</span>
+          <span class="items-total" id="items-total"></span>
+        </div>
+        <div id="items-list"></div>
+        <button class="add-item-btn" onclick="addItemRow()">+ Lisää puulaji</button>
+      </div>
+
       <div class="field">
         <label>Lisätiedot</label>
         <textarea id="f-lisatiedot" placeholder="Vapaat muistiinpanot…"></textarea>
@@ -360,47 +273,46 @@
 
 <script>
 const sb = window._supabaseClient;
-// MML API-avain — haetaan osoitteesta https://www.maanmittauslaitos.fi/rajapinnat/api-avaimen-ohje
-// Korvaa alla oleva oikea avaimesi
 const MML_API_KEY = '17cc0d41-99a1-49df-91b9-8c7283542cf0';
+const LAJIT = ['Mät','Mäp','Mäk','Kut','Kup','Kuk','Kok','Ranka'];
+
 let spots = [], markers = {}, editingId = null, pendingLat = null, pendingLng = null, map;
 
-function toggleNav(e) {
-  e.stopPropagation();
-  document.getElementById('navDropdown').classList.toggle('open');
-}
+// ── NAV ──
+function toggleNav(e) { e.stopPropagation(); document.getElementById('navDropdown').classList.toggle('open'); }
 document.addEventListener('click', () => document.getElementById('navDropdown').classList.remove('open'));
 
+// ── KARTTA ──
 function initMap() {
   map = L.map('map', { zoomControl: true }).setView([64.0, 26.0], 7);
-
   window._layers = {
     osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19
+      attribution: '© OpenStreetMap', maxZoom: 19
     }),
     mml: L.tileLayer(
       'https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=' + MML_API_KEY,
-      {
-        attribution: '© <a href="https://www.maanmittauslaitos.fi">Maanmittauslaitos</a>',
-        maxZoom: 15,
-        tileSize: 256
-      }
+      { attribution: '© Maanmittauslaitos', maxZoom: 15, tileSize: 256 }
     )
   };
-
   window._layers.osm.addTo(map);
   window._currentLayer = 'osm';
+
   map.on('click', function(e) {
-    // Jos modal on jo auki, päivitä vain koordinaatit
     if (!document.getElementById('modal-backdrop').classList.contains('hidden')) {
-      setCoords(e.latlng.lat, e.latlng.lng);
-      return;
+      setCoords(e.latlng.lat, e.latlng.lng); return;
     }
-    // Muuten avaa uusi modal ja aseta koordinaatit
     openAddModal();
     setCoords(e.latlng.lat, e.latlng.lng);
   });
+}
+
+function setLayer(name) {
+  if (name === window._currentLayer) return;
+  map.removeLayer(window._layers[window._currentLayer]);
+  window._layers[name].addTo(map);
+  window._currentLayer = name;
+  document.getElementById('sw-osm').classList.toggle('active', name === 'osm');
+  document.getElementById('sw-mml').classList.toggle('active', name === 'mml');
 }
 
 function makeIcon(tila) {
@@ -408,48 +320,55 @@ function makeIcon(tila) {
   const c = colors[tila] || '#d97706';
   return L.divIcon({
     className: '',
-    html: `<div style="width:14px;height:14px;border-radius:50%;background:${c};border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,
-    iconSize: [14, 14], iconAnchor: [7, 7], popupAnchor: [0, -10]
+    html: `<div style="width:20px;height:20px;border-radius:50%;background:${c};border:3px solid #ffffff;box-shadow:0 2px 8px rgba(0,0,0,.35)"></div>`,
+    iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -12]
   });
 }
 
+// ── DATA ──
 async function loadSpots() {
-  const { data, error } = await sb
-    .from('forest_spots')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) { console.error(error); document.getElementById('list').innerHTML = '<div class="empty-state">Virhe ladattaessa tietoja</div>'; return; }
+  const { data, error } = await sb.from('forest_spots').select('*, forest_spot_items(*)').order('created_at', { ascending: false });
+  if (error) { console.error(error); document.getElementById('list').innerHTML = '<div class="empty-state">Virhe ladattaessa</div>'; return; }
   spots = data || [];
   renderList(); renderMarkers(); updateCount();
 }
 
+function spotTotal(s) {
+  return (s.forest_spot_items || []).reduce((sum, i) => sum + (parseFloat(i.maara_m3) || 0), 0);
+}
+
 function fmtDate(d) {
   if (!d) return null;
-  const dt = new Date(d);
+  const dt = new Date(d + 'T00:00:00');
   return dt.getDate() + '.' + (dt.getMonth()+1) + '.' + dt.getFullYear();
 }
 
 function renderList() {
   const el = document.getElementById('list');
-  if (!spots.length) { el.innerHTML = '<div class="empty-state">Ei puukasooja vielä.<br>Lisää + -napilla.</div>'; return; }
-  el.innerHTML = spots.map(s => `
-    <div class="spot-card" id="card-${s.id}" onclick="selectSpot('${s.id}')">
+  if (!spots.length) { el.innerHTML = '<div class="empty-state">Ei puukasooja vielä.<br>Lisää + -napilla tai klikkaa kartalta.</div>'; return; }
+  el.innerHTML = spots.map(s => {
+    const items = s.forest_spot_items || [];
+    const total = spotTotal(s);
+    const itemsHtml = items.map(i =>
+      `<div class="spot-card-item">
+        <span class="laji">${esc(i.puulaji)}</span>
+        <span>${i.maara_m3 ? i.maara_m3 + ' m³' : '—'}</span>
+        <span class="pvm">${i.pickup_date ? fmtDate(i.pickup_date) : ''}</span>
+      </div>`
+    ).join('');
+    return `<div class="spot-card" id="card-${s.id}" onclick="selectSpot('${s.id}')">
       <div class="spot-card-top">
         <span class="spot-card-num">#${s.kauppa_numero || '—'}</span>
         <span class="spot-card-name">${esc(s.nimi || 'Nimetön')}</span>
-        <span class="spot-card-vol">${s.maara_m3 ? s.maara_m3 + ' m³' : ''}</span>
+        <span class="spot-card-total">${total > 0 ? total.toFixed(1) + ' m³' : ''}</span>
       </div>
-      <div class="spot-card-tags">
-        ${s.puulaji ? `<span class="tag tag-species">${s.puulaji}</span>` : ''}
-        ${s.tila ? `<span class="tag tag-status-${s.tila}">${tilaLabel(s.tila)}</span>` : ''}
-        ${s.laatu ? `<span class="tag" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1">${s.laatu}</span>` : ''}
-      </div>
-      ${s.pickup_date ? `<div class="spot-card-pickup">📅 Nouto: ${fmtDate(s.pickup_date)}</div>` : ''}
-      <div style="margin-top:6px;text-align:right">
+      <div class="spot-card-items">${itemsHtml}</div>
+      <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between">
+        <span class="tag tag-status-${s.tila}">${tilaLabel(s.tila)}</span>
         <button class="btn btn-sm" onclick="event.stopPropagation();openEditModal('${s.id}')">Muokkaa</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function renderMarkers() {
@@ -464,14 +383,20 @@ function renderMarkers() {
 }
 
 function makePopupHtml(s) {
+  const items = s.forest_spot_items || [];
+  const total = spotTotal(s);
+  const itemsHtml = items.map(i =>
+    `<div class="popup-item-row">
+      <span class="laji">${esc(i.puulaji)}</span>
+      <span>${i.maara_m3 ? i.maara_m3 + ' m³' : '—'}</span>
+      <span class="pvm">${i.pickup_date ? fmtDate(i.pickup_date) : ''}</span>
+    </div>`
+  ).join('');
   return `<div class="popup-inner">
     <div class="popup-num">#${s.kauppa_numero || '—'}</div>
     <div class="popup-name">${esc(s.nimi || 'Nimetön')}</div>
-    <div class="popup-row"><span>Puulaji</span><span>${s.puulaji || '—'}</span></div>
-    <div class="popup-row"><span>Laatu</span><span>${s.laatu || '—'}</span></div>
-    <div class="popup-row"><span>Määrä</span><span>${s.maara_m3 ? s.maara_m3 + ' m³' : '—'}</span></div>
-    <div class="popup-row"><span>Tila</span><span>${tilaLabel(s.tila)}</span></div>
-    ${s.pickup_date ? `<div class="popup-pickup">📅 Nouto sovittu: ${fmtDate(s.pickup_date)}</div>` : ''}
+    <div class="popup-items">${itemsHtml || '<span style="color:var(--text-dim);font-size:12px">Ei puulajeja</span>'}</div>
+    ${total > 0 ? `<div class="popup-total">Yhteensä: ${total.toFixed(1)} m³</div>` : ''}
     ${s.lisatiedot ? `<div style="margin-top:6px;font-size:12px;color:var(--text-mid)">${esc(s.lisatiedot)}</div>` : ''}
     <div class="popup-actions">
       <button class="btn btn-sm" onclick="openEditModal('${s.id}')">Muokkaa</button>
@@ -480,10 +405,11 @@ function makePopupHtml(s) {
 }
 
 function updateCount() {
-  const total = spots.reduce((sum, s) => sum + (parseFloat(s.maara_m3) || 0), 0);
+  const total = spots.reduce((sum, s) => sum + spotTotal(s), 0);
   document.getElementById('total-count').textContent = spots.length + ' kasaa · ' + total.toFixed(1) + ' m³';
 }
 
+// ── VALINTA ──
 function selectSpot(id) {
   const s = spots.find(x => x.id === id);
   if (!s) return;
@@ -496,6 +422,49 @@ function highlightCard(id) {
   document.getElementById('card-' + id)?.classList.add('active');
 }
 
+// ── PUULAJI-RIVIT MODALISSA ──
+let itemRows = []; // [{id, puulaji, maara_m3, pickup_date}]
+
+function addItemRow(data) {
+  const row = data || { _key: Date.now(), id: null, puulaji: LAJIT[0], maara_m3: '', pickup_date: '' };
+  if (!data) itemRows.push(row);
+  renderItemRows();
+}
+
+function removeItemRow(key) {
+  itemRows = itemRows.filter(r => r._key !== key);
+  renderItemRows();
+}
+
+function renderItemRows() {
+  const el = document.getElementById('items-list');
+  el.innerHTML = itemRows.map(r => `
+    <div class="item-row">
+      <select onchange="updateItemRow(${r._key},'puulaji',this.value)">
+        ${LAJIT.map(l => `<option value="${l}" ${r.puulaji === l ? 'selected' : ''}>${l}</option>`).join('')}
+      </select>
+      <input type="number" placeholder="m³" min="0" step="0.1" value="${r.maara_m3 || ''}"
+        onchange="updateItemRow(${r._key},'maara_m3',this.value)"
+        oninput="updateItemRow(${r._key},'maara_m3',this.value)">
+      <input type="date" value="${r.pickup_date || ''}"
+        onchange="updateItemRow(${r._key},'pickup_date',this.value)">
+      <button class="item-del" onclick="removeItemRow(${r._key})">✕</button>
+    </div>
+  `).join('');
+  updateItemsTotal();
+}
+
+function updateItemRow(key, field, value) {
+  const r = itemRows.find(r => r._key === key);
+  if (r) { r[field] = value; updateItemsTotal(); }
+}
+
+function updateItemsTotal() {
+  const total = itemRows.reduce((sum, r) => sum + (parseFloat(r.maara_m3) || 0), 0);
+  document.getElementById('items-total').textContent = total > 0 ? total.toFixed(1) + ' m³' : '';
+}
+
+// ── MODAL ──
 function openAddModal() {
   editingId = null; pendingLat = null; pendingLng = null;
   document.getElementById('modal-title').textContent = 'Uusi puukasa';
@@ -511,26 +480,30 @@ function openEditModal(id) {
   document.getElementById('delete-btn').style.display = 'flex';
   document.getElementById('f-kauppa').value = s.kauppa_numero || '';
   document.getElementById('f-nimi').value = s.nimi || '';
-  document.getElementById('f-laji').value = s.puulaji || 'mänty';
-  document.getElementById('f-laatu').value = s.laatu || 'tukki';
-  document.getElementById('f-maara').value = s.maara_m3 || '';
   document.getElementById('f-tila').value = s.tila || 'odottaa';
-  document.getElementById('f-pickup').value = s.pickup_date || '';
   document.getElementById('f-lisatiedot').value = s.lisatiedot || '';
   if (s.lat && s.lng) setCoords(s.lat, s.lng);
   else { pendingLat = null; pendingLng = null; document.getElementById('coord-display').textContent = 'Ei sijaintia'; }
+  // Puulajit
+  itemRows = (s.forest_spot_items || []).map(i => ({ ...i, _key: i.id || Date.now() + Math.random() }));
+  renderItemRows();
   document.getElementById('modal-backdrop').classList.remove('hidden');
 }
 function closeModal() { document.getElementById('modal-backdrop').classList.add('hidden'); editingId = null; }
 function backdropClick(e) { if (e.target === document.getElementById('modal-backdrop')) closeModal(); }
 function clearForm() {
-  ['f-kauppa','f-nimi','f-maara','f-lisatiedot','f-lat','f-lng','f-pickup'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('f-laji').value = 'mänty';
-  document.getElementById('f-laatu').value = 'tukki';
+  document.getElementById('f-kauppa').value = '';
+  document.getElementById('f-nimi').value = '';
   document.getElementById('f-tila').value = 'odottaa';
+  document.getElementById('f-lisatiedot').value = '';
+  document.getElementById('f-lat').value = '';
+  document.getElementById('f-lng').value = '';
   document.getElementById('coord-display').textContent = 'Klikkaa karttaa tai käytä GPS';
+  itemRows = [];
+  renderItemRows();
 }
 
+// ── GPS ──
 function getGPS() {
   const btn = document.getElementById('gps-btn');
   btn.textContent = '⏳ Haetaan…';
@@ -548,43 +521,55 @@ function setCoords(lat, lng) {
   document.getElementById('coord-display').textContent = pendingLat + ', ' + pendingLng;
 }
 
+// ── TALLENNUS ──
 async function saveSpot() {
   const payload = {
     kauppa_numero: document.getElementById('f-kauppa').value.trim() || null,
     nimi: document.getElementById('f-nimi').value.trim() || null,
-    puulaji: document.getElementById('f-laji').value,
-    laatu: document.getElementById('f-laatu').value,
-    maara_m3: parseFloat(document.getElementById('f-maara').value) || null,
     tila: document.getElementById('f-tila').value,
-    pickup_date: document.getElementById('f-pickup').value || null,
     lisatiedot: document.getElementById('f-lisatiedot').value.trim() || null,
     lat: pendingLat, lng: pendingLng,
   };
-  let error;
-  if (editingId) ({ error } = await sb.from('forest_spots').update(payload).eq('id', editingId));
-  else ({ error } = await sb.from('forest_spots').insert(payload));
-  if (error) { alert('Tallennus epäonnistui: ' + error.message); return; }
-  closeModal(); await loadSpots();
+
+  let spotId = editingId;
+  if (editingId) {
+    const { error } = await sb.from('forest_spots').update(payload).eq('id', editingId);
+    if (error) { alert('Tallennus epäonnistui: ' + error.message); return; }
+  } else {
+    const { data, error } = await sb.from('forest_spots').insert(payload).select().single();
+    if (error) { alert('Tallennus epäonnistui: ' + error.message); return; }
+    spotId = data.id;
+  }
+
+  // Tallennetaan puulajit: poistetaan vanhat, lisätään uudet
+  await sb.from('forest_spot_items').delete().eq('spot_id', spotId);
+  const newItems = itemRows.filter(r => r.puulaji).map(r => ({
+    spot_id: spotId,
+    puulaji: r.puulaji,
+    maara_m3: parseFloat(r.maara_m3) || null,
+    pickup_date: r.pickup_date || null,
+  }));
+  if (newItems.length) {
+    const { error } = await sb.from('forest_spot_items').insert(newItems);
+    if (error) { alert('Puulajien tallennus epäonnistui: ' + error.message); return; }
+  }
+
+  closeModal();
+  await loadSpots();
 }
+
 async function deleteSpot() {
   if (!editingId || !confirm('Poistetaanko tämä puukasa?')) return;
+  await sb.from('forest_spot_items').delete().eq('spot_id', editingId);
   const { error } = await sb.from('forest_spots').delete().eq('id', editingId);
   if (error) { alert('Poisto epäonnistui: ' + error.message); return; }
   closeModal(); await loadSpots();
 }
 
-function setLayer(name) {
-  if (name === window._currentLayer) return;
-  map.removeLayer(window._layers[window._currentLayer]);
-  window._layers[name].addTo(map);
-  window._currentLayer = name;
-  document.getElementById('sw-osm').classList.toggle('active', name === 'osm');
-  document.getElementById('sw-mml').classList.toggle('active', name === 'mml');
-}
-
+// ── APUFUNKTIOT ──
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('show'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('show'); }
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function tilaLabel(t) { return { odottaa: 'Odottaa', osittain: 'Osittain noudettu', noudettu: 'Noudettu' }[t] || t; }
 
 async function init() {
