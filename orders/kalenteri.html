@@ -578,9 +578,8 @@ async function loadData() {
     const { data: fData } = await db
       .from('forest_spot_items')
       .select('id, puulaji, maara_m3, pickup_date, forest_spots(id, kauppa_numero, nimi, tila)')
-      .not('pickup_date', 'is', null)
-      .neq('forest_spots.tila', 'noudettu');
-    forestSpots = (fData || []).filter(i => i.forest_spots);
+      .not('pickup_date', 'is', null);
+    forestSpots = (fData || []).filter(i => i.forest_spots && i.forest_spots.tila !== 'noudettu');
   } catch(e) {
     console.error('loadData:', e);
   }
