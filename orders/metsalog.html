@@ -222,6 +222,21 @@
     .spinner { width: 28px; height: 28px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     #loading p { font-size: 13px; color: var(--text-dim); }
+
+    /* karttapohjavalitsin */
+    #map-switcher {
+      position: absolute; top: 10px; right: 10px; z-index: 1000;
+      display: flex; border-radius: 5px; overflow: hidden;
+      border: 1px solid var(--border2); box-shadow: var(--shadow);
+    }
+    .map-sw-btn {
+      padding: 6px 12px; font-family: var(--mono); font-size: 11px; font-weight: 600;
+      border: none; cursor: pointer; transition: background .15s, color .15s;
+      background: var(--panel); color: var(--text-mid); letter-spacing: .03em;
+    }
+    .map-sw-btn:first-child { border-right: 1px solid var(--border2); }
+    .map-sw-btn.active { background: var(--accent); color: white; }
+    .map-sw-btn:hover:not(.active) { background: var(--bg2); color: var(--text); }
   </style>
 </head>
 <body>
@@ -258,6 +273,10 @@
         <button id="sidebar-close" onclick="closeSidebar()">✕</button>
       </div>
       <div id="list"><div class="empty-state">Ladataan…</div></div>
+    </div>
+    <div id="map-switcher">
+      <button class="map-sw-btn active" id="sw-osm" onclick="setLayer('osm')">OSM</button>
+      <button class="map-sw-btn" id="sw-mml" onclick="setLayer('mml')">Maastokartta</button>
     </div>
     <button id="fab" onclick="openAddModal()" title="Lisää uusi puukasa">+</button>
     <button id="mob-list-btn" onclick="toggleSidebar()">☰ Lista</button>
@@ -351,9 +370,24 @@ document.addEventListener('click', () => document.getElementById('navDropdown').
 
 function initMap() {
   map = L.map('map', { zoomControl: true }).setView([64.0, 26.0], 7);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap', maxZoom: 19
-  }).addTo(map);
+
+  window._layers = {
+    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19
+    }),
+    mml: L.tileLayer(
+      'https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png',
+      {
+        attribution: '© Maanmittauslaitos',
+        maxZoom: 16,
+        tileSize: 256
+      }
+    )
+  };
+
+  window._layers.osm.addTo(map);
+  window._currentLayer = 'osm';
   map.on('click', function(e) {
     // Jos modal on jo auki, päivitä vain koordinaatit
     if (!document.getElementById('modal-backdrop').classList.contains('hidden')) {
@@ -534,6 +568,15 @@ async function deleteSpot() {
   const { error } = await sb.from('forest_spots').delete().eq('id', editingId);
   if (error) { alert('Poisto epäonnistui: ' + error.message); return; }
   closeModal(); await loadSpots();
+}
+
+function setLayer(name) {
+  if (name === window._currentLayer) return;
+  map.removeLayer(window._layers[window._currentLayer]);
+  window._layers[name].addTo(map);
+  window._currentLayer = name;
+  document.getElementById('sw-osm').classList.toggle('active', name === 'osm');
+  document.getElementById('sw-mml').classList.toggle('active', name === 'mml');
 }
 
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('show'); }
