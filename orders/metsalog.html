@@ -426,7 +426,7 @@ function highlightCard(id) {
 let itemRows = []; // [{id, puulaji, maara_m3, pickup_date}]
 
 function addItemRow(data) {
-  const row = data || { _key: Date.now(), id: null, puulaji: LAJIT[0], maara_m3: '', pickup_date: '' };
+  const row = data || { _key: String(Date.now()), id: null, puulaji: LAJIT[0], maara_m3: '', pickup_date: '' };
   if (!data) itemRows.push(row);
   renderItemRows();
 }
@@ -440,15 +440,15 @@ function renderItemRows() {
   const el = document.getElementById('items-list');
   el.innerHTML = itemRows.map(r => `
     <div class="item-row">
-      <select onchange="updateItemRow(${r._key},'puulaji',this.value)">
+      <select onchange="updateItemRow('${r._key}','puulaji',this.value)">
         ${LAJIT.map(l => `<option value="${l}" ${r.puulaji === l ? 'selected' : ''}>${l}</option>`).join('')}
       </select>
       <input type="number" placeholder="m³" min="0" step="0.1" value="${r.maara_m3 || ''}"
-        onchange="updateItemRow(${r._key},'maara_m3',this.value)"
-        oninput="updateItemRow(${r._key},'maara_m3',this.value)">
+        onchange="updateItemRow('${r._key}','maara_m3',this.value)"
+        oninput="updateItemRow('${r._key}','maara_m3',this.value)">
       <input type="date" value="${r.pickup_date || ''}"
-        onchange="updateItemRow(${r._key},'pickup_date',this.value)">
-      <button class="item-del" onclick="removeItemRow(${r._key})">✕</button>
+        onchange="updateItemRow('${r._key}','pickup_date',this.value)">
+      <button class="item-del" onclick="removeItemRow('${r._key}')">✕</button>
     </div>
   `).join('');
   updateItemsTotal();
@@ -485,7 +485,7 @@ function openEditModal(id) {
   if (s.lat && s.lng) setCoords(s.lat, s.lng);
   else { pendingLat = null; pendingLng = null; document.getElementById('coord-display').textContent = 'Ei sijaintia'; }
   // Puulajit
-  itemRows = (s.forest_spot_items || []).map(i => ({ ...i, _key: i.id || Date.now() + Math.random() }));
+  itemRows = (s.forest_spot_items || []).map(i => ({ ...i, _key: String(i.id || Date.now() + Math.random()) }));
   renderItemRows();
   document.getElementById('modal-backdrop').classList.remove('hidden');
 }
@@ -528,8 +528,12 @@ async function saveSpot() {
     nimi: document.getElementById('f-nimi').value.trim() || null,
     tila: document.getElementById('f-tila').value,
     lisatiedot: document.getElementById('f-lisatiedot').value.trim() || null,
-    lat: pendingLat, lng: pendingLng,
   };
+  // Päivitetään koordinaatit vain jos käyttäjä on asettanut ne
+  if (pendingLat !== null && pendingLng !== null) {
+    payload.lat = pendingLat;
+    payload.lng = pendingLng;
+  }
 
   let spotId = editingId;
   if (editingId) {
