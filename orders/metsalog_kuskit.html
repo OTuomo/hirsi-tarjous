@@ -163,7 +163,24 @@
   </style>
 </head>
 <body>
-<div id="loading"><div class="spinner"></div><p>Ladataan…</p></div>
+<div id="loading">
+  <div id="login-form" style="display:none; flex-direction:column; align-items:center; gap:16px; width:100%; max-width:300px; padding:0 24px;">
+    <img src="okkonenlogopuu.svg" style="height:48px; margin-bottom:8px;">
+    <div style="font-family:var(--mono);font-size:13px;color:var(--text-mid);letter-spacing:.04em;">METSÄLOG</div>
+    <input type="password" id="pw-input" placeholder="Salasana"
+      style="width:100%;padding:10px 14px;border:1px solid var(--border2);border-radius:6px;background:var(--bg2);color:var(--text);font-size:15px;font-family:var(--font);outline:none;"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()"
+      style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:6px;font-family:var(--mono);font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.04em;">
+      Kirjaudu sisään
+    </button>
+    <div id="login-error" style="color:#dc2626;font-size:12px;font-family:var(--mono);display:none;">Väärä salasana</div>
+  </div>
+  <div id="loading-spinner" style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+    <div class="spinner"></div>
+    <p>Ladataan…</p>
+  </div>
+</div>
 
 <div id="app">
   <header>
@@ -559,9 +576,30 @@ function tilaLabel(t) { return { odottaa: 'Odottaa', osittain: 'Osittain noudett
 const KUSKIT_EMAIL = 'gemgommll@gmail.com';
 const KUSKIT_PASS  = 'Puuk454t';
 
+async function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  document.getElementById('login-error').style.display = 'none';
+  if (pw !== KUSKIT_PASS) {
+    document.getElementById('login-error').style.display = 'block';
+    return;
+  }
+  // Oikea salasana — piilotetaan lomake, näytetään spinner
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('loading-spinner').style.display = 'flex';
+  const { error } = await sb.auth.signInWithPassword({
+    email: KUSKIT_EMAIL,
+    password: KUSKIT_PASS
+  });
+  if (error) {
+    document.getElementById('loading').innerHTML = '<p style="color:#dc2626;font-family:var(--mono);font-size:13px;">Kirjautuminen epäonnistui.<br>Ota yhteys Tomi.</p>';
+    return;
+  }
+  await loadSpots();
+  document.getElementById('loading').classList.add('hidden');
+}
+
 async function init() {
   initMap();
-
   // Tarkistetaan onko jo sessio
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
@@ -569,19 +607,10 @@ async function init() {
     document.getElementById('loading').classList.add('hidden');
     return;
   }
-
-  // Kirjaudutaan automaattisesti
-  document.getElementById('loading').querySelector('p').textContent = 'Kirjaudutaan…';
-  const { error } = await sb.auth.signInWithPassword({
-    email: KUSKIT_EMAIL,
-    password: KUSKIT_PASS
-  });
-  if (error) {
-    document.getElementById('loading').innerHTML = '<p style="color:#dc2626">Kirjautuminen epäonnistui.<br>Ota yhteys Tomi.</p>';
-    return;
-  }
-  await loadSpots();
-  document.getElementById('loading').classList.add('hidden');
+  // Näytetään salasanalomake
+  document.getElementById('loading-spinner').style.display = 'none';
+  document.getElementById('login-form').style.display = 'flex';
+  setTimeout(() => document.getElementById('pw-input').focus(), 100);
 }
 init();
 </script>
