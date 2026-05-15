@@ -577,6 +577,13 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.nav-menu-wrap')) document.getElementById('navDropdown').classList.remove('open');
 });
 
+window.addEventListener('scroll', () => {
+  const openDd = document.querySelector('.nimike-dropdown.open');
+  if (!openDd) return;
+  const m = openDd.id.match(/^nimike-dd-(.+)-(\d+)$/);
+  if (m) positionNimikeDropdown(m[1], parseInt(m[2]));
+}, { passive: true });
+
 // =============================================
 // VIIKKOSELAIN
 // =============================================
