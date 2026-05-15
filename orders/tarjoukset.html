@@ -358,7 +358,7 @@
       <div class="card-number" id="cnt-in_progress">—</div>
     </div>
     <div class="summary-card" id="card-quoted" onclick="setFilter('quoted')">
-      <div class="card-label">Lähetetty</div>
+      <div class="card-label">Tarjottu</div>
       <div class="card-number" id="cnt-quoted">—</div>
     </div>
     <div class="summary-card" id="card-ordered" onclick="setFilter('ordered')">
@@ -385,7 +385,7 @@
     <div class="filter-btns">
       <button class="fbtn" data-filter="draft" onclick="setStatusBtn(this,'draft')">Luonnos</button>
       <button class="fbtn" data-filter="in_progress" onclick="setStatusBtn(this,'in_progress')">Kesken</button>
-      <button class="fbtn" data-filter="quoted" onclick="setStatusBtn(this,'quoted')">Lähetetty</button>
+      <button class="fbtn" data-filter="quoted" onclick="setStatusBtn(this,'quoted')">Tarjottu</button>
       <button class="fbtn" data-filter="ordered" onclick="setStatusBtn(this,'ordered')">Tilattu</button>
       <button class="fbtn" data-filter="completed" onclick="setStatusBtn(this,'completed')">Valmis</button>
       <button class="fbtn arch-btn" data-filter="archived" onclick="setStatusBtn(this,'archived')">Arkisto</button>
@@ -439,7 +439,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const STATUS_FI = {
   DRAFT:       'Luonnos',
   IN_PROGRESS: 'Kesken',
-  QUOTED:      'Lähetetty',
+  QUOTED:      'Tarjottu',
   ORDERED:     'Tilattu',
   ARCHIVED:    'Arkisto',
   COMPLETED:   'Valmis'
@@ -641,7 +641,7 @@ function renderTable(rows) {
           <div class="status-menu" id="menu-${q.id}">
             <div class="status-item" onclick="setStatus('${q.id}','DRAFT',false)">Luonnos</div>
             <div class="status-item" onclick="setStatus('${q.id}','IN_PROGRESS',false)">Kesken</div>
-            <div class="status-item" onclick="setStatus('${q.id}','QUOTED',false)">Lähetetty</div>
+            <div class="status-item" onclick="setStatus('${q.id}','QUOTED',false)">Tarjottu</div>
             <div class="status-item" onclick="setStatus('${q.id}','ORDERED',false)">Tilattu</div>
             <div class="status-item" onclick="setStatus('${q.id}','COMPLETED',false)">Valmis</div>
             <div class="status-item" onclick="setStatus('${q.id}',null,true)">Malli</div>
