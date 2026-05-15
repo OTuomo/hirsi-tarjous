@@ -402,7 +402,7 @@ async function loadChecklists() {
 }
 
 function renderChecklists() {
-  buildCLGroup("omatListat", checklists.filter(function(l) { return !l.is_shared; }));
+  buildCLGroup("omatListat", checklists.filter(function(l) { return !l.is_shared && l.user_id === currentUserId; }));
   buildCLGroup("yhteisListat", checklists.filter(function(l) { return l.is_shared; }));
 }
 
