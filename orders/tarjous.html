@@ -337,12 +337,15 @@
     <table class="summary-table">
       <tr><td class="label">Välisumma</td><td class="value" id="sumSubtotal">0,00 €</td></tr>
       <tr>
-        <td class="label">Pyöristys / alennus</td>
-        <td class="value"><input class="adj" type="number" id="adjAmount" value="0" step="0.01" oninput="recalcTotals();autoSave()"></td>
+        <td class="label">Pyöristys / alennus<br><span style="font-size:10px;font-weight:400;">(veroton)</span></td>
+        <td class="value"><input class="adj" type="number" id="adjAmount" value="0" step="0.01" oninput="onAdjInput()"></td>
       </tr>
       <tr><td class="label">Veroton yhteensä</td><td class="value" id="sumNoTax">0,00 €</td></tr>
       <tr><td class="label">ALV 25,5%</td><td class="value" id="sumVat">0,00 €</td></tr>
-      <tr class="big"><td class="label">YHT</td><td class="value" id="sumTotal">0,00 €</td></tr>
+      <tr class="big">
+        <td class="label">YHT (verollinen)</td>
+        <td class="value"><input class="adj" type="number" id="adjGross" value="0" step="0.01" oninput="onGrossInput()" style="font-size:15px;font-weight:600;color:var(--accent);width:110px;"></td>
+      </tr>
     </table>
   </div>
 
@@ -844,10 +847,10 @@ function renderSections() {
             <th style="width:150px">Kohde</th>
             <th style="width:150px">Hinnasto</th>
             <th>Kuvaus / lisätiedot</th>
-            <th style="width:60px" class="right">Määrä</th>
+            <th style="width:88px" class="right">Määrä</th>
             <th style="width:55px">Yks</th>
             <th style="width:95px" class="right">à-hinta</th>
-            <th style="width:90px" class="right">Yhteensä</th>
+            <th style="width:100px" class="right">Yhteensä<br><span style="font-weight:400;color:var(--text-dim);font-size:9px;letter-spacing:0;">sis. ALV</span></th>
             <th style="width:32px"></th>
           </tr></thead>
           <tbody id="tbody-${sec.id}">
@@ -902,8 +905,8 @@ function renderRowHTML(secId, row) {
           ${row.priceManual?`<button class="restore-btn" onclick="restorePrice(${secId},${row.id})" title="Palauta laskettu hinta">↺</button>`:''}
         </div>
       </td>
-      <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;" id="rowsum-${secId}-${row.id}">
-        ${fmt(rowSum(row))} €
+      <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.3;" id="rowsum-${secId}-${row.id}">
+        ${fmt(rowSum(row))} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(rowSum(row)*1.255)} €</span>
       </td>
       <td><button class="del-btn" onclick="removeRow(${secId},${row.id})">✕</button></td>
     </tr>
@@ -1036,7 +1039,10 @@ function selectNimike(secId, rowId, productId) {
     if (priceInput) priceInput.value = row.price || '';
 
     const rowSumEl = document.getElementById(`rowsum-${secId}-${rowId}`);
-    if (rowSumEl) rowSumEl.textContent = fmt(rowSum(row)) + ' €';
+    if (rowSumEl) {
+      const net = rowSum(row);
+      rowSumEl.innerHTML = `${fmt(net)} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(net*1.255)} €</span>`;
+    }
 
     recalcTotals();
   }
@@ -1130,7 +1136,10 @@ function updateRowSum(secId, rowId) {
   const row = sec && sec.rows.find(r => r.id === rowId);
   if (!row) return;
   const el = document.getElementById(`rowsum-${secId}-${rowId}`);
-  if (el) el.textContent = fmt(rowSum(row)) + ' €';
+  if (el) {
+    const net = rowSum(row);
+    el.innerHTML = `${fmt(net)} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(net*1.255)} €</span>`;
+  }
   const ss = document.getElementById(`subsub-${secId}`);
   if (ss) ss.textContent = fmt(sectionSum(sec));
   recalcTotals();
@@ -1148,14 +1157,40 @@ function recalcTotals() {
   const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
   const noTax = sub + adj;
   const vat = noTax * 0.255;
+  const gross = noTax + vat;
   document.getElementById('sumSubtotal').textContent = fmt(sub) + ' €';
   document.getElementById('sumNoTax').textContent = fmt(noTax) + ' €';
   document.getElementById('sumVat').textContent = fmt(vat) + ' €';
-  document.getElementById('sumTotal').textContent = fmt(noTax + vat) + ' €';
+  // Päivitä verollinen kenttä vain jos käyttäjä ei ole sitä editoimassa
+  const grossEl = document.getElementById('adjGross');
+  if (document.activeElement !== grossEl) {
+    grossEl.value = Math.round(gross * 100) / 100;
+  }
   sections.forEach(sec => {
     const el = document.getElementById(`subsub-${sec.id}`);
     if (el) el.textContent = fmt(sectionSum(sec));
   });
+}
+
+// Käyttäjä muuttaa verotonta pyöristystä → päivitä verollinen YHT
+function onAdjInput() {
+  recalcTotals();
+  autoSave();
+}
+
+// Käyttäjä kirjoittaa verollisen loppusumman → laske veroton pyöristys taaksepäin
+function onGrossInput() {
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const targetGross = parseFloat(document.getElementById('adjGross').value) || 0;
+  const targetNet = targetGross / 1.255;
+  const adj = Math.round((targetNet - sub) * 100) / 100;
+  document.getElementById('adjAmount').value = adj;
+  const noTax = sub + adj;
+  const vat = noTax * 0.255;
+  document.getElementById('sumSubtotal').textContent = fmt(sub) + ' €';
+  document.getElementById('sumNoTax').textContent = fmt(noTax) + ' €';
+  document.getElementById('sumVat').textContent = fmt(vat) + ' €';
+  autoSave();
 }
 
 function fmt(n) {
@@ -1184,7 +1219,7 @@ function buildQuoteData(status) {
     is_template: false,
     total_net: Math.round(noTax * 100) / 100,
     total_vat: Math.round(vat * 100) / 100,
-    total_gross: Math.round((noTax + vat) * 100) / 100,
+    total_gross: Math.round((parseFloat(document.getElementById('adjGross').value)||0) * 100) / 100,
   };
 }
 
@@ -1267,6 +1302,7 @@ async function loadQuote(id) {
   document.getElementById('quoteRef').value = q.notes || '';
   document.getElementById('defaultText').value = q.footer_text || '';
   document.getElementById('adjAmount').value = q.discount_amount || 0;
+  if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
   if (q.customer_id) {
     const cust = customers.find(c => c.id === q.customer_id);
     if (cust) setCustomer(cust.id, cust.name);
