@@ -141,7 +141,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }, 0);
   const noTax = sub + adj;
   const vat = noTax * 0.255;
-  const total = noTax + vat;
+  // Käytetään tallennettua total_gross jos saatavilla (pyöristetty arvo), muuten lasketaan
+  const total = q.total_gross ? parseFloat(q.total_gross) : noTax + vat;
 
   // colspan: showPrices lisää 2, showQty lisää 2
   const colspanSec = 1 + (showQty ? 2 : 0) + (showPrices ? 2 : 0);
@@ -152,14 +153,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     rowsHTML += `<tr class="section-hdr"><td colspan="${colspanSec}">${sec.name}</td></tr>`;
     sec.rows.forEach(row => {
       if (!row.nimikeTeksti && !row.desc && !row.qty) return;
-      const kohde = row.nimikeTeksti || '';
-      const kuvaus = row.desc || '';
-      const teksti = kohde && kuvaus ? `${kohde} ${kuvaus}` : kohde || kuvaus;
+      const teksti = row.desc || row.nimikeTeksti || '';
       const rs = (parseFloat(row.qty)||0) * (parseFloat(row.price)||0);
+      const rsVat = rs * 1.255;
       rowsHTML += `<tr>
         <td>${teksti}</td>
         ${showQty ? `<td class="right">${row.qty || ''}</td><td>${row.unit || ''}</td>` : ''}
-        ${showPrices ? `<td class="right">${row.price ? fmt(row.price) + ' €' : ''}</td><td class="right">${rs ? fmt(rs) + ' €' : ''}</td>` : ''}
+        ${showPrices ? `<td class="right">${row.price ? fmt(row.price) + ' €' : ''}</td><td class="right" style="line-height:1.3;">${rs ? fmt(rs) + ' €' : ''}<br>${rs ? '<span style="font-size:7.5pt;color:#777;">' + fmt(rsVat) + ' €</span>' : ''}</td>` : ''}
       </tr>`;
     });
   });
@@ -167,7 +167,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const theadCols = `
     <th>Tuote ja lisätiedot</th>
     ${showQty ? `<th class="right" style="width:9%">Määrä</th><th style="width:7%">Yksikkö</th>` : ''}
-    ${showPrices ? `<th class="right" style="width:17%">Alv 0%</th><th class="right" style="width:17%">Rivihinta</th>` : ''}
+    ${showPrices ? `<th class="right" style="width:15%">Alv 0%</th><th class="right" style="width:18%">Rivihinta<br><span style="font-weight:400;font-size:7.5pt;color:#777;">sis. ALV</span></th>` : ''}
   `;
   const theadHTML = `<tr>${theadCols}</tr>`;
 
