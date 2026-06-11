@@ -77,6 +77,7 @@
   .nimike-dropdown.open { display: block; }
   .nimike-option { padding: 6px 10px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nimike-option:hover { background: var(--accent-glow); color: var(--accent); }
+  .nimike-option.active { background: var(--accent-glow); color: var(--accent); }
   .nimike-option .nimike-code { color: var(--text-dim); margin-right: 6px; font-size: 10px; }
 
   /* SECTION ROW */
@@ -888,6 +889,7 @@ function renderRowHTML(secId, row) {
             oninput="onNimikeInput(${secId},${row.id},this.value)"
             onfocus="onNimikeFocus(${secId},${row.id})"
             onblur="setTimeout(()=>{ const d=document.getElementById('nimike-dd-${secId}-${row.id}'); if(d) d.classList.remove('open'); },150)"
+            onkeydown="onNimikeKeyDown(event,${secId},${row.id})"
             placeholder="Hae hinnastosta..."
             style="min-width:130px;">
           <div class="nimike-dropdown" id="nimike-dd-${secId}-${row.id}"></div>
@@ -1001,8 +1003,8 @@ function onNimikeInput(secId, rowId, val) {
     dd.classList.add('open');
     return;
   }
-  dd.innerHTML = hits.map(p =>
-    `<div class="nimike-option" onclick="selectNimike(${secId},${rowId},'${p.id}')">
+  dd.innerHTML = hits.map((p, i) =>
+    `<div class="nimike-option" data-index="${i}" onclick="selectNimike(${secId},${rowId},'${p.id}')">
       <span class="nimike-code">${p.code||''}</span>${p.name}
       <span style="color:var(--text-dim);font-size:10px;margin-left:6px;">${p.unit||''}</span>
     </div>`
@@ -1103,6 +1105,34 @@ function moveSection(id, dir) {
 
 function onProductSelect(secId, rowId, productId) {
   selectNimike(secId, rowId, productId);
+}
+
+function onNimikeKeyDown(e, secId, rowId) {
+  const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
+  if (!dd || !dd.classList.contains('open')) return;
+  const items = dd.querySelectorAll('.nimike-option[data-index]');
+  if (!items.length) return;
+  const current = dd.querySelector('.nimike-option.active');
+  let idx = current ? parseInt(current.dataset.index) : -1;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    idx = Math.min(idx + 1, items.length - 1);
+    items.forEach(el => el.classList.remove('active'));
+    items[idx].classList.add('active');
+    items[idx].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    idx = Math.max(idx - 1, 0);
+    items.forEach(el => el.classList.remove('active'));
+    items[idx].classList.add('active');
+    items[idx].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (current) current.click();
+  } else if (e.key === 'Escape') {
+    dd.classList.remove('open');
+  }
 }
 
 function onRowInput(secId, rowId, field, val) {
