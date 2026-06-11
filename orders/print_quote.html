@@ -118,7 +118,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   const showPrices = params.get('prices') !== '0';
-  const showQty = showPrices && params.get('qty') !== '0';  // ei määriä jos hinnat piilotettu
+  const showQty = showPrices && params.get('qty') !== '0';
   if (!id) { document.getElementById('root').textContent = 'Tarjousnumero puuttuu URL:sta.'; return; }
 
   const [quoteArr, custArr] = await Promise.all([
@@ -214,9 +214,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     <div class="summary-bottom">
       <div class="summary-box">
         <table>
-          ${adj !== 0 ? `
-          <tr><td class="lbl">Välisumma</td><td class="val">${fmt(sub)} €</td></tr>
-          <tr><td class="lbl">Pyöristys / alennus</td><td class="val">${fmt(adj)} €</td></tr>` : ''}
           <tr><td class="lbl">Alv 0%:</td><td class="val">${fmt(noTax)} €</td></tr>
           <tr><td class="lbl">Alv 25,5%:</td><td class="val">${fmt(vat)} €</td></tr>
           <tr class="total"><td class="lbl">YHT:</td><td class="val">${fmt(total)} €</td></tr>
