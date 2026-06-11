@@ -115,12 +115,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   let rowsHTML = '';
   sections.forEach(sec => {
     if (!sec.active) return;
-    rowsHTML += `<tr class="section-hdr"><td colspan="4">${sec.name}</td></tr>`;
+    rowsHTML += `<tr class="section-hdr"><td colspan="5">${sec.name}</td></tr>`;
     sec.rows.forEach(row => {
       if (!(parseFloat(row.qty) > 0)) return;
       rowsHTML += `
         <tr>
-          <td>${row.desc || row.nimikeTeksti || ''}</td>
+          <td>${row.nimikeTeksti || ''}</td>
+          <td>${row.desc || ''}</td>
           <td class="right">${fmtNum(row.qty)}</td>
           <td>${row.unit || ''}</td>
           <td></td>
@@ -159,10 +160,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     <table class="product-table">
       <thead>
         <tr>
-          <th>Tuote ja lisätiedot</th>
-          <th class="right" style="width:12%">Määrä</th>
-          <th style="width:10%">Yksikkö</th>
-          <th style="width:15%">Huomio</th>
+          <th style="width:25%">Kohde</th>
+          <th>Lisätiedot</th>
+          <th class="right" style="width:10%">Määrä</th>
+          <th style="width:8%">Yksikkö</th>
+          <th style="width:13%">Huomio</th>
         </tr>
       </thead>
       <tbody>${rowsHTML}</tbody>
