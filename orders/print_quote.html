@@ -152,7 +152,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!sec.active) return;
     rowsHTML += `<tr class="section-hdr"><td colspan="${colspanSec}">${sec.name}</td></tr>`;
     sec.rows.forEach(row => {
-      if (!row.nimikeTeksti) return;  // piilotetaan rivit joilla ei ole hinnastovalintaa
+      if (!(parseFloat(row.qty) > 0)) return;  // piilotetaan rivit joilla ei ole positiivista määrää
       const teksti = row.desc || row.nimikeTeksti || '';
       const rs = (parseFloat(row.qty)||0) * (parseFloat(row.price)||0);
       const rsVat = rs * 1.255;
