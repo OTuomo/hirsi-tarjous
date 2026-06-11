@@ -118,7 +118,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   const showPrices = params.get('prices') !== '0';
-  const showQty = params.get('qty') !== '0';
+  const showQty = showPrices && params.get('qty') !== '0';  // ei määriä jos hinnat piilotettu
   if (!id) { document.getElementById('root').textContent = 'Tarjousnumero puuttuu URL:sta.'; return; }
 
   const [quoteArr, custArr] = await Promise.all([
