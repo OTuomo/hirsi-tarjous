@@ -193,7 +193,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         <div class="name">${custName}</div>
         ${cust && cust.address ? `<div>${cust.address}</div>` : ''}
         ${cust && cust.city ? `<div>${cust.city}</div>` : ''}
-        ${q.notes ? `<div style="margin-top:4px;font-weight:600;">${q.notes}</div>` : ''}
       </div>
       <div class="summary-top">
         <table>
@@ -204,6 +203,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       </div>
     </div>
 
+    ${q.notes ? `<div style="font-size:10pt;font-weight:600;margin-bottom:2mm;">${q.notes}</div>` : ''}
     <div class="intro-text">Kiitämme tarjouspyynnöstänne. Tarjoamme tuotteitamme teille seuraavasti:</div>
 
     <table class="product-table">
