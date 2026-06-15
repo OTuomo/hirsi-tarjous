@@ -159,7 +159,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       rowsHTML += `<tr>
         <td>${teksti}</td>
         ${showQty ? `<td class="right">${row.qty || ''}</td><td>${row.unit || ''}</td>` : ''}
-        ${showPrices ? `<td class="right">${row.price ? fmt(row.price) + ' €' : ''}</td><td class="right" style="line-height:1.3;">${rs ? fmt(rs) + ' €' : ''}<br>${rs ? '<span style="font-size:7.5pt;color:#777;">' + fmt(rsVat) + ' €</span>' : ''}</td>` : ''}
+        ${showPrices ? `<td class="right" style="line-height:1.3;">${row.price ? fmt(row.price) + ' €' : ''}<br>${row.price ? '<span style="font-size:7.5pt;color:#777;">' + fmt(parseFloat(row.price)*1.255) + ' €</span>' : ''}</td><td class="right" style="line-height:1.3;">${rs ? fmt(rs) + ' €' : ''}<br>${rs ? '<span style="font-size:7.5pt;color:#777;">' + fmt(rsVat) + ' €</span>' : ''}</td>` : ''}
       </tr>`;
     });
   });
@@ -195,7 +195,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         ${cust && cust.city ? `<div>${cust.city}</div>` : ''}
       </div>
       <div class="summary-top">
-        ${q.notes ? `<div style="font-size:9pt;color:#333;margin-bottom:4px;">${q.notes}</div>` : ''}
         <table>
           <tr><td>Alv 0%:</td><td><b>${fmt(noTax)} €</b></td></tr>
           <tr><td>Alv:</td><td><b>${fmt(vat)} €</b></td></tr>
@@ -204,6 +203,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       </div>
     </div>
 
+    ${q.notes ? `<div style="font-size:10pt;font-weight:600;margin-bottom:4mm;">${q.notes}</div>` : ''}
     <div class="intro-text">Kiitämme tarjouspyynnöstänne. Tarjoamme tuotteitamme teille seuraavasti:</div>
 
     <table class="product-table">
