@@ -167,7 +167,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const theadCols = `
     <th>Tuote ja lisätiedot</th>
     ${showQty ? `<th class="right" style="width:9%">Määrä</th><th style="width:7%">Yksikkö</th>` : ''}
-    ${showPrices ? `<th class="right" style="width:15%">Alv 0%</th><th class="right" style="width:18%">Rivihinta<br><span style="font-weight:400;font-size:7.5pt;color:#777;">sis. ALV</span></th>` : ''}
+    ${showPrices ? `<th class="right" style="width:15%">Alv 0%<br><span style="font-weight:400;font-size:7.5pt;color:#777;">sis. ALV</span></th><th class="right" style="width:18%">Rivihinta<br><span style="font-weight:400;font-size:7.5pt;color:#777;">sis. ALV</span></th>` : ''}
   `;
   const theadHTML = `<tr>${theadCols}</tr>`;
 
@@ -193,6 +193,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         <div class="name">${custName}</div>
         ${cust && cust.address ? `<div>${cust.address}</div>` : ''}
         ${cust && cust.city ? `<div>${cust.city}</div>` : ''}
+        ${q.notes ? `<div style="margin-top:4px;font-weight:600;">${q.notes}</div>` : ''}
       </div>
       <div class="summary-top">
         <table>
@@ -203,7 +204,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       </div>
     </div>
 
-    ${q.notes ? `<div style="font-size:10pt;font-weight:600;margin-bottom:4mm;">${q.notes}</div>` : ''}
     <div class="intro-text">Kiitämme tarjouspyynnöstänne. Tarjoamme tuotteitamme teille seuraavasti:</div>
 
     <table class="product-table">
