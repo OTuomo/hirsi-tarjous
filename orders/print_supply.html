@@ -15,7 +15,7 @@
   .logo-area { display: flex; align-items: center; gap: 10px; }
   .logo-area img { height: 36px; width: auto; }
   .logo-area .company-name { font-size: 13pt; font-weight: 700; line-height: 1.15; }
-  .doc-title { font-size: 11pt; font-weight: 700; letter-spacing: 0.08em; text-align: center; flex: 1; padding-top: 6px; }
+  .doc-title { font-size: 11pt; font-weight: 700; letter-spacing: 0.08em; text-align: center; flex: 1; padding-top: 2px; line-height: 1.4; }
   .doc-meta { text-align: right; font-size: 9pt; min-width: 55mm; }
   .doc-meta table { margin-left: auto; border-collapse: collapse; }
   .doc-meta td { padding: 2px 4px; }
@@ -115,18 +115,24 @@ window.addEventListener('DOMContentLoaded', async () => {
   let rowsHTML = '';
   sections.forEach(sec => {
     if (!sec.active) return;
-    rowsHTML += `<tr class="section-hdr"><td colspan="5">${sec.name}</td></tr>`;
+    let secHTML = '';
     sec.rows.forEach(row => {
-      if (!(parseFloat(row.qty) > 0)) return;
-      rowsHTML += `
-        <tr>
+      // Pakkausmäärä ensisijainen jos täytetty, muuten käytetään tavallista määrää
+      const hasPackQty = row.packQty !== undefined && row.packQty !== null && row.packQty !== '';
+      const effectiveQty = hasPackQty ? row.packQty : row.qty;
+      if (!(parseFloat(effectiveQty) > 0)) return;
+      const corrected = hasPackQty && parseFloat(row.packQty) !== parseFloat(row.qty);
+      secHTML += `
+        <tr${corrected ? ' style="background:#fff8e1;"' : ''}>
           <td>${row.nimikeTeksti || ''}</td>
           <td>${row.desc || ''}</td>
-          <td class="right">${fmtNum(row.qty)}</td>
+          <td class="right">${fmtNum(effectiveQty)}${corrected ? ' <span style="color:#b45309;font-size:7.5pt;">✎</span>' : ''}</td>
           <td>${row.unit || ''}</td>
           <td></td>
         </tr>`;
     });
+    if (!secHTML) return; // ei näytetä osion otsikkoa jos kaikki rivit suodattuivat pois
+    rowsHTML += `<tr class="section-hdr"><td colspan="5">${sec.name}</td></tr>` + secHTML;
   });
 
   const root = document.getElementById('root');
@@ -139,7 +145,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         <img src="https://otuomo.github.io/hirsi-tarjous/orders/okkonenlogopuu.svg" alt="Logo">
         <div class="company-name">OKKOSEN<br>PUUTUOTE</div>
       </div>
-      <div class="doc-title">TARVIKKEET</div>
+      <div class="doc-title">TILAUSVAHVISTUS<br><span style="font-size:8.5pt;">TARVIKKEET</span></div>
       <div class="doc-meta">
         <table>
           <tr><td>Päivämäärä</td><td>${fmtDate(q.created_at)}</td></tr>
