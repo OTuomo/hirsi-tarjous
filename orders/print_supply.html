@@ -109,31 +109,52 @@ window.addEventListener('DOMContentLoaded', async () => {
   const cust = Array.isArray(custArr) ? custArr.find(c => c.id === q.customer_id) : null;
   const custName = cust ? cust.name : '—';
 
-  let sections = [];
-  try { sections = JSON.parse(q.sections_json || '[]'); } catch(e) {}
-
   let rowsHTML = '';
-  sections.forEach(sec => {
-    if (!sec.active) return;
-    let secHTML = '';
-    sec.rows.forEach(row => {
-      // Pakkausmäärä ensisijainen jos täytetty, muuten käytetään tavallista määrää
-      const hasPackQty = row.packQty !== undefined && row.packQty !== null && row.packQty !== '';
-      const effectiveQty = hasPackQty ? row.packQty : row.qty;
-      if (!(parseFloat(effectiveQty) > 0)) return;
-      const corrected = hasPackQty && parseFloat(row.packQty) !== parseFloat(row.qty);
-      secHTML += `
-        <tr${corrected ? ' style="background:#fff8e1;"' : ''}>
-          <td>${row.nimikeTeksti || ''}</td>
-          <td>${row.desc || ''}</td>
-          <td class="right">${fmtNum(effectiveQty)}${corrected ? ' <span style="color:#b45309;font-size:7.5pt;">✎</span>' : ''}</td>
-          <td>${row.unit || ''}</td>
-          <td></td>
-        </tr>`;
+
+  // Ensisijaisesti käytetään erillistä pakkauslistaa, jos sellainen on tehty
+  let packingSections = [];
+  try { packingSections = JSON.parse(q.packing_list_json || '[]'); } catch(e) {}
+  const hasPackingList = packingSections.some(sec => sec.rows && sec.rows.length > 0);
+
+  if (hasPackingList) {
+    packingSections.forEach(sec => {
+      if (!sec.rows || !sec.rows.length) return;
+      const validRows = sec.rows.filter(row => (row.nimikeTeksti || row.desc) && parseFloat(row.qty) > 0);
+      if (!validRows.length) return;
+      const pkgLabel = sec.packageNumber ? `PAKETTI ${sec.packageNumber} — ${sec.name}` : sec.name;
+      rowsHTML += `<tr class="section-hdr"><td colspan="5">${pkgLabel}</td></tr>`;
+      validRows.forEach(row => {
+        rowsHTML += `
+          <tr>
+            <td>${row.nimikeTeksti || ''}</td>
+            <td>${row.desc || ''}</td>
+            <td class="right">${fmtNum(row.qty)}</td>
+            <td>${row.unit || ''}</td>
+            <td></td>
+          </tr>`;
+      });
     });
-    if (!secHTML) return; // ei näytetä osion otsikkoa jos kaikki rivit suodattuivat pois
-    rowsHTML += `<tr class="section-hdr"><td colspan="5">${sec.name}</td></tr>` + secHTML;
-  });
+  } else {
+    // Fallback: ei erillistä pakkauslistaa tehty — näytetään tarjouksen rivit kuten ennenkin
+    let sections = [];
+    try { sections = JSON.parse(q.sections_json || '[]'); } catch(e) {}
+    sections.forEach(sec => {
+      if (!sec.active) return;
+      const validRows = sec.rows.filter(row => parseFloat(row.qty) > 0);
+      if (!validRows.length) return;
+      rowsHTML += `<tr class="section-hdr"><td colspan="5">${sec.name}</td></tr>`;
+      validRows.forEach(row => {
+        rowsHTML += `
+          <tr>
+            <td>${row.nimikeTeksti || ''}</td>
+            <td>${row.desc || ''}</td>
+            <td class="right">${fmtNum(row.qty)}</td>
+            <td>${row.unit || ''}</td>
+            <td></td>
+          </tr>`;
+      });
+    });
+  }
 
   const root = document.getElementById('root');
   root.className = '';
