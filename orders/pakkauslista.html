@@ -118,7 +118,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  document.getElementById('quoteInfo').textContent = `${q.quote_number || 'Tallentamaton tarjous'}`;
+  let custName = '';
+  if (q.customer_id) {
+    const custArr = await sbGet('customers', `?id=eq.${q.customer_id}&select=name`);
+    if (Array.isArray(custArr) && custArr[0]) custName = custArr[0].name;
+  }
+  document.getElementById('quoteInfo').textContent =
+    `${q.quote_number || 'Tallentamaton tarjous'}${custName ? ' — ' + custName : ''}`;
+  document.title = `Pakkauslista — ${custName || q.quote_number || ''}`;
 
   try { quoteSections = JSON.parse(q.sections_json || '[]'); } catch(e) { quoteSections = []; }
 
