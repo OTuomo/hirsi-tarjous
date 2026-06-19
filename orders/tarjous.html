@@ -124,6 +124,8 @@
   .status-badge.draft    { background: #44444f; color: var(--text-dim); }
   .status-badge.progress { background: #3d2e1e; color: var(--warn); }
   .status-badge.sent     { background: #1e3d2e; color: var(--success); }
+  .status-badge.ordered  { background: #1e2e3d; color: #5b9bd5; }
+  .status-badge.completed{ background: #1e3d2e; color: #4ade80; }
   .status-badge.model    { background: #2a1e3d; color: #c084fc; }
   .status-badge.archived { background: #2a2a2a; color: #666; }
 
@@ -180,6 +182,7 @@
   <h1>Tarjous</h1>
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
+    <button class="btn btn-secondary" id="togglePackQtyBtn" onclick="togglePackQty()" style="padding:6px 14px;font-size:12px;" title="Näytä/piilota erillinen pakkausmäärä-kenttä rivihinnan vieressä">📦 Pakkauskorjaukset</button>
     <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna</button>
     <select id="statusSelect" onchange="changeStatus(this.value)"
       style="font-size:12px;padding:6px 10px;width:auto;font-family:'IBM Plex Mono',monospace;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:4px;">
@@ -453,6 +456,16 @@ let currentQuoteId = null;
 let currentStatus = 'DRAFT';
 let sectionIdCounter = 0;
 let rowIdCounter = 0;
+let showPackQty = false;
+
+function togglePackQty() {
+  showPackQty = !showPackQty;
+  const btn = document.getElementById('togglePackQtyBtn');
+  btn.classList.toggle('btn-secondary', !showPackQty);
+  btn.style.background = showPackQty ? 'var(--accent)' : '';
+  btn.style.color = showPackQty ? '#1c1a14' : '';
+  renderSections();
+}
 
 // =============================================
 // INIT
@@ -896,7 +909,10 @@ function renderRowHTML(secId, row) {
         </div>
       </td>
       <td><input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" placeholder="Kuvaus"></td>
-      <td><input type="number" value="${row.qty||''}" oninput="onRowInput(${secId},${row.id},'qty',this.value)" min="0" step="0.01" style="text-align:right;"></td>
+      <td>
+        <input type="number" value="${row.qty||''}" oninput="onRowInput(${secId},${row.id},'qty',this.value)" min="0" step="0.01" style="text-align:right;width:100%;">
+        ${(showPackQty && row.nimikeTeksti) ? `<input type="number" value="${row.packQty||''}" oninput="onRowInput(${secId},${row.id},'packQty',this.value)" min="0" step="0.01" placeholder="pkt." title="Pakkausmäärä — jätä tyhjäksi jos sama kuin Määrä" style="text-align:right;width:100%;margin-top:2px;border-color:var(--accent);background:var(--accent-glow);">` : ''}
+      </td>
       <td><input type="text" value="${esc(row.unit||'')}" oninput="onRowInput(${secId},${row.id},'unit',this.value)" placeholder="kpl"></td>
       <td>
         <div style="display:flex;align-items:center;gap:2px;">
@@ -931,6 +947,11 @@ function renderCardHTML(secId, row) {
         <label style="margin-left:8px;">Yks</label>
         <input type="text" value="${esc(row.unit||'')}" oninput="onRowInput(${secId},${row.id},'unit',this.value)" style="width:60px;">
       </div>
+      ${(showPackQty && row.nimikeTeksti) ? `
+      <div class="card-row">
+        <label>Pakkaus</label>
+        <input type="number" value="${row.packQty||''}" oninput="onRowInput(${secId},${row.id},'packQty',this.value)" placeholder="= Määrä" title="Pakkausmäärä — jätä tyhjäksi jos sama kuin Määrä" style="width:80px;border-color:var(--accent);background:var(--accent-glow);">
+      </div>` : ''}
       <div class="card-row">
         <label>à-hinta</label>
         <input type="number" value="${row.price||''}" oninput="onPriceInput(${secId},${row.id},this.value)"
@@ -1392,6 +1413,8 @@ function updateStatusBadge() {
     DRAFT:       ['draft',    'Luonnos'],
     IN_PROGRESS: ['progress', 'Kesken'],
     QUOTED:      ['sent',     'Tarjottu'],
+    ORDERED:     ['ordered',  'Tilattu'],
+    COMPLETED:   ['completed','Valmis'],
     ARCHIVED:    ['archived', 'Arkisto'],
     MODEL:       ['model',    'Malli'],
   };
