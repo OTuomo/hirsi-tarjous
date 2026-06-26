@@ -496,7 +496,7 @@ async function loadCustomers() {
 }
 
 async function loadProducts() {
-  const data = await sbGet('products', '?order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,aihio_leveys,aihio_paksuus,kate_percent');
+  const data = await sbGet('products', '?status=not.in.(stock_only,hidden)&order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,aihio_leveys,aihio_paksuus,kate_percent');
   products = Array.isArray(data) ? data : [];
   console.log('Tuotteet ladattu:', products.length, 'kpl');
   products.forEach(p => {
