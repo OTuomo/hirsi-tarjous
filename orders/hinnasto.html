@@ -249,7 +249,7 @@
   }
   .low-stock-row { background: rgba(232,160,32,0.06); }
   .low-stock-row:hover { background: rgba(232,160,32,0.12) !important; }
-  .stock-warn { color: var(--warn); font-weight: 600; }
+  .stock-warn { color: var(--danger); font-weight: 600; }
   .cat {
     display: inline-block; padding: 2px 8px; border-radius: 3px;
     font-size: 11px; background: var(--accent-glow); color: var(--accent);
@@ -879,7 +879,7 @@ function renderTable() {
       ? `<span class="badge badge-stock">varasto</span>`
       : `<span class="badge badge-inactive">piilotettu</span>`;
     const varastoCell = p.varasto_maara != null
-      ? `<td class="mono" style="text-align:right;${isLow ? 'color:var(--warn);font-weight:700;font-size:14px;' : 'color:var(--text-dim);'}">${p.varasto_maara} ${esc(p.unit||'')}</td>`
+      ? `<td class="mono" style="text-align:right;${isLow ? 'color:var(--danger);font-weight:700;font-size:14px;' : 'color:var(--text-dim);'}">${p.varasto_maara} ${esc(p.unit||'')}</td>`
       : `<td style="text-align:right;color:var(--text-dim)">—</td>`;
     return `
     <tr ${isLow ? 'class="low-stock-row"' : ''}>
@@ -916,7 +916,7 @@ function renderTable() {
         <span class="card-code">${esc(p.code || '—')}</span>
         ${p.category ? `<span class="cat">${esc(p.category)}</span>` : ''}
         <span class="mono" style="font-size:11px;color:var(--text-dim)">${esc(p.unit || '')}</span>
-        ${p.varasto_maara != null ? `<span class="mono" style="font-size:11px;${isLow ? 'color:var(--warn);font-weight:600;' : 'color:var(--text-dim);'}">▪ ${p.varasto_maara} ${esc(p.unit||'')}</span>` : ''}
+        ${p.varasto_maara != null ? `<span class="mono" style="font-size:11px;${isLow ? 'color:var(--danger);font-weight:600;' : 'color:var(--text-dim);'}">▪ ${p.varasto_maara} ${esc(p.unit||'')}</span>` : ''}
         ${statusBadge}
         <div class="card-actions">
           <button class="btn btn-ghost btn-sm btn-icon" onclick="openEdit('${p.id}')">✎</button>
