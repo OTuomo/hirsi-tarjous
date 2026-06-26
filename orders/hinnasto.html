@@ -879,7 +879,7 @@ function renderTable() {
       ? `<span class="badge badge-stock">varasto</span>`
       : `<span class="badge badge-inactive">piilotettu</span>`;
     const varastoCell = p.varasto_maara != null
-      ? `<td class="mono" style="text-align:right"><span ${isLow ? 'class="stock-warn"' : ''}>${p.varasto_maara} ${esc(p.unit||'')}</span>${p.varasto_alaraja != null ? `<span style="color:var(--text-dim);font-size:11px;"> / ${p.varasto_alaraja}</span>` : ''}</td>`
+      ? `<td class="mono" style="text-align:right;${isLow ? 'color:var(--warn);font-weight:700;font-size:14px;' : 'color:var(--text-dim);'}">${p.varasto_maara} ${esc(p.unit||'')}</td>`
       : `<td style="text-align:right;color:var(--text-dim)">—</td>`;
     return `
     <tr ${isLow ? 'class="low-stock-row"' : ''}>
