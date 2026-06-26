@@ -225,6 +225,31 @@
   }
   .badge-active   { background: rgba(61,186,110,0.12); color: var(--success); border: 1px solid rgba(61,186,110,0.3); }
   .badge-inactive { background: rgba(149,149,160,0.1); color: var(--text-dim); border: 1px solid var(--border); }
+  .badge-stock    { background: rgba(217,119,6,0.12); color: var(--accent); border: 1px solid rgba(217,119,6,0.3); }
+
+  /* VÄLILEHDET */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .tab-btn {
+    padding: 7px 16px; border-radius: 4px; border: 1px solid var(--border);
+    background: transparent; color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.04em; transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); border-color: var(--accent-dim); }
+  .tab-btn.active { color: var(--accent); border-color: var(--accent); background: var(--accent-glow); }
+  .tab-btn .tab-count { opacity: 0.6; font-size: 10px; margin-left: 4px; }
+
+  /* VÄHÄNÄ-NÄKYMÄ */
+  .low-category { margin-bottom: 24px; }
+  .low-cat-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+    padding: 8px 14px; background: #222018; border: 1px solid var(--border);
+    border-bottom: none; border-radius: 4px 4px 0 0;
+  }
+  .low-stock-row { background: rgba(232,160,32,0.06); }
+  .low-stock-row:hover { background: rgba(232,160,32,0.12) !important; }
+  .stock-warn { color: var(--warn); font-weight: 600; }
   .cat {
     display: inline-block; padding: 2px 8px; border-radius: 3px;
     font-size: 11px; background: var(--accent-glow); color: var(--accent);
@@ -347,8 +372,9 @@
       </select>
       <select id="filterActive" style="width:auto;">
         <option value="">Kaikki</option>
-        <option value="true">Aktiiviset</option>
-        <option value="false">Piilotetut</option>
+        <option value="active">Aktiiviset</option>
+        <option value="stock_only">Varastotuotteet</option>
+        <option value="hidden">Piilotetut</option>
       </select>
     </div>
   </div>
@@ -369,6 +395,15 @@
     </div>
   </div>
 
+  <!-- VÄLILEHDET -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">Hinnasto</button>
+    <button class="tab-btn" id="tab-low" onclick="switchTab('low')">⚠ Vähänä <span class="tab-count" id="cnt-low">—</span></button>
+  </div>
+
+  <!-- HINNASTO-NÄKYMÄ -->
+  <div id="view-all">
+
   <!-- TAULUKKO -->
   <div class="table-wrap">
     <table>
@@ -380,6 +415,7 @@
           <th data-sort="unit">Yksikkö</th>
           <th data-sort="price" style="text-align:right">Hinta (€)</th>
           <th>ALV%</th>
+          <th style="text-align:right">Varasto</th>
           <th>Tila</th>
           <th></th>
         </tr>
@@ -394,6 +430,17 @@
       <div class="pagination-btns">
         <button class="btn btn-ghost btn-sm" id="prevPage">‹ Edell.</button>
         <button class="btn btn-ghost btn-sm" id="nextPage">Seur. ›</button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /view-all -->
+
+  <!-- VÄHÄNÄ-NÄKYMÄ -->
+  <div id="view-low" style="display:none;">
+    <div id="lowStockContent">
+      <div class="empty-state" style="padding:48px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-dim);">
+        Ladataan…
       </div>
     </div>
   </div>
@@ -537,13 +584,22 @@
         </div>
       </div>
 
-      <!-- Tila -->
-      <div class="form-group full">
+      <!-- Tila + varasto -->
+      <div class="form-group">
         <label>Tila</label>
-        <select id="fActive">
-          <option value="true">Aktiivinen — näkyy tarjouslomakkeessa</option>
-          <option value="false">Piilotettu</option>
+        <select id="fActive" onchange="toggleStockFields()">
+          <option value="active">Aktiivinen — näkyy tarjouslomakkeessa</option>
+          <option value="stock_only">Varastotuote — vain hinnastossa</option>
+          <option value="hidden">Piilotettu</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label>Varastomäärä</label>
+        <input type="number" id="fVarastoMaara" step="1" min="0" placeholder="—">
+      </div>
+      <div class="form-group" id="stockLimitField">
+        <label>Alaraja (hälytys)</label>
+        <input type="number" id="fVarastoAlaraja" step="1" min="0" placeholder="—">
       </div>
 
     </div>
@@ -613,6 +669,71 @@ function toggleNav(e) {
 }
 document.addEventListener('click', () => document.getElementById('navDropdown').classList.remove('open'));
 
+// ── Välilehdet ──────────────────────────────────────────────
+let currentTab = 'all';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-all').classList.toggle('active', tab === 'all');
+  document.getElementById('tab-low').classList.toggle('active', tab === 'low');
+  document.getElementById('view-all').style.display = tab === 'all' ? '' : 'none';
+  document.getElementById('view-low').style.display = tab === 'low' ? '' : 'none';
+  if (tab === 'low') renderLowStock();
+}
+
+function renderLowStock() {
+  const lowProducts = allProducts.filter(p =>
+    p.varasto_maara != null && p.varasto_alaraja != null && p.varasto_maara < p.varasto_alaraja
+  );
+  const container = document.getElementById('lowStockContent');
+  if (lowProducts.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="padding:48px;font-family:\'IBM Plex Mono\',monospace;font-size:13px;color:var(--text-dim);">Kaikki tuotteet ovat riittävällä tasolla ✓</div>';
+    return;
+  }
+  // Ryhmittele kategorian mukaan
+  const byCat = {};
+  lowProducts.forEach(p => {
+    const cat = p.category || 'Muu';
+    if (!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push(p);
+  });
+  container.innerHTML = Object.entries(byCat).sort(([a],[b]) => a.localeCompare(b,'fi')).map(([cat, prods]) => `
+    <div class="low-category">
+      <div class="low-cat-title">${esc(cat)}</div>
+      <div class="table-wrap" style="border-radius:0 0 4px 4px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Koodi</th><th>Nimike</th><th>Yksikkö</th><th style="text-align:right">Varastossa</th><th style="text-align:right">Alaraja</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${prods.sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'fi',{numeric:true})).map(p => `
+            <tr class="low-stock-row">
+              <td class="mono">${esc(p.code||'—')}</td>
+              <td>${esc(p.name||'')}</td>
+              <td class="mono">${esc(p.unit||'—')}</td>
+              <td class="mono stock-warn" style="text-align:right">${p.varasto_maara} ${esc(p.unit||'')}</td>
+              <td class="mono" style="text-align:right;color:var(--text-dim)">${p.varasto_alaraja} ${esc(p.unit||'')}</td>
+              <td class="actions"><button class="btn btn-ghost btn-sm btn-icon" onclick="openEdit('${p.id}')">✎</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('');
+}
+
+function updateLowCount() {
+  const cnt = allProducts.filter(p =>
+    p.varasto_maara != null && p.varasto_alaraja != null && p.varasto_maara < p.varasto_alaraja
+  ).length;
+  document.getElementById('cnt-low').textContent = cnt > 0 ? cnt : '';
+}
+
+function toggleStockFields() {
+  // Varastokentät näkyvissä aina — ei piiloteta tilasta riippumatta
+}
+
 // ── Init ───────────────────────────────────────────────────
 loadProducts();
 
@@ -623,6 +744,7 @@ async function loadProducts() {
   buildCategoryFilter();
   applyFilters();
   updateStats();
+  updateLowCount();
 }
 
 // ── Hinnoittelulogiikka ────────────────────────────────────
@@ -713,7 +835,7 @@ function applyFilters() {
   filtered = allProducts.filter(p => {
     if (q && !((p.code||'').toLowerCase().includes(q) || (p.name||'').toLowerCase().includes(q))) return false;
     if (cat && p.category !== cat) return false;
-    if (act !== '' && String(p.active) !== act) return false;
+    if (act !== '' && (p.status || 'active') !== act) return false;
     return true;
   });
 
@@ -749,23 +871,42 @@ function renderTable() {
     const priceTooltip = isCubic
       ? `Kuutio: ${fmtPrice(p.kuutiohinta||0)} + T:${fmtPrice(p.tyosto_kuutio||0)} + S:${fmtPrice(p.salvostus_kuutio||0)} | Kate: ${((p.kate_percent||0)*100).toFixed(1)}%`
       : `Osto: ${fmtPrice(p.ostohinta||0)} | Kate: ${((p.kate_percent||0)*100).toFixed(1)}%${p.kpl > 1 ? ' | Kpl: '+p.kpl : ''}`;
+    const st = p.status || 'active';
+    const isLow = p.varasto_maara != null && p.varasto_alaraja != null && p.varasto_maara < p.varasto_alaraja;
+    const statusBadge = st === 'active'
+      ? `<span class="badge badge-active">aktiivinen</span>`
+      : st === 'stock_only'
+      ? `<span class="badge badge-stock">varasto</span>`
+      : `<span class="badge badge-inactive">piilotettu</span>`;
+    const varastoCell = p.varasto_maara != null
+      ? `<td class="mono" style="text-align:right"><span ${isLow ? 'class="stock-warn"' : ''}>${p.varasto_maara} ${esc(p.unit||'')}</span>${p.varasto_alaraja != null ? `<span style="color:var(--text-dim);font-size:11px;"> / ${p.varasto_alaraja}</span>` : ''}</td>`
+      : `<td style="text-align:right;color:var(--text-dim)">—</td>`;
     return `
-    <tr>
+    <tr ${isLow ? 'class="low-stock-row"' : ''}>
       <td class="mono">${esc(p.code || '—')}</td>
       <td>${esc(p.name || '')}</td>
       <td>${p.category ? `<span class="cat">${esc(p.category)}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
       <td class="mono">${esc(p.unit || '—')}</td>
       <td class="price" title="${esc(priceTooltip)}">${p.price != null ? fmtPrice(p.price) : '—'}</td>
       <td class="mono" style="color:var(--text-dim)">${p.vat_percent != null ? p.vat_percent + ' %' : '—'}</td>
-      <td><span class="badge ${p.active !== false ? 'badge-active' : 'badge-inactive'}">${p.active !== false ? 'aktiivinen' : 'piilotettu'}</span></td>
+      ${varastoCell}
+      <td>${statusBadge}</td>
       <td class="actions">
         <button class="btn btn-ghost btn-sm btn-icon" onclick="openEdit('${p.id}')" title="Muokkaa">✎</button>
-        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteProduct('${p.id}', '${esc(p.name || p.code || '')}')" title="Poista">✕</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteProduct('${p.id}', '${esc(p.name || p.code || '')}')">✕</button>
       </td>
     </tr>`;
   }).join('');
 
-  cardList.innerHTML = slice.map(p => `
+  cardList.innerHTML = slice.map(p => {
+    const st = p.status || 'active';
+    const isLow = p.varasto_maara != null && p.varasto_alaraja != null && p.varasto_maara < p.varasto_alaraja;
+    const statusBadge = st === 'active'
+      ? `<span class="badge badge-active" style="font-size:10px;">aktiivinen</span>`
+      : st === 'stock_only'
+      ? `<span class="badge badge-stock" style="font-size:10px;">varasto</span>`
+      : `<span class="badge badge-inactive" style="font-size:10px;">piilotettu</span>`;
+    return `
     <div class="product-card">
       <div class="card-top">
         <div class="card-name">${esc(p.name || '—')}</div>
@@ -775,14 +916,15 @@ function renderTable() {
         <span class="card-code">${esc(p.code || '—')}</span>
         ${p.category ? `<span class="cat">${esc(p.category)}</span>` : ''}
         <span class="mono" style="font-size:11px;color:var(--text-dim)">${esc(p.unit || '')}</span>
-        <span class="badge ${p.active !== false ? 'badge-active' : 'badge-inactive'}" style="font-size:10px;">${p.active !== false ? 'aktiivinen' : 'piilotettu'}</span>
+        ${p.varasto_maara != null ? `<span class="mono" style="font-size:11px;${isLow ? 'color:var(--warn);font-weight:600;' : 'color:var(--text-dim);'}">▪ ${p.varasto_maara} ${esc(p.unit||'')}</span>` : ''}
+        ${statusBadge}
         <div class="card-actions">
           <button class="btn btn-ghost btn-sm btn-icon" onclick="openEdit('${p.id}')">✎</button>
           <button class="btn btn-danger btn-sm btn-icon" onclick="deleteProduct('${p.id}', '${esc(p.name || p.code || '')}')">✕</button>
         </div>
       </div>
-    </div>`).join('');
-
+    </div>`;
+  }).join('');
   pInfo.textContent = `${start + 1}–${Math.min(start + PAGE_SIZE, filtered.length)} / ${filtered.length} tuotetta`;
   document.getElementById('prevPage').disabled = page === 0;
   document.getElementById('nextPage').disabled = start + PAGE_SIZE >= filtered.length;
@@ -791,7 +933,7 @@ function renderTable() {
 // ── Stats ──────────────────────────────────────────────────
 function updateStats() {
   document.getElementById('statTotal').textContent  = allProducts.length;
-  document.getElementById('statActive').textContent = allProducts.filter(p => p.active !== false).length;
+  document.getElementById('statActive').textContent = allProducts.filter(p => (p.status || 'active') === 'active').length;
   const cats = new Set(allProducts.map(p => p.category).filter(Boolean));
   document.getElementById('statCats').textContent   = cats.size;
 }
@@ -847,7 +989,9 @@ function openEdit(id) {
   document.getElementById('fCategory').value     = p.category    || '';
   document.getElementById('fPricingModel').dataset.userChanged = '1';
   document.getElementById('fVat').value          = p.vat_percent ?? 25.5;
-  document.getElementById('fActive').value       = String(p.active !== false);
+  document.getElementById('fActive').value       = p.status || 'active';
+  document.getElementById('fVarastoMaara').value  = p.varasto_maara ?? '';
+  document.getElementById('fVarastoAlaraja').value = p.varasto_alaraja ?? '';
   document.getElementById('fPricingModel').value = p.pricing_model || 'simple';
 
   if (p.pricing_model === 'cubic') {
@@ -888,7 +1032,10 @@ async function saveProduct() {
     unit:         document.getElementById('fUnit').value.trim()     || null,
     category:     document.getElementById('fCategory').value.trim() || null,
     vat_percent:  parseFloat(document.getElementById('fVat').value) || 25.5,
-    active:       document.getElementById('fActive').value === 'true',
+    active:       document.getElementById('fActive').value === 'active',
+    status:       document.getElementById('fActive').value,
+    varasto_maara:   document.getElementById('fVarastoMaara').value !== '' ? parseFloat(document.getElementById('fVarastoMaara').value) : null,
+    varasto_alaraja: document.getElementById('fVarastoAlaraja').value !== '' ? parseFloat(document.getElementById('fVarastoAlaraja').value) : null,
     pricing_model: model,
     kate_percent:  kate / 100,
     price:        parseFloat(document.getElementById('fPrice').value) || null,
@@ -999,6 +1146,7 @@ function parseCsv(text, filename) {
       ostohinta:    parseFloat(obj.ostohinta) || null,
       kate_percent: parseFloat(obj.kateprosentti) || null,
       active:       true,
+      status:       'active',
     };
   }).filter(Boolean);
 
@@ -1046,7 +1194,9 @@ function clearForm() {
   });
   document.getElementById('fKpl').value         = '1';
   document.getElementById('fVat').value         = '25.5';
-  document.getElementById('fActive').value      = 'true';
+  document.getElementById('fActive').value      = 'active';
+  document.getElementById('fVarastoMaara').value = '';
+  document.getElementById('fVarastoAlaraja').value = '';
   document.getElementById('fPricingModel').value = 'simple';
   document.getElementById('fPrice').value       = '';
   if (document.getElementById('calcKuutio')) document.getElementById('calcKuutio').textContent = '—';
