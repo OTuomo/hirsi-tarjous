@@ -72,9 +72,9 @@
   .cust-option .cust-num { font-size: 10px; color: var(--text-dim); margin-left: 8px; }
 
   /* ASIAKKAAN OSOITETIEDOT (read-only) */
-  .customer-info-display { margin-top: 6px; padding: 6px 10px; background: #222018; border: 1px solid var(--border); border-radius: 4px; font-size: 11px; color: var(--text-dim); line-height: 1.5; display: none; }
+  .customer-info-display { margin-top: 6px; padding: 7px 11px; background: #222018; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; color: var(--text-dim); line-height: 1.6; display: none; }
   .customer-info-display.show { display: block; }
-  .customer-info-display .cid-label { color: var(--accent); font-weight: 600; font-size: 10px; letter-spacing: 0.04em; margin-right: 4px; }
+  .customer-info-display .cid-label { color: var(--accent); font-weight: 600; font-size: 11px; letter-spacing: 0.04em; margin-right: 4px; }
 
   /* NIMIKEHAKU */
   .nimike-wrap { position: relative; }
@@ -512,7 +512,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadCustomers() {
-  const data = await sbGet('customers', '?is_active=eq.true&order=name.asc&select=id,name,customer_number,address,city,billing_address,billing_postal_code,billing_city,email');
+  const data = await sbGet('customers', '?is_active=eq.true&order=name.asc&select=id,name,customer_number,address,city,billing_address,billing_postal_code,billing_city,email,phone');
   customers = Array.isArray(data) ? data : [];
 }
 
@@ -602,7 +602,7 @@ function setCustomer(id, name) {
   } else if (id) {
     // Asiakas ei ole aktiivisten listalla (esim. deaktivoitu) — haetaan silti tiedot
     // näytettäväksi, koska vanhoissa tarjouksissa osoite pitää silti näkyä.
-    sbGet('customers', `?id=eq.${id}&select=id,name,address,city,billing_address,billing_postal_code,billing_city,email`)
+    sbGet('customers', `?id=eq.${id}&select=id,name,address,city,billing_address,billing_postal_code,billing_city,email,phone`)
       .then(res => { if (Array.isArray(res) && res[0]) renderCustomerInfo(res[0]); });
   } else {
     renderCustomerInfo(null);
@@ -624,6 +624,9 @@ function renderCustomerInfo(cust) {
   }
   if (cust.email) {
     lines.push(`<div><span class="cid-label">Email</span>${cust.email}</div>`);
+  }
+  if (cust.phone) {
+    lines.push(`<div><span class="cid-label">Puhelin</span>${cust.phone}</div>`);
   }
   if (!lines.length) { box.classList.remove('show'); box.innerHTML = ''; return; }
   box.innerHTML = lines.join('');
