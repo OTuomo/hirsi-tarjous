@@ -101,13 +101,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const [quoteArr, custArr] = await Promise.all([
     sbGet('quotes', `?id=eq.${id}&select=*`),
-    sbGet('customers', '?select=id,name,address,city')
+    sbGet('customers', '?select=id,name,address,city,billing_address,billing_postal_code,billing_city')
   ]);
   const q = Array.isArray(quoteArr) ? quoteArr[0] : null;
   if (!q) { document.getElementById('root').textContent = 'Tarjousta ei löydy.'; return; }
 
   const cust = Array.isArray(custArr) ? custArr.find(c => c.id === q.customer_id) : null;
   const custName = cust ? cust.name : '—';
+  const custStreet = cust ? (cust.billing_address || cust.address || '') : '';
+  const custCityLine = cust ? [cust.billing_postal_code || '', cust.billing_city || cust.city || ''].filter(Boolean).join(' ') : '';
 
   let rowsHTML = '';
 
@@ -178,8 +180,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     <div class="info-row">
       <div class="customer-block">
         <div class="name">${custName}</div>
-        ${cust && cust.address ? `<div>${cust.address}</div>` : ''}
-        ${cust && cust.city ? `<div>${cust.city}</div>` : ''}
+        ${custStreet ? `<div style="font-size:11pt;">${custStreet}</div>` : ''}
+        ${custCityLine ? `<div style="font-size:11pt;">${custCityLine}</div>` : ''}
         ${q.notes ? `<div style="margin-top:4px;color:#555;">${q.notes}</div>` : ''}
       </div>
     </div>
