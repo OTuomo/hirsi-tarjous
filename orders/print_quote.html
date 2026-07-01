@@ -113,6 +113,28 @@ function fmtDate(s) {
   return s.slice(0,10).split('-').reverse().join('.');
 }
 
+// Sama viikkolaskenta kuin tarjous.html:n viikkoselaimessa
+function mondayOfWeek(year, week) {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (jan4day - 1) + (week - 1) * 7);
+  return monday;
+}
+
+function fmtDeliveryWeek(key) {
+  if (!key) return '';
+  const m = /^(\d{4})-(\d{1,2})$/.exec(key.trim());
+  if (!m) return key;
+  const year = parseInt(m[1], 10), week = parseInt(m[2], 10);
+  const monday = mondayOfWeek(year, week);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const f = d => `${d.getUTCDate()}.${d.getUTCMonth()+1}.`;
+  const suffix = sunday.getUTCFullYear() !== monday.getUTCFullYear() ? `${sunday.getUTCFullYear()}` : `${monday.getUTCFullYear()}`;
+  return `Vko ${week} (${f(monday)}–${f(sunday)}${suffix})`;
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   await window._authReady;
   const params = new URLSearchParams(window.location.search);
@@ -123,13 +145,16 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const [quoteArr, custArr] = await Promise.all([
     sbGet('quotes', `?id=eq.${id}&select=*`),
-    sbGet('customers', '?select=id,name,address,city,billing_address,billing_city')
+    sbGet('customers', '?select=id,name,address,city,billing_address,billing_postal_code,billing_city,email')
   ]);
   const q = Array.isArray(quoteArr) ? quoteArr[0] : null;
   if (!q) { document.getElementById('root').textContent = 'Tarjousta ei löydy.'; return; }
 
   const cust = Array.isArray(custArr) ? custArr.find(c => c.id === q.customer_id) : null;
   const custName = cust ? cust.name : '—';
+  // Laskutusosoite ensisijaisena, tavallinen osoite varalla jos laskutusosoitetta ei ole täytetty
+  const custStreet = cust ? (cust.billing_address || cust.address || '') : '';
+  const custCityLine = cust ? [cust.billing_postal_code || '', cust.billing_city || cust.city || ''].filter(Boolean).join(' ') : '';
 
   let sections = [];
   try { sections = JSON.parse(q.sections_json || '[]'); } catch(e) {}
@@ -182,6 +207,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       <div class="doc-title">TARJOUS</div>
       <div class="doc-meta">
         <table>
+          <tr><td>Tarjousnumero</td><td>${q.quote_number || ''}</td></tr>
+          ${q.delivery_week ? `<tr><td>Toimitusviikko</td><td>${fmtDeliveryWeek(q.delivery_week)}</td></tr>` : ''}
           <tr><td>Tarjouksen antopäivä</td><td>${fmtDate(q.created_at)}</td></tr>
           <tr><td>Tarjous voimassa</td><td>${fmtDate(q.valid_until)}</td></tr>
         </table>
@@ -191,8 +218,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     <div class="info-row">
       <div class="customer-block">
         <div class="name">${custName}</div>
-        ${cust && cust.address ? `<div>${cust.address}</div>` : ''}
-        ${cust && cust.city ? `<div>${cust.city}</div>` : ''}
+        ${custStreet ? `<div>${custStreet}</div>` : ''}
+        ${custCityLine ? `<div>${custCityLine}</div>` : ''}
+        ${cust && cust.email ? `<div style="font-size:8.5pt;color:#555;margin-top:2px;">${cust.email}</div>` : ''}
       </div>
       <div class="summary-top">
         <table>
