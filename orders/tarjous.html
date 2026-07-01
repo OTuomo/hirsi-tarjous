@@ -251,6 +251,21 @@
         <label>Kaupunki</label>
         <input type="text" id="nc_city" placeholder="Kaupunki">
       </div>
+      <div class="field" style="grid-column:1/-1;border-top:1px solid var(--border);margin-top:4px;padding-top:10px;">
+        <label style="text-transform:uppercase;letter-spacing:0.06em;">Laskutusosoite (jos eri kuin yllä)</label>
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label>Laskutusosoite — katuosoite</label>
+        <input type="text" id="nc_billing_address" placeholder="Katuosoite">
+      </div>
+      <div class="field">
+        <label>Postinumero</label>
+        <input type="text" id="nc_billing_postal_code" placeholder="00100">
+      </div>
+      <div class="field">
+        <label>Laskutuskaupunki</label>
+        <input type="text" id="nc_billing_city" placeholder="Kaupunki">
+      </div>
       <div class="field" style="grid-column:1/-1">
         <label>Y-tunnus</label>
         <input type="text" id="nc_business_id" placeholder="1234567-8">
@@ -779,7 +794,7 @@ async function reloadTpl() {
 // UUSI ASIAKAS MODAL
 // =============================================
 function openNewCustModal() {
-  ['nc_name','nc_phone','nc_email','nc_address','nc_city','nc_business_id'].forEach(id => {
+  ['nc_name','nc_phone','nc_email','nc_address','nc_city','nc_billing_address','nc_billing_postal_code','nc_billing_city','nc_business_id'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('newCustModal').classList.add('open');
@@ -802,6 +817,9 @@ async function saveNewCustomer() {
       email: document.getElementById('nc_email').value.trim() || null,
       address: document.getElementById('nc_address').value.trim() || null,
       city: document.getElementById('nc_city').value.trim() || null,
+      billing_address: document.getElementById('nc_billing_address').value.trim() || null,
+      billing_postal_code: document.getElementById('nc_billing_postal_code').value.trim() || null,
+      billing_city: document.getElementById('nc_billing_city').value.trim() || null,
       business_id: document.getElementById('nc_business_id').value.trim() || null,
       is_active: true
     });
