@@ -216,11 +216,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     </div>
 
     <div class="info-row">
-      <div class="customer-block">
+      <div class="customer-block" style="text-align:left;">
         <div class="name">${custName}</div>
-        ${custStreet ? `<div>${custStreet}</div>` : ''}
-        ${custCityLine ? `<div>${custCityLine}</div>` : ''}
-        ${cust && cust.email ? `<div style="font-size:8.5pt;color:#555;margin-top:2px;">${cust.email}</div>` : ''}
+        ${custStreet ? `<div style="font-size:11pt;">${custStreet}</div>` : ''}
+        ${custCityLine ? `<div style="font-size:11pt;">${custCityLine}</div>` : ''}
       </div>
       <div class="summary-top">
         <table>
