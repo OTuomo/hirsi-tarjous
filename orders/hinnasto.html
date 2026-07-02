@@ -226,6 +226,7 @@
   .badge-active   { background: rgba(61,186,110,0.12); color: var(--success); border: 1px solid rgba(61,186,110,0.3); }
   .badge-inactive { background: rgba(149,149,160,0.1); color: var(--text-dim); border: 1px solid var(--border); }
   .badge-stock    { background: rgba(217,119,6,0.12); color: var(--accent); border: 1px solid rgba(217,119,6,0.3); }
+  .badge-assembly { background: rgba(91,155,213,0.12); color: #5b9bd5; border: 1px solid rgba(91,155,213,0.3); }
 
   /* VÄLILEHDET */
   .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
@@ -250,6 +251,15 @@
   .low-stock-row { background: rgba(232,160,32,0.06); }
   .low-stock-row:hover { background: rgba(232,160,32,0.12) !important; }
   .stock-warn { color: var(--danger); font-weight: 600; }
+  .comp-search-wrap { position: relative; }
+  .comp-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 2px; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 50; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+  .comp-dropdown.open { display: block; }
+  .comp-option { padding: 7px 10px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; border-bottom: 1px solid var(--border); }
+  .comp-option:hover { background: var(--accent-glow); color: var(--accent); }
+  .comp-option .comp-code { color: var(--text-dim); margin-right: 6px; font-size: 10px; }
+  .comp-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px; }
+  .comp-row .comp-name { flex: 1; font-size: 12px; }
+  .comp-row input[type="number"] { width: 70px; }
   .cat {
     display: inline-block; padding: 2px 8px; border-radius: 3px;
     font-size: 11px; background: var(--accent-glow); color: var(--accent);
@@ -502,6 +512,7 @@
         <select id="fPricingModel" onchange="togglePricingFields()">
           <option value="simple">Yksinkertainen — ostohinta + kate%</option>
           <option value="cubic">Kuutiohinnoittelu — hirsi / sahatavara</option>
+          <option value="assembly">Kokoonpano — rakennettu varastotuotteista</option>
         </select>
       </div>
 
@@ -580,6 +591,32 @@
               </div>
             </div>
             <input type="hidden" id="fPrice">
+          </div>
+        </div>
+      </div>
+
+      <!-- KOKOONPANO (assembly) -->
+      <div id="assemblyFields" class="form-group full" style="display:none;">
+        <label>Komponentit — hae varastotuotteista</label>
+        <div class="comp-search-wrap">
+          <input type="text" id="fCompSearch" placeholder="Hae nimellä tai koodilla…"
+            oninput="onCompSearchInput(this.value)" onfocus="onCompSearchInput(this.value)"
+            onblur="setTimeout(()=>{ const d=document.getElementById('compDropdown'); if(d) d.classList.remove('open'); },150)">
+          <div class="comp-dropdown" id="compDropdown"></div>
+        </div>
+        <div id="compList" style="margin-top:10px;"></div>
+        <div class="form-grid" style="width:100%;margin-top:10px;">
+          <div class="form-group">
+            <label>Kate % (kokoonpanolle)</label>
+            <input type="number" id="fKateAssembly" step="0.1" min="0" max="999" placeholder="0" oninput="calcAssemblyPrice()">
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button type="button" class="btn btn-ghost" onclick="calcAssemblyPrice()">Laske hinta komponenteista</button>
+          </div>
+          <div class="form-group full" style="background:rgba(91,155,213,0.07);border:1px solid rgba(91,155,213,0.2);border-radius:4px;padding:10px;">
+            <label style="color:#5b9bd5;">Myyntihinta alv 0% <span style="color:var(--text-dim);font-weight:400;">(laskettu — voit muokata käsin)</span></label>
+            <input type="number" id="fPriceAssembly" step="0.0001" min="0" placeholder="—" oninput="onAssemblyPriceManualInput()">
           </div>
         </div>
       </div>
@@ -796,13 +833,16 @@ async function autoFillCode(cat) {
 
 function togglePricingFields() {
   const model = document.getElementById('fPricingModel').value;
-  document.getElementById('simpleFields').style.display = model === 'simple' ? '' : 'none';
-  document.getElementById('cubicFields').style.display  = model === 'cubic'  ? '' : 'none';
+  document.getElementById('simpleFields').style.display   = model === 'simple'   ? '' : 'none';
+  document.getElementById('cubicFields').style.display    = model === 'cubic'    ? '' : 'none';
+  document.getElementById('assemblyFields').style.display = model === 'assembly' ? '' : 'none';
+  if (model === 'assembly') renderComponentsList();
   laskeMyynnin();
 }
 
 function laskeMyynnin() {
   const model = document.getElementById('fPricingModel').value;
+  if (model === 'assembly') return;
   if (model === 'simple') {
     const osto  = parseFloat(document.getElementById('fOstohinta').value) || 0;
     const kate  = (parseFloat(document.getElementById('fKate').value) || 0) / 100;
@@ -868,7 +908,10 @@ function renderTable() {
 
   tbody.innerHTML = slice.map(p => {
     const isCubic = p.pricing_model === 'cubic';
-    const priceTooltip = isCubic
+    const isAssembly = p.pricing_model === 'assembly' || p.is_assembly;
+    const priceTooltip = isAssembly
+      ? `Kokoonpano — hinta laskettu komponenteista, kate: ${((p.kate_percent||0)*100).toFixed(1)}%`
+      : isCubic
       ? `Kuutio: ${fmtPrice(p.kuutiohinta||0)} + T:${fmtPrice(p.tyosto_kuutio||0)} + S:${fmtPrice(p.salvostus_kuutio||0)} | Kate: ${((p.kate_percent||0)*100).toFixed(1)}%`
       : `Osto: ${fmtPrice(p.ostohinta||0)} | Kate: ${((p.kate_percent||0)*100).toFixed(1)}%${p.kpl > 1 ? ' | Kpl: '+p.kpl : ''}`;
     const st = p.status || 'active';
@@ -884,7 +927,7 @@ function renderTable() {
     return `
     <tr ${isLow ? 'class="low-stock-row"' : ''}>
       <td class="mono">${esc(p.code || '—')}</td>
-      <td>${esc(p.name || '')}</td>
+      <td>${esc(p.name || '')}${isAssembly ? ' <span class="badge badge-assembly" style="font-size:9px;">kokoonpano</span>' : ''}</td>
       <td>${p.category ? `<span class="cat">${esc(p.category)}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
       <td class="mono">${esc(p.unit || '—')}</td>
       <td class="price" title="${esc(priceTooltip)}">${p.price != null ? fmtPrice(p.price) : '—'}</td>
@@ -900,6 +943,7 @@ function renderTable() {
 
   cardList.innerHTML = slice.map(p => {
     const st = p.status || 'active';
+    const isAssembly = p.pricing_model === 'assembly' || p.is_assembly;
     const isLow = p.varasto_maara != null && p.varasto_alaraja != null && p.varasto_maara < p.varasto_alaraja;
     const statusBadge = st === 'active'
       ? `<span class="badge badge-active" style="font-size:10px;">aktiivinen</span>`
@@ -909,7 +953,7 @@ function renderTable() {
     return `
     <div class="product-card">
       <div class="card-top">
-        <div class="card-name">${esc(p.name || '—')}</div>
+        <div class="card-name">${esc(p.name || '—')}${isAssembly ? ' <span class="badge badge-assembly" style="font-size:9px;">kokoonpano</span>' : ''}</div>
         <div class="card-price">${p.price != null ? fmtPrice(p.price) + ' €' : '—'}</div>
       </div>
       <div class="card-bottom">
@@ -977,7 +1021,7 @@ function openNew() {
   modal.classList.add('open');
 }
 
-function openEdit(id) {
+async function openEdit(id) {
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
   editingId = id;
@@ -994,6 +1038,9 @@ function openEdit(id) {
   document.getElementById('fVarastoAlaraja').value = p.varasto_alaraja ?? '';
   document.getElementById('fPricingModel').value = p.pricing_model || 'simple';
 
+  assemblyComponents = [];
+  assemblyPriceManual = false;
+
   if (p.pricing_model === 'cubic') {
     document.getElementById('fAihioLeveys').value  = p.aihio_leveys      ?? '';
     document.getElementById('fAihioPaksuus').value = p.aihio_paksuus    ?? '';
@@ -1003,6 +1050,23 @@ function openEdit(id) {
     document.getElementById('fTyosto').value      = p.tyosto_kuutio    ?? '';
     document.getElementById('fSalvostus').value   = p.salvostus_kuutio ?? '';
     document.getElementById('fKateCubic').value   = p.kate_percent != null ? (p.kate_percent * 100).toFixed(1) : '';
+  } else if (p.pricing_model === 'assembly') {
+    document.getElementById('fKateAssembly').value  = p.kate_percent != null ? (p.kate_percent * 100).toFixed(1) : '';
+    document.getElementById('fPriceAssembly').value = p.price ?? '';
+    assemblyPriceManual = true; // säilytä tallennettu hinta kunnes käyttäjä muuttaa jotain
+    const { data } = await db.from('product_components').select('*').eq('parent_product_id', p.id);
+    assemblyComponents = (data || []).map(c => {
+      const comp = allProducts.find(x => x.id === c.component_product_id);
+      return {
+        productId: c.component_product_id,
+        code: comp ? comp.code : '',
+        name: comp ? comp.name : '(tuote puuttuu tai poistettu)',
+        unit: comp ? comp.unit : '',
+        price: comp ? comp.price : 0,
+        quantity: c.quantity
+      };
+    });
+    renderComponentsList();
   } else {
     document.getElementById('fOstohinta').value   = p.ostohinta    ?? '';
     document.getElementById('fKate').value        = p.kate_percent != null ? (p.kate_percent * 100).toFixed(1) : '';
@@ -1024,7 +1088,13 @@ async function saveProduct() {
   const model = document.getElementById('fPricingModel').value;
   const kate  = parseFloat(model === 'cubic'
     ? document.getElementById('fKateCubic').value
+    : model === 'assembly'
+    ? document.getElementById('fKateAssembly').value
     : document.getElementById('fKate').value) || 0;
+
+  const priceValue = model === 'assembly'
+    ? document.getElementById('fPriceAssembly').value
+    : document.getElementById('fPrice').value;
 
   const payload = {
     code:         document.getElementById('fCode').value.trim()     || null,
@@ -1037,8 +1107,9 @@ async function saveProduct() {
     varasto_maara:   document.getElementById('fVarastoMaara').value !== '' ? parseFloat(document.getElementById('fVarastoMaara').value) : null,
     varasto_alaraja: document.getElementById('fVarastoAlaraja').value !== '' ? parseFloat(document.getElementById('fVarastoAlaraja').value) : null,
     pricing_model: model,
+    is_assembly:  model === 'assembly',
     kate_percent:  kate / 100,
-    price:        parseFloat(document.getElementById('fPrice').value) || null,
+    price:        parseFloat(priceValue) || null,
   };
 
   if (model === 'cubic') {
@@ -1051,6 +1122,16 @@ async function saveProduct() {
     payload.mitta            = parseFloat(document.getElementById('fMitta').value)        || null;
     payload.ostohinta        = null;
     payload.kpl              = 1;
+  } else if (model === 'assembly') {
+    payload.ostohinta        = null;
+    payload.kpl              = 1;
+    payload.kuutiohinta      = null;
+    payload.tyosto_kuutio    = null;
+    payload.salvostus_kuutio = null;
+    payload.leveys           = null;
+    payload.mitta             = null;
+    payload.aihio_leveys     = null;
+    payload.aihio_paksuus    = null;
   } else {
     payload.ostohinta        = parseFloat(document.getElementById('fOstohinta').value)   || null;
     payload.kpl              = parseFloat(document.getElementById('fKpl').value)         || 1;
@@ -1062,20 +1143,42 @@ async function saveProduct() {
   }
 
   if (!payload.name) { showToast('Nimike on pakollinen', 'error'); return; }
+  if (model === 'assembly' && assemblyComponents.length === 0) {
+    showToast('Lisää vähintään yksi komponentti kokoonpanolle', 'error'); return;
+  }
 
   const saveBtn = document.getElementById('saveBtn');
   saveBtn.disabled = true; saveBtn.textContent = 'Tallennetaan…';
 
-  let error;
+  let error, productId = editingId;
   if (editingId) {
     ({ error } = await db.from('products').update(payload).eq('id', editingId));
   } else {
-    ({ error } = await db.from('products').insert([payload]));
+    const { data, error: insErr } = await db.from('products').insert([payload]).select('id').single();
+    error = insErr;
+    if (data) productId = data.id;
+  }
+
+  if (error) {
+    saveBtn.disabled = false; saveBtn.textContent = 'Tallenna';
+    showToast('Virhe tallennuksessa: ' + error.message, 'error'); return;
+  }
+
+  // Kokoonpanon komponentit: poistetaan vanhat rivit ja kirjoitetaan nykyiset
+  if (productId) {
+    await db.from('product_components').delete().eq('parent_product_id', productId);
+    if (model === 'assembly' && assemblyComponents.length > 0) {
+      const rows = assemblyComponents.map(c => ({
+        parent_product_id: productId,
+        component_product_id: c.productId,
+        quantity: parseFloat(c.quantity) || 0
+      }));
+      const { error: compErr } = await db.from('product_components').insert(rows);
+      if (compErr) showToast('Tuote tallentui, mutta komponenttien tallennus epäonnistui: ' + compErr.message, 'error');
+    }
   }
 
   saveBtn.disabled = false; saveBtn.textContent = 'Tallenna';
-
-  if (error) { showToast('Virhe tallennuksessa: ' + error.message, 'error'); return; }
   showToast(editingId ? 'Tuote päivitetty ✓' : 'Tuote lisätty ✓', 'success');
   closeModal();
   loadProducts();
@@ -1185,10 +1288,95 @@ document.getElementById('csvImportBtn').addEventListener('click', async () => {
 });
 
 // ── Helpers ────────────────────────────────────────────────
+// ── Kokoonpano: komponenttien haku ja hallinta ─────────────
+let assemblyComponents = [];
+let assemblyPriceManual = false;
+
+function onCompSearchInput(val) {
+  const dd = document.getElementById('compDropdown');
+  const q = val.toLowerCase().trim();
+  if (!q) { dd.classList.remove('open'); dd.innerHTML = ''; return; }
+  const hits = allProducts.filter(p => {
+    if (p.id === editingId) return false;        // ei itseään komponentiksi
+    if (p.pricing_model === 'assembly') return false; // ei kokoonpanoa kokoonpanoon
+    const name = (p.name || '').toLowerCase();
+    const code = String(p.code || '').toLowerCase();
+    return name.includes(q) || code.includes(q);
+  }).slice(0, 40);
+  if (!hits.length) {
+    dd.innerHTML = '<div class="comp-option" style="color:var(--text-dim)">Ei tuloksia</div>';
+    dd.classList.add('open');
+    return;
+  }
+  dd.innerHTML = hits.map(p =>
+    `<div class="comp-option" onclick="addComponent('${p.id}')">
+      <span class="comp-code">${esc(p.code || '')}</span>${esc(p.name)}
+      <span style="color:var(--text-dim);font-size:10px;margin-left:6px;">${esc(p.unit || '')} · ${p.price != null ? fmtPrice(p.price) + ' €' : '—'}</span>
+    </div>`
+  ).join('');
+  dd.classList.add('open');
+}
+
+function addComponent(productId) {
+  const p = allProducts.find(x => x.id === productId);
+  if (!p) return;
+  const existing = assemblyComponents.find(c => c.productId === productId);
+  if (existing) {
+    existing.quantity = (parseFloat(existing.quantity) || 0) + 1;
+  } else {
+    assemblyComponents.push({ productId: p.id, code: p.code, name: p.name, unit: p.unit, price: p.price, quantity: 1 });
+  }
+  document.getElementById('fCompSearch').value = '';
+  document.getElementById('compDropdown').classList.remove('open');
+  renderComponentsList();
+  if (!assemblyPriceManual) calcAssemblyPrice();
+}
+
+function updateComponentQty(idx, val) {
+  if (!assemblyComponents[idx]) return;
+  assemblyComponents[idx].quantity = parseFloat(val) || 0;
+  if (!assemblyPriceManual) calcAssemblyPrice();
+}
+
+function removeComponent(idx) {
+  assemblyComponents.splice(idx, 1);
+  renderComponentsList();
+  if (!assemblyPriceManual) calcAssemblyPrice();
+}
+
+function renderComponentsList() {
+  const el = document.getElementById('compList');
+  if (!el) return;
+  if (!assemblyComponents.length) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:6px 0;">Ei komponentteja vielä — hae yllä.</div>';
+    return;
+  }
+  el.innerHTML = assemblyComponents.map((c, i) => `
+    <div class="comp-row">
+      <span class="comp-name">${esc(c.code ? c.code + ' – ' : '')}${esc(c.name)} <span style="color:var(--text-dim);font-size:10px;">${c.price != null ? fmtPrice(c.price) + ' €/' + esc(c.unit || '') : ''}</span></span>
+      <input type="number" value="${c.quantity}" min="0" step="0.01" oninput="updateComponentQty(${i}, this.value)">
+      <span style="color:var(--text-dim);font-size:11px;">${esc(c.unit || '')}</span>
+      <button type="button" class="btn btn-danger btn-sm btn-icon" onclick="removeComponent(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function calcAssemblyPrice() {
+  const sum  = assemblyComponents.reduce((s, c) => s + (parseFloat(c.price) || 0) * (parseFloat(c.quantity) || 0), 0);
+  const kate = (parseFloat(document.getElementById('fKateAssembly').value) || 0) / 100;
+  const total = sum * (1 + kate);
+  document.getElementById('fPriceAssembly').value = total > 0 ? total.toFixed(4) : '';
+  assemblyPriceManual = false;
+}
+
+function onAssemblyPriceManualInput() {
+  assemblyPriceManual = true;
+}
+
 function clearForm() {
   document.getElementById('fPricingModel').dataset.userChanged = '';
   ['fCode','fName','fUnit','fCategory','fOstohinta','fKate','fKuutiohinta','fAihioLeveys','fAihioPaksuus',
-   'fTyosto','fSalvostus','fKateCubic','fLeveys','fMitta'].forEach(id => {
+   'fTyosto','fSalvostus','fKateCubic','fLeveys','fMitta','fKateAssembly','fPriceAssembly','fCompSearch'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1199,6 +1387,9 @@ function clearForm() {
   document.getElementById('fVarastoAlaraja').value = '';
   document.getElementById('fPricingModel').value = 'simple';
   document.getElementById('fPrice').value       = '';
+  assemblyComponents = [];
+  assemblyPriceManual = false;
+  renderComponentsList();
   if (document.getElementById('calcKuutio')) document.getElementById('calcKuutio').textContent = '—';
   if (document.getElementById('calcJm'))     document.getElementById('calcJm').textContent     = '—';
   togglePricingFields();
