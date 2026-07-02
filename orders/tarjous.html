@@ -84,6 +84,7 @@
   .nimike-option:hover { background: var(--accent-glow); color: var(--accent); }
   .nimike-option.active { background: var(--accent-glow); color: var(--accent); }
   .nimike-option .nimike-code { color: var(--text-dim); margin-right: 6px; font-size: 10px; }
+  .assembly-tag { display: inline-block; margin-top: 3px; font-size: 9px; font-family: 'IBM Plex Mono', monospace; color: #5b9bd5; background: rgba(91,155,213,0.12); border: 1px solid rgba(91,155,213,0.3); border-radius: 3px; padding: 1px 5px; letter-spacing: 0.03em; }
 
   /* SECTION ROW */
   .section-row { background: #222018; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 4px; }
@@ -963,6 +964,7 @@ function renderRowHTML(secId, row) {
             style="min-width:130px;">
           <div class="nimike-dropdown" id="nimike-dd-${secId}-${row.id}"></div>
         </div>
+        ${row.isAssembly ? '<span class="assembly-tag" title="Kokoonpano — puretaan komponentteihin tarvikelistassa">⚙ kokoonpano</span>' : ''}
       </td>
       <td><input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" placeholder="Kuvaus"></td>
       <td>
@@ -993,6 +995,7 @@ function renderCardHTML(secId, row) {
         <label>Nimike</label>
         <input type="text" value="${esc(row.nimikeTeksti||'')}" style="flex:1;"
           oninput="onNimikeInput(${secId},${row.id},this.value)" placeholder="Hae...">
+        ${row.isAssembly ? '<span class="assembly-tag">⚙</span>' : ''}
       </div>
       <div class="card-row"><label>Kuvaus</label>
         <input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" style="flex:1;"></div>
@@ -1095,6 +1098,7 @@ function selectNimike(secId, rowId, productId) {
     row.unit = prod.unit || row.unit;
     row.basePrice = prod.price != null ? parseFloat(prod.price) : null;
     if (!row.priceManual && row.basePrice !== null) row.price = row.basePrice;
+    row.isAssembly = prod.pricing_model === 'assembly';
 
     // Päivitä kentät suoraan DOM:iin
     const nimikeInput = document.getElementById(`nimike-${secId}-${rowId}`);
@@ -1134,7 +1138,7 @@ function selectNimike(secId, rowId, productId) {
 function addRow(secId) {
   const sec = sections.find(s => s.id === secId);
   if (!sec) return;
-  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null });
+  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null, isAssembly: false });
   renderSections();
   autoSave();
 }
