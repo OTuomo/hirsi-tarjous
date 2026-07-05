@@ -101,44 +101,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const id = params.get('id');
   if (!id) { document.getElementById('root').textContent = 'Tarjousnumero puuttuu URL:sta.'; return; }
 
-  const [quoteArr, custArr, productsArr, componentsArr] = await Promise.all([
+  const [quoteArr, custArr] = await Promise.all([
     sbGet('quotes', `?id=eq.${id}&select=*`),
-    sbGet('customers', '?select=id,name,address,city,billing_address,billing_postal_code,billing_city'),
-    sbGet('products', '?select=id,code,name,unit,pricing_model'),
-    sbGet('product_components', '?select=parent_product_id,component_product_id,quantity')
+    sbGet('customers', '?select=id,name,address,city,billing_address,billing_postal_code,billing_city')
   ]);
   const q = Array.isArray(quoteArr) ? quoteArr[0] : null;
   if (!q) { document.getElementById('root').textContent = 'Tarjousta ei löydy.'; return; }
-
-  const productsById = {};
-  (Array.isArray(productsArr) ? productsArr : []).forEach(p => { productsById[p.id] = p; });
-  const componentsByParent = {};
-  (Array.isArray(componentsArr) ? componentsArr : []).forEach(c => {
-    if (!componentsByParent[c.parent_product_id]) componentsByParent[c.parent_product_id] = [];
-    componentsByParent[c.parent_product_id].push(c);
-  });
-
-  // Kokoonpanon purku riveiksi — palauttaa HTML:n jos rivi on kokoonpano jolla komponentteja, muuten null
-  function expandAssemblyRow(row) {
-    if (!row.isAssembly || !row.productId) return null;
-    const comps = componentsByParent[row.productId];
-    if (!comps || !comps.length) return null;
-    const parentLabel = row.hinnastoTeksti || row.nimikeTeksti || '';
-    let html = `<tr class="assembly-note"><td colspan="5">↳ ${esc(parentLabel)} (${fmtNum(row.qty)} kpl) — puretaan komponentteihin:</td></tr>`;
-    comps.forEach(c => {
-      const prod = productsById[c.component_product_id];
-      const totalQty = (parseFloat(row.qty) || 0) * (parseFloat(c.quantity) || 0);
-      html += `
-        <tr class="assembly-component">
-          <td>${esc(prod ? prod.name : '(tuote puuttuu)')}</td>
-          <td></td>
-          <td class="right">${fmtNum(totalQty)}</td>
-          <td>${esc(prod ? (prod.unit || '') : '')}</td>
-          <td></td>
-        </tr>`;
-    });
-    return html;
-  }
 
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -157,13 +125,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (hasPackingList) {
     packingSections.forEach(sec => {
       if (!sec.rows || !sec.rows.length) return;
-      const validRows = sec.rows.filter(row => (row.nimikeTeksti || row.desc) && parseFloat(row.qty) > 0);
+      const validRows = sec.rows.filter(row => row.isNote || ((row.nimikeTeksti || row.desc) && parseFloat(row.qty) > 0));
       if (!validRows.length) return;
       const pkgLabel = sec.packageNumber ? `PAKETTI ${sec.packageNumber} — ${sec.name}` : sec.name;
       rowsHTML += `<tr class="section-hdr"><td colspan="5">${pkgLabel}</td></tr>`;
       validRows.forEach(row => {
-        const expanded = expandAssemblyRow(row);
-        if (expanded) { rowsHTML += expanded; return; }
+        if (row.isNote) {
+          rowsHTML += `<tr class="assembly-note"><td colspan="5">${esc(row.nimikeTeksti || '')}</td></tr>`;
+          return;
+        }
         rowsHTML += `
           <tr>
             <td>${row.nimikeTeksti || ''}</td>
@@ -184,8 +154,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (!validRows.length) return;
       rowsHTML += `<tr class="section-hdr"><td colspan="5">${sec.name}</td></tr>`;
       validRows.forEach(row => {
-        const expanded = expandAssemblyRow(row);
-        if (expanded) { rowsHTML += expanded; return; }
         rowsHTML += `
           <tr>
             <td>${row.nimikeTeksti || ''}</td>
