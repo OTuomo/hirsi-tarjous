@@ -416,7 +416,6 @@
     </div>
     <div class="spacer"></div>
     <button class="btn btn-ghost" onclick="printQuote()">🖨 Tulosta tarjous</button>
-    <button class="btn btn-ghost" onclick="printSupply()">📋 Tulosta tarvikkelista</button>
     <button class="btn btn-ghost" onclick="copyQuote()">⧉ Kopioi tarjous</button>
   </div>
 
@@ -964,7 +963,7 @@ function renderRowHTML(secId, row) {
             style="min-width:130px;">
           <div class="nimike-dropdown" id="nimike-dd-${secId}-${row.id}"></div>
         </div>
-        ${row.isAssembly ? '<span class="assembly-tag" title="Kokoonpano — puretaan komponentteihin tarvikelistassa">⚙ kokoonpano</span>' : ''}
+        ${row.isAssembly ? '<span class="assembly-tag" title="Kokoonpano — voidaan avata komponentteihin pakkauslistalla">⚙ kokoonpano</span>' : ''}
       </td>
       <td><input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" placeholder="Kuvaus"></td>
       <td>
@@ -1383,6 +1382,8 @@ async function changeStatus(newStatus) {
   document.getElementById('prodStatus').style.display = ['ORDERED','COMPLETED'].includes(newStatus) ? 'flex' : 'none';
   if (currentQuoteId) {
     try { await sbPatch('quotes', currentQuoteId, { status: newStatus }); } catch(e) {}
+  } else {
+    autoSave(); // uusi, ei vielä tallennettu tarjous — luo tietue heti, status mukana
   }
 }
 
@@ -1487,10 +1488,8 @@ function printQuote() {
   window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}`, '_blank');
 }
 
-function printSupply() {
-  if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
-  window.open(`print_supply.html?id=${currentQuoteId}`, '_blank');
-}
+// printSupply() poistettu 2026-07 — tarvikelista tehdään aina pakkauslista.html:n kautta (ks. openPackingPage),
+// jotta käyttäjä joutuu aina päättämään näkyvätkö kokoonpanot eriteltynä vai ei.
 
 // =============================================
 // NAV
