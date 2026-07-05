@@ -32,7 +32,7 @@
   .product-table td { padding: 4px 6px; border-bottom: 1px solid #ddd; vertical-align: top; text-align: left; }
   .product-table td.right { text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 8.5pt; }
   .product-table .section-hdr td { background: #f0f0f0; font-weight: 700; font-size: 9pt; border-bottom: 1px solid #bbb; border-top: 3px solid #555; padding: 5px 6px; }
-  .product-table .assembly-note td { font-style: italic; color: #777; font-size: 8pt; padding: 4px 6px 2px; border-bottom: none; }
+  .product-table .assembly-note td { font-style: italic; color: #777; font-size: 9pt; padding: 4px 6px 2px; border-bottom: none; }
   .product-table tr.assembly-component td { padding-left: 14px; }
 
   .doc-footer {
@@ -130,7 +130,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const totalQty = (parseFloat(row.qty) || 0) * (parseFloat(c.quantity) || 0);
       html += `
         <tr class="assembly-component">
-          <td>${esc(prod ? ((prod.code ? prod.code + ' – ' : '') + prod.name) : '(tuote puuttuu)')}</td>
+          <td>${esc(prod ? prod.name : '(tuote puuttuu)')}</td>
           <td></td>
           <td class="right">${fmtNum(totalQty)}</td>
           <td>${esc(prod ? (prod.unit || '') : '')}</td>
