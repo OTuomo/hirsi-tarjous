@@ -126,7 +126,7 @@
   /* Varmista että status-valikko ei leikkaudu sivun alareunassa */
   .action-bar select { max-height: 200px; }
   .action-bar .spacer { flex: 1; }
-  .status-badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 3px; letter-spacing: 0.06em; }
+  .status-badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 5px; letter-spacing: 0.06em; }
   .status-badge.draft    { background: #44444f; color: var(--text-dim); }
   .status-badge.progress { background: #3d2e1e; color: var(--warn); }
   .status-badge.sent     { background: #1e3d2e; color: var(--success); }
@@ -134,6 +134,8 @@
   .status-badge.completed{ background: #1e3d2e; color: #4ade80; }
   .status-badge.model    { background: #2a1e3d; color: #c084fc; }
   .status-badge.archived { background: #2a2a2a; color: #666; }
+  .stale-banner { display: none; align-items: center; gap: 10px; background: #3d2e1e; border: 1px solid var(--warn); color: var(--warn); font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
+  .stale-banner.show { display: flex; }
 
   /* MODAL */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center; }
@@ -200,7 +202,7 @@
       <option value="ARCHIVED">Arkisto</option>
       <option value="MODEL">Malli</option>
     </select>
-    <span class="status-badge draft" id="statusBadge" style="display:none;">Luonnos</span>
+    <span class="status-badge draft" id="statusBadge">Luonnos</span>
   </div>
 </header>
 
@@ -285,6 +287,8 @@
 </div>
 
 <div class="page">
+
+  <div class="stale-banner" id="staleBanner">⏰ <span id="staleBannerText"></span></div>
 
   <!-- PERUSTIEDOT -->
   <div class="panel">
@@ -475,6 +479,7 @@ let textTemplates = [];
 let sections = [];
 let currentQuoteId = null;
 let currentStatus = 'DRAFT';
+let currentStatusChangedAt = null;
 let sectionIdCounter = 0;
 let rowIdCounter = 0;
 
@@ -1378,12 +1383,13 @@ async function saveProdStatus() {
 
 async function changeStatus(newStatus) {
   currentStatus = newStatus;
+  currentStatusChangedAt = new Date().toISOString();
   updateStatusBadge();
   document.getElementById('prodStatus').style.display = ['ORDERED','COMPLETED'].includes(newStatus) ? 'flex' : 'none';
   if (currentQuoteId) {
-    try { await sbPatch('quotes', currentQuoteId, { status: newStatus }); } catch(e) {}
+    try { await sbPatch('quotes', currentQuoteId, { status: newStatus, status_changed_at: currentStatusChangedAt }); } catch(e) {}
   } else {
-    autoSave(); // uusi, ei vielä tallennettu tarjous — luo tietue heti, status mukana
+    autoSave(); // uusi, ei vielä tallennettu tarjous — luo tietue heti, status mukana (status_changed_at = DB:n oletus now())
   }
 }
 
@@ -1396,6 +1402,7 @@ async function loadQuote(id) {
   if (!q) return;
   currentQuoteId = q.id;
   currentStatus = q.status || 'DRAFT';
+  currentStatusChangedAt = q.status_changed_at || q.created_at || null;
   document.getElementById('prodStatus').style.display = ['ORDERED','COMPLETED'].includes(currentStatus) ? 'flex' : 'none';
   document.getElementById('quoteNumber').value = q.quote_number || '';
   document.getElementById('quoteDate').value = (q.created_at||'').slice(0,10);
@@ -1477,6 +1484,28 @@ function updateStatusBadge() {
   badge.className = `status-badge ${cls}`;
   badge.textContent = label;
   if (sel) sel.value = currentStatus;
+  checkStaleStatus();
+}
+
+// Muistuttaa jos tarjous on jämähtänyt Luonnos/Kesken/Tarjottu-tilaan yli 7 päiväksi.
+// Tilattu/Valmis/Arkisto/Malli eivät ole "unohdettuja" vaikka ne olisivat vanhoja, joten niistä ei muistuteta.
+const STALE_STATUSES = ['DRAFT', 'IN_PROGRESS', 'QUOTED'];
+const STALE_DAYS = 7;
+function checkStaleStatus() {
+  const banner = document.getElementById('staleBanner');
+  const text = document.getElementById('staleBannerText');
+  if (!currentQuoteId || !currentStatusChangedAt || !STALE_STATUSES.includes(currentStatus)) {
+    banner.classList.remove('show');
+    return;
+  }
+  const days = Math.floor((Date.now() - new Date(currentStatusChangedAt).getTime()) / 86400000);
+  if (days >= STALE_DAYS) {
+    const labelMap = { DRAFT: 'Luonnos', IN_PROGRESS: 'Kesken', QUOTED: 'Tarjottu' };
+    text.textContent = `Tämä on ollut tilassa "${labelMap[currentStatus] || currentStatus}" jo ${days} päivää — muistathan päivittää tilan?`;
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
 }
 
 // =============================================
