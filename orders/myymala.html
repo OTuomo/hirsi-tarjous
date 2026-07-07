@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Myymälä — Okkosen Puutuote</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  :root {
+    --bg: #1c1a14; --panel: #2a2720; --border: #4a4535;
+    --accent: #d97706; --accent-dim: #b45309; --accent-glow: rgba(217,119,6,0.15);
+    --text: #ededf0; --text-dim: #9595a0; --input-bg: #333028;
+    --success: #3dba6e; --danger: #e84040; --warn: #e8a020; --section-header: #222018;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; }
+  header { background: #141210; border-bottom: 2px solid var(--accent); padding: 10px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  header .logo { height: 32px; width: auto; }
+  header h1 { font-size: 16px; font-weight: 500; color: var(--text); }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .nav-menu-wrap { position: relative; }
+  .nav-btn { background: #3a3545; border: 1px solid #585568; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 4px; cursor: pointer; letter-spacing: 0.04em; }
+  .nav-btn:hover { background: #4a4558; }
+  .nav-dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; background: #3a3545; border: 1px solid var(--border); border-radius: 6px; min-width: 200px; z-index: 999; box-shadow: 0 4px 16px rgba(0,0,0,0.4); overflow: hidden; }
+  .nav-dropdown.open { display: block; }
+  .nav-section-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); padding: 8px 14px 4px; }
+  .nav-item { display: block; width: 100%; text-align: left; padding: 8px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text); background: none; border: none; cursor: pointer; text-decoration: none; transition: background 0.1s; }
+  .nav-item:hover { background: var(--accent-glow); color: var(--accent); }
+  .nav-item.current { color: var(--accent); font-weight: 600; }
+  .nav-divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+  .btn { padding: 8px 14px; border: none; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; cursor: pointer; letter-spacing: 0.04em; transition: background 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dim); }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover { background: #686578; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-warn { background: var(--warn); color: #1a1a1a; }
+  .btn-warn:hover { background: #f0b030; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-xs { padding: 3px 7px; font-size: 10px; }
+  .saving { font-size: 11px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
+  .saving.ok { color: var(--success); }
+  .saving.err { color: var(--danger); }
+  .page { max-width: 1100px; margin: 0 auto; padding: 20px 24px 60px; display: flex; flex-direction: column; gap: 16px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
+  .panel-header { background: var(--section-header); border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; padding: 10px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+  .panel-body { padding: 16px; }
+  .basics-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; }
+  .basics-row2 { display: flex; gap: 12px; margin-top: 12px; align-items: flex-end; }
+  .basics-row2 .field { flex: 0 0 180px; }
+  .basics-row2 .field-quotenum { margin-left: auto; flex: 0 0 160px; }
+  .field { display: flex; flex-direction: column; gap: 3px; }
+  label { font-size: 11px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
+  input, select, textarea { background: var(--input-bg); border: 1px solid var(--border); color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13px; padding: 7px 9px; border-radius: 4px; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  input[readonly] { color: var(--text-dim); cursor: default; background: #252218; border-color: transparent; }
+  input::placeholder, textarea::placeholder { color: var(--text-dim); }
+  select option { background: var(--panel); }
+  textarea { resize: vertical; min-height: 100px; }
+
+  /* ASIAKASHAKU */
+  .customer-row { display: flex; gap: 8px; align-items: flex-end; }
+  .customer-row .customer-search-wrap { flex: 1; }
+  .customer-search-wrap { position: relative; }
+  .customer-dropdown { display: none; position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 50; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  .customer-dropdown.open { display: block; }
+  .cust-option { padding: 8px 12px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-bottom: 1px solid var(--border); }
+  .cust-option:last-child { border-bottom: none; }
+  .cust-option:hover { background: var(--accent-glow); color: var(--accent); }
+  .cust-option .cust-num { font-size: 10px; color: var(--text-dim); margin-left: 8px; }
+
+  /* ASIAKKAAN OSOITETIEDOT (read-only) */
+  .customer-info-display { margin-top: 6px; padding: 7px 11px; background: #222018; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; color: var(--text-dim); line-height: 1.6; display: none; }
+  .customer-info-display.show { display: block; }
+  .customer-info-display .cid-label { color: var(--accent); font-weight: 600; font-size: 11px; letter-spacing: 0.04em; margin-right: 4px; }
+
+  /* NIMIKEHAKU */
+  .nimike-wrap { position: relative; }
+  .nimike-dropdown { display: none; position: fixed; min-width: 320px; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 500; max-height: 400px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+  .nimike-dropdown.open { display: block; }
+  .nimike-option { padding: 6px 10px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 11px; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nimike-option:hover { background: var(--accent-glow); color: var(--accent); }
+  .nimike-option.active { background: var(--accent-glow); color: var(--accent); }
+  .nimike-option .nimike-code { color: var(--text-dim); margin-right: 6px; font-size: 10px; }
+  .assembly-tag { display: inline-block; margin-top: 3px; font-size: 9px; font-family: 'IBM Plex Mono', monospace; color: #5b9bd5; background: rgba(91,155,213,0.12); border: 1px solid rgba(91,155,213,0.3); border-radius: 3px; padding: 1px 5px; letter-spacing: 0.03em; }
+
+  /* SECTION ROW */
+  .section-row { background: #222018; border: 1px solid var(--border); border-radius: 5px; margin-bottom: 4px; }
+  .section-row.inactive { opacity: 0.45; }
+  .section-row-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .section-row-header input[type="text"] { background: transparent; border: none; color: var(--text); font-weight: 600; font-size: 13px; padding: 0; width: auto; flex: 1; }
+  .section-row-header input[type="text"]:focus { border-bottom: 1px solid var(--accent); outline: none; }
+  .section-toggle { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid var(--accent); background: none; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .section-toggle.on { background: var(--accent); }
+  .section-toggle.on::after { content: '✓'; color: #fff; font-size: 10px; line-height: 1; }
+  .move-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 3px; }
+  .move-btn:hover { background: var(--accent-glow); color: var(--accent); }
+  .section-subtotal { padding: 6px 12px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); text-align: right; }
+  .section-subtotal span { color: var(--accent); font-weight: 600; }
+  .product-rows { overflow-x: auto; overflow-y: visible; }
+  table.product-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 640px; }
+  table.product-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: var(--text-dim); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+  table.product-table th.right { text-align: right; }
+  table.product-table td { padding: 3px 4px; vertical-align: middle; border-bottom: 1px solid #33302a; }
+  table.product-table tr:last-child td { border-bottom: none; }
+  table.product-table input, table.product-table select { padding: 5px 7px; font-size: 12px; }
+  .price-manual { background: rgba(217,119,6,0.18) !important; }
+  .restore-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 11px; padding: 2px 4px; }
+  .restore-btn:hover { color: var(--accent); }
+  .del-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 14px; padding: 2px 5px; border-radius: 3px; }
+  .del-btn:hover { background: rgba(232,64,64,0.15); }
+  .add-row-wrap { padding: 6px 12px 10px; }
+
+  /* YHTEENVETO */
+  .summary-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; display: flex; justify-content: flex-end; }
+  .summary-table { font-family: 'IBM Plex Mono', monospace; font-size: 13px; width: 320px; }
+  .summary-table tr td { padding: 4px 0; }
+  .summary-table .label { color: var(--text-dim); padding-right: 16px; }
+  .summary-table .value { text-align: right; color: var(--text); }
+  .summary-table .big td { font-size: 16px; font-weight: 600; color: var(--accent); padding-top: 8px; border-top: 1px solid var(--border); }
+  .summary-table input.adj { width: 90px; text-align: right; padding: 4px 7px; font-size: 12px; }
+  .default-text-wrap textarea { width: 100%; min-height: 100px; font-size: 12px; }
+  .action-bar { display: flex; gap: 10px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
+  /* Varmista että status-valikko ei leikkaudu sivun alareunassa */
+  .action-bar select { max-height: 200px; }
+  .action-bar .spacer { flex: 1; }
+  .status-badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 700; padding: 6px 16px; border-radius: 5px; letter-spacing: 0.06em; }
+  .status-badge.draft    { background: #44444f; color: var(--text-dim); }
+  .status-badge.progress { background: #3d2e1e; color: var(--warn); }
+  .status-badge.sent     { background: #1e3d2e; color: var(--success); }
+  .status-badge.ordered  { background: #1e2e3d; color: #5b9bd5; }
+  .status-badge.completed{ background: #1e3d2e; color: #4ade80; }
+  .status-badge.model    { background: #2a1e3d; color: #c084fc; }
+  .status-badge.archived { background: #2a2a2a; color: #666; }
+  .stale-banner { display: none; align-items: center; gap: 10px; background: #3d2e1e; border: 1px solid var(--warn); color: var(--warn); font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
+  .stale-banner.show { display: flex; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 24px; width: 480px; max-width: 96vw; display: flex; flex-direction: column; gap: 14px; }
+  .modal h2 { font-size: 15px; font-weight: 600; color: var(--accent); font-family: 'IBM Plex Mono', monospace; }
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+  /* MOBIILI */
+  @media (max-width: 640px) {
+    .basics-grid { grid-template-columns: 1fr 1fr; }
+    .page { padding: 12px 12px 60px; gap: 12px; }
+    table.product-table { display: none; }
+    .product-card-list { display: block !important; }
+    .summary-table { width: 100%; }
+    .action-bar { flex-direction: column; }
+  }
+  .product-card-list { display: none; }
+  .product-card { background: var(--input-bg); border: 1px solid var(--border); border-radius: 5px; padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .product-card .card-row { display: flex; gap: 8px; align-items: center; }
+  .product-card label { min-width: 60px; }
+
+  /* VIIKKOSELAIN */
+  .week-picker { display: flex; align-items: center; gap: 4px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; height: 32px; }
+  .week-picker:focus-within { border-color: var(--accent); }
+  .week-arrow { background: none; border: none; color: var(--text-dim); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 3px; border-radius: 3px; font-family: inherit; flex-shrink: 0; }
+  .week-arrow:hover { color: var(--accent); background: var(--accent-glow); }
+  .week-input { background: transparent; border: none; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13px; width: 28px; text-align: center; padding: 0; outline: none; }
+  .week-input::placeholder { color: var(--text-dim); }
+  .week-dates { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); white-space: nowrap; flex: 1; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+</head>
+<body>
+
+<header>
+  <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote" class="logo">
+  <div class="nav-menu-wrap">
+    <button class="nav-btn" onclick="toggleNav(event)">☰ Valikko</button>
+    <div class="nav-dropdown" id="navDropdown">
+      <div class="nav-section-label">Sivut</div>
+      <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
+      <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
+      <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
+      <a class="nav-item" href="tarjous.html">✏️ Uusi Tarjous</a>
+      <a class="nav-item current" href="myymala.html">🏪 Myymälä</a>
+      <a class="nav-item" href="kalenteri.html">📅 Kalenteri</a>
+      <a class="nav-item current" href="todo.html">✅ Muistilista</a>
+    </div>
+  </div>
+  <h1>Myymälä</h1>
+  <div class="header-right">
+    <span class="saving" id="saveStatus"></span>
+    <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna ostos</button>
+  </div>
+</header>
+
+
+<!-- LISÄÄ ASIAKAS MODAL -->
+<div class="modal-overlay" id="newCustModal">
+  <div class="modal">
+    <h2>Uusi asiakas</h2>
+    <div class="modal-grid">
+      <div class="field" style="grid-column:1/-1">
+        <label>Nimi *</label>
+        <input type="text" id="nc_name" placeholder="Yritys tai henkilö">
+      </div>
+      <div class="field">
+        <label>Puhelin</label>
+        <input type="text" id="nc_phone" placeholder="0400 000 000">
+      </div>
+      <div class="field">
+        <label>Sähköposti</label>
+        <input type="text" id="nc_email" placeholder="email@example.com">
+      </div>
+      <div class="field">
+        <label>Osoite</label>
+        <input type="text" id="nc_address" placeholder="Katuosoite">
+      </div>
+      <div class="field">
+        <label>Kaupunki</label>
+        <input type="text" id="nc_city" placeholder="Kaupunki">
+      </div>
+      <div class="field" style="grid-column:1/-1;border-top:1px solid var(--border);margin-top:4px;padding-top:10px;">
+        <label style="text-transform:uppercase;letter-spacing:0.06em;">Laskutusosoite (jos eri kuin yllä)</label>
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label>Laskutusosoite — katuosoite</label>
+        <input type="text" id="nc_billing_address" placeholder="Katuosoite">
+      </div>
+      <div class="field">
+        <label>Postinumero</label>
+        <input type="text" id="nc_billing_postal_code" placeholder="00100">
+      </div>
+      <div class="field">
+        <label>Laskutuskaupunki</label>
+        <input type="text" id="nc_billing_city" placeholder="Kaupunki">
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label>Y-tunnus</label>
+        <input type="text" id="nc_business_id" placeholder="1234567-8">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeNewCustModal()">Peruuta</button>
+      <button class="btn btn-primary btn-sm" onclick="saveNewCustomer()">Tallenna asiakas</button>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- PERUSTIEDOT -->
+  <div class="panel">
+    <div class="panel-header">Perustiedot</div>
+    <div class="panel-body">
+      <div class="basics-grid">
+        <div class="field">
+          <label>Asiakas</label>
+          <div class="customer-row">
+            <div class="customer-search-wrap">
+              <input type="text" id="customerSearch" placeholder="Hae nimellä..." autocomplete="off"
+                oninput="searchCustomers(this.value)" onfocus="searchCustomers(this.value)">
+              <div class="customer-dropdown" id="customerDropdown"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="setCashCustomer()" title="Merkitse käteisasiakkaaksi ilman nimeä">⚡ Käteinen</button>
+            <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="openNewCustModal()" title="Lisää uusi asiakas">+ Asiakas</button>
+          </div>
+          <div class="customer-info-display" id="customerInfoDisplay"></div>
+          <input type="hidden" id="customerId">
+        </div>
+        <div class="field">
+          <label>Päivämäärä</label>
+          <input type="date" id="quoteDate" onchange="autoSave()">
+        </div>
+        <div class="field field-quotenum">
+          <label>Kuittinumero</label>
+          <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label>Huomiot</label>
+        <input type="text" id="quoteRef" placeholder="Vapaa huomio ostosta" oninput="autoSave()">
+      </div>
+    </div>
+  </div>
+
+  <!-- OSIOT JA TUOTERIVIT -->
+  <div class="panel">
+    <div class="panel-header">
+      Tuoterivit
+      <span style="margin-left:auto;"></span>
+      <button class="btn btn-secondary btn-sm" onclick="addSection()">+ Lisää osio</button>
+    </div>
+    <div class="panel-body" style="padding:12px;">
+      <div id="sectionsContainer"></div>
+    </div>
+  </div>
+
+  <!-- YHTEENVETO -->
+  <div class="summary-panel">
+    <table class="summary-table">
+      <tr><td class="label">Välisumma</td><td class="value" id="sumSubtotal">0,00 €</td></tr>
+      <tr>
+        <td class="label">Pyöristys / alennus<br><span style="font-size:10px;font-weight:400;">(veroton)</span></td>
+        <td class="value"><input class="adj" type="number" id="adjAmount" value="0" step="0.01" oninput="onAdjInput()"></td>
+      </tr>
+      <tr><td class="label">Veroton yhteensä</td><td class="value" id="sumNoTax">0,00 €</td></tr>
+      <tr><td class="label">ALV 25,5%</td><td class="value" id="sumVat">0,00 €</td></tr>
+      <tr class="big">
+        <td class="label">YHT (verollinen)</td>
+        <td class="value"><input class="adj" type="number" id="adjGross" value="0" step="0.01" oninput="onGrossInput()" style="font-size:15px;font-weight:600;color:var(--accent);width:110px;"></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- TOIMINTOPAINIKKEET -->
+  <div class="action-bar">
+    <div class="spacer"></div>
+    <button class="btn btn-ghost" onclick="printQuote()">🖨 Tulosta kuitti</button>
+  </div>
+
+</div>
+<script>
+// =============================================
+// SUPABASE
+// =============================================
+const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
+
+async function sbGet(table, query='') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+  });
+  return r.json();
+}
+async function sbPost(table, data) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(data)
+  });
+  return r.json();
+}
+async function sbPatch(table, id, data) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(data)
+  });
+  return r.json();
+}
+async function sbDelete(table, id) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+  });
+}
+async function sbRpc(fn, params={}) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  return r.json();
+}
+
+// =============================================
+// STATE
+// =============================================
+let customers = [];
+let products = [];
+let sections = [];
+let currentQuoteId = null;
+let sectionIdCounter = 0;
+let rowIdCounter = 0;
+
+// =============================================
+// INIT
+// =============================================
+window.addEventListener('DOMContentLoaded', async () => {
+  const today = new Date();
+  document.getElementById('quoteDate').value = today.toISOString().slice(0,10);
+
+  // Odotetaan auth-guardin sessiota ennen Supabase-kutsuja
+  await window._authReady;
+
+  await Promise.all([loadCustomers(), loadProducts()]);
+
+  const params = new URLSearchParams(window.location.search);
+  const openId = params.get('id');
+
+  if (openId) {
+    await loadQuote(openId);
+  } else {
+    addSection('Myymälämyynti');
+    fetchNextQuoteNumber();
+  }
+});
+
+
+async function loadCustomers() {
+  const data = await sbGet('customers', '?is_active=eq.true&order=name.asc&select=id,name,customer_number,address,city,billing_address,billing_postal_code,billing_city,email,phone');
+  customers = Array.isArray(data) ? data : [];
+}
+
+async function loadProducts() {
+  const data = await sbGet('products', '?status=not.in.(stock_only,hidden)&order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,aihio_leveys,aihio_paksuus,kate_percent');
+  products = Array.isArray(data) ? data : [];
+  console.log('Tuotteet ladattu:', products.length, 'kpl');
+  products.forEach(p => {
+    if (p.pricing_model === 'cubic' && p.kuutiohinta != null) {
+      const kate = 1 + (parseFloat(p.kate_percent) || 0);
+      const al = parseFloat(p.aihio_leveys || p.leveys || 0);
+      const ap = parseFloat(p.aihio_paksuus || p.mitta || 0);
+      const mv = (parseFloat(p.kuutiohinta) + parseFloat(p.tyosto_kuutio||0) + parseFloat(p.salvostus_kuutio||0)) * kate;
+      p.price = al && ap ? mv * al * ap / 1000000 : p.price;
+    }
+  });
+}
+
+async function fetchNextQuoteNumber() {
+  try {
+    const num = await sbRpc('next_quote_number');
+    if (num) document.getElementById('quoteNumber').value = num;
+  } catch(e) {}
+}
+
+// =============================================
+// ASIAKASHAKU
+// =============================================
+function searchCustomers(val) {
+  const dd = document.getElementById('customerDropdown');
+  const q = val.toLowerCase().trim();
+  const filtered = q
+    ? customers.filter(c => c.name.toLowerCase().includes(q) || (c.customer_number||'').includes(q))
+    : customers.slice(0, 20);
+  if (!filtered.length) {
+    dd.innerHTML = '<div class="cust-option" style="color:var(--text-dim)">Ei tuloksia</div>';
+  } else {
+    dd.innerHTML = filtered.slice(0,30).map(c =>
+      `<div class="cust-option" onclick="setCustomer('${c.id}','${c.name.replace(/'/g,"\\'")}')">
+        ${c.name}<span class="cust-num">#${c.customer_number||'—'}</span>
+      </div>`
+    ).join('');
+  }
+  dd.classList.add('open');
+}
+
+function setCustomer(id, name) {
+  document.getElementById('customerId').value = id;
+  document.getElementById('customerSearch').value = name;
+  document.getElementById('customerDropdown').classList.remove('open');
+  const cust = customers.find(c => c.id === id);
+  if (cust) {
+    renderCustomerInfo(cust);
+  } else if (id) {
+    // Asiakas ei ole aktiivisten listalla (esim. deaktivoitu) — haetaan silti tiedot
+    // näytettäväksi, koska vanhoissa tarjouksissa osoite pitää silti näkyä.
+    sbGet('customers', `?id=eq.${id}&select=id,name,address,city,billing_address,billing_postal_code,billing_city,email,phone`)
+      .then(res => { if (Array.isArray(res) && res[0]) renderCustomerInfo(res[0]); });
+  } else {
+    renderCustomerInfo(null);
+  }
+  autoSave();
+}
+
+function renderCustomerInfo(cust) {
+  const box = document.getElementById('customerInfoDisplay');
+  if (!cust) { box.classList.remove('show'); box.innerHTML = ''; return; }
+  const lines = [];
+  if (cust.address || cust.city) {
+    lines.push(`<div><span class="cid-label">Osoite</span>${[cust.address, cust.city].filter(Boolean).join(', ')}</div>`);
+  }
+  const hasBilling = cust.billing_address || cust.billing_postal_code || cust.billing_city;
+  const billingDiffers = hasBilling && (cust.billing_address !== cust.address || cust.billing_city !== cust.city);
+  if (hasBilling && billingDiffers) {
+    lines.push(`<div><span class="cid-label">Laskutus</span>${[cust.billing_address, [cust.billing_postal_code, cust.billing_city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}</div>`);
+  }
+  if (cust.email) {
+    lines.push(`<div><span class="cid-label">Email</span>${cust.email}</div>`);
+  }
+  if (cust.phone) {
+    lines.push(`<div><span class="cid-label">Puhelin</span>${cust.phone}</div>`);
+  }
+  if (!lines.length) { box.classList.remove('show'); box.innerHTML = ''; return; }
+  box.innerHTML = lines.join('');
+  box.classList.add('show');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.customer-search-wrap')) document.getElementById('customerDropdown').classList.remove('open');
+  if (!e.target.closest('.nimike-wrap')) document.querySelectorAll('.nimike-dropdown').forEach(d => d.classList.remove('open'));
+  if (!e.target.closest('.nav-menu-wrap')) document.getElementById('navDropdown').classList.remove('open');
+});
+
+window.addEventListener('scroll', () => {
+  const openDd = document.querySelector('.nimike-dropdown.open');
+  if (!openDd) return;
+  const m = openDd.id.match(/^nimike-dd-(.+)-(\d+)$/);
+  if (m) positionNimikeDropdown(m[1], parseInt(m[2]));
+}, { passive: true });
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// UUSI ASIAKAS MODAL
+// =============================================
+function openNewCustModal() {
+  ['nc_name','nc_phone','nc_email','nc_address','nc_city','nc_billing_address','nc_billing_postal_code','nc_billing_city','nc_business_id'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('newCustModal').classList.add('open');
+  setTimeout(() => document.getElementById('nc_name').focus(), 100);
+}
+
+function closeNewCustModal() {
+  document.getElementById('newCustModal').classList.remove('open');
+}
+
+async function saveNewCustomer() {
+  const name = document.getElementById('nc_name').value.trim();
+  if (!name) { alert('Nimi on pakollinen.'); return; }
+  const btn = document.querySelector('#newCustModal .btn-primary');
+  btn.textContent = 'Tallennetaan...'; btn.disabled = true;
+  try {
+    const result = await sbPost('customers', {
+      name,
+      phone: document.getElementById('nc_phone').value.trim() || null,
+      email: document.getElementById('nc_email').value.trim() || null,
+      address: document.getElementById('nc_address').value.trim() || null,
+      city: document.getElementById('nc_city').value.trim() || null,
+      billing_address: document.getElementById('nc_billing_address').value.trim() || null,
+      billing_postal_code: document.getElementById('nc_billing_postal_code').value.trim() || null,
+      billing_city: document.getElementById('nc_billing_city').value.trim() || null,
+      business_id: document.getElementById('nc_business_id').value.trim() || null,
+      is_active: true
+    });
+    if (Array.isArray(result) && result[0]) {
+      const c = result[0];
+      customers.push(c);
+      setCustomer(c.id, c.name);
+      closeNewCustModal();
+    } else {
+      alert('Tallentaminen epäonnistui.');
+    }
+  } catch(e) {
+    alert('Verkkovirhe.');
+  }
+  btn.textContent = 'Tallenna asiakas'; btn.disabled = false;
+}
+
+// =============================================
+// OSIOT
+// =============================================
+function addSection(name='') {
+  const id = ++sectionIdCounter;
+  sections.push({ id, name: name || `Osio ${id}`, active: true, rows: [] });
+  renderSections();
+  addRow(id);
+}
+
+function renderSections() {
+  const container = document.getElementById('sectionsContainer');
+  container.innerHTML = '';
+  sections.forEach((sec, idx) => {
+    const div = document.createElement('div');
+    div.className = 'section-row' + (sec.active ? '' : ' inactive');
+    div.id = `section-${sec.id}`;
+    div.innerHTML = `
+      <div class="section-row-header">
+        <button class="section-toggle ${sec.active?'on':''}" onclick="toggleSection(${sec.id})" title="Aktiivinen/pois"></button>
+        <input type="text" value="${esc(sec.name)}" oninput="renameSection(${sec.id},this.value)"
+          style="font-weight:600;font-size:13px;background:transparent;border:none;color:var(--text);flex:1;padding:0;">
+        <button class="move-btn" onclick="moveSection(${sec.id},-1)" ${idx===0?'disabled style="opacity:0.3"':''} title="Siirrä ylös">↑</button>
+        <button class="move-btn" onclick="moveSection(${sec.id},1)" ${idx===sections.length-1?'disabled style="opacity:0.3"':''} title="Siirrä alas">↓</button>
+        <button class="btn btn-danger btn-xs" onclick="removeSection(${sec.id})" style="margin-left:4px;">✕</button>
+      </div>
+      <div class="product-rows">
+        <table class="product-table">
+          <thead><tr>
+            <th style="width:150px">Kohde</th>
+            <th style="width:150px">Hinnasto</th>
+            <th>Kuvaus / lisätiedot</th>
+            <th style="width:88px" class="right">Määrä</th>
+            <th style="width:55px">Yks</th>
+            <th style="width:95px" class="right">à-hinta</th>
+            <th style="width:100px" class="right">Yhteensä<br><span style="font-weight:400;color:var(--text-dim);font-size:9px;letter-spacing:0;">sis. ALV</span></th>
+            <th style="width:32px"></th>
+          </tr></thead>
+          <tbody id="tbody-${sec.id}">
+            ${sec.rows.map(row => renderRowHTML(sec.id, row)).join('')}
+          </tbody>
+        </table>
+        <div class="product-card-list" id="cards-${sec.id}">
+          ${sec.rows.map(row => renderCardHTML(sec.id, row)).join('')}
+        </div>
+      </div>
+      <div class="add-row-wrap" style="display:flex;justify-content:space-between;align-items:center;">
+        <button class="btn btn-ghost btn-xs" onclick="addRow(${sec.id})">+ Lisää tuoterivi</button>
+        <div class="section-subtotal">Osio yhteensä: <span id="subsub-${sec.id}">${fmt(sectionSum(sec))}</span> €</div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+  recalcTotals();
+}
+
+function renderRowHTML(secId, row) {
+  return `
+    <tr id="row-${secId}-${row.id}">
+      <td>
+        <input type="text" id="kohde-${secId}-${row.id}"
+          value="${esc(row.nimikeTeksti||'')}"
+          oninput="onRowInput(${secId},${row.id},'nimikeTeksti',this.value)"
+          placeholder="Kohde / tuotenimi"
+          style="min-width:130px;">
+      </td>
+      <td>
+        <div class="nimike-wrap">
+          <input type="text" id="nimike-${secId}-${row.id}"
+            value="${esc(row.hinnastoTeksti||'')}"
+            oninput="onNimikeInput(${secId},${row.id},this.value)"
+            onfocus="onNimikeFocus(${secId},${row.id})"
+            onblur="setTimeout(()=>{ const d=document.getElementById('nimike-dd-${secId}-${row.id}'); if(d) d.classList.remove('open'); },150)"
+            onkeydown="onNimikeKeyDown(event,${secId},${row.id})"
+            placeholder="Hae hinnastosta..."
+            style="min-width:130px;">
+          <div class="nimike-dropdown" id="nimike-dd-${secId}-${row.id}"></div>
+        </div>
+        ${row.isAssembly ? '<span class="assembly-tag" title="Kokoonpano — voidaan avata komponentteihin pakkauslistalla">⚙ kokoonpano</span>' : ''}
+      </td>
+      <td><input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" placeholder="Kuvaus"></td>
+      <td>
+        <input type="number" value="${row.qty||''}" oninput="onRowInput(${secId},${row.id},'qty',this.value)" min="0" step="0.01" style="text-align:right;width:100%;">
+      </td>
+      <td><input type="text" value="${esc(row.unit||'')}" oninput="onRowInput(${secId},${row.id},'unit',this.value)" placeholder="kpl"></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:2px;">
+          <input type="number" id="price-${secId}-${row.id}" value="${row.price||''}"
+            oninput="onPriceInput(${secId},${row.id},this.value)"
+            class="${row.priceManual?'price-manual':''}"
+            step="0.01" min="0" style="text-align:right;">
+          ${row.priceManual?`<button class="restore-btn" onclick="restorePrice(${secId},${row.id})" title="Palauta laskettu hinta">↺</button>`:''}
+        </div>
+      </td>
+      <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.3;" id="rowsum-${secId}-${row.id}">
+        ${fmt(rowSum(row))} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(rowSum(row)*1.255)} €</span>
+      </td>
+      <td><button class="del-btn" onclick="removeRow(${secId},${row.id})">✕</button></td>
+    </tr>
+  `;
+}
+
+function renderCardHTML(secId, row) {
+  return `
+    <div class="product-card">
+      <div class="card-row">
+        <label>Nimike</label>
+        <input type="text" value="${esc(row.nimikeTeksti||'')}" style="flex:1;"
+          oninput="onNimikeInput(${secId},${row.id},this.value)" placeholder="Hae...">
+        ${row.isAssembly ? '<span class="assembly-tag">⚙</span>' : ''}
+      </div>
+      <div class="card-row"><label>Kuvaus</label>
+        <input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" style="flex:1;"></div>
+      <div class="card-row">
+        <label>Määrä</label>
+        <input type="number" value="${row.qty||''}" oninput="onRowInput(${secId},${row.id},'qty',this.value)" style="width:80px;">
+        <label style="margin-left:8px;">Yks</label>
+        <input type="text" value="${esc(row.unit||'')}" oninput="onRowInput(${secId},${row.id},'unit',this.value)" style="width:60px;">
+      </div>
+      <div class="card-row">
+        <label>à-hinta</label>
+        <input type="number" value="${row.price||''}" oninput="onPriceInput(${secId},${row.id},this.value)"
+          class="${row.priceManual?'price-manual':''}" style="width:100px;">
+        <label style="margin-left:8px;">= ${fmt(rowSum(row))} €</label>
+        <button class="del-btn" onclick="removeRow(${secId},${row.id})" style="margin-left:auto;">✕</button>
+      </div>
+    </div>
+  `;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// =============================================
+// NIMIKEHAKU (teksti)
+// =============================================
+function positionNimikeDropdown(secId, rowId) {
+  const input = document.getElementById(`nimike-${secId}-${rowId}`);
+  const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
+  if (!input || !dd) return;
+  const rect = input.getBoundingClientRect();
+  dd.style.top = (rect.bottom + 2) + 'px';
+  dd.style.left = rect.left + 'px';
+  dd.style.width = Math.max(rect.width, 320) + 'px';
+}
+
+function onNimikeFocus(secId, rowId) {
+  positionNimikeDropdown(secId, rowId);
+  onNimikeInput(secId, rowId, document.getElementById(`nimike-${secId}-${rowId}`).value);
+}
+
+function onNimikeInput(secId, rowId, val) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  row.hinnastoTeksti = val;
+  const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
+  if (!dd) return;
+  positionNimikeDropdown(secId, rowId);
+  if (!products.length) {
+    dd.innerHTML = '<div class="nimike-option" style="color:var(--text-dim)">Hinnastoa ei löydy — tarkista yhteys</div>';
+    dd.classList.add('open');
+    return;
+  }
+  const q = val.toLowerCase().trim();
+  const isNumeric = /^\d+$/.test(q);
+  const hits = q.length >= 1
+    ? products.filter(p => {
+        const code = String(p.code || '');
+        if (isNumeric) {
+          // Numerohaulla vain koodi
+          return code === q || code.startsWith(q);
+        } else {
+          // Tekstihaulla nimi ja kategoria
+          const name = (p.name || '').toLowerCase();
+          const cat  = (p.category || '').toLowerCase();
+          return name.includes(q) || cat.includes(q);
+        }
+      })
+      .sort((a, b) => {
+        const aExact = String(a.code||'') === q ? 0 : 1;
+        const bExact = String(b.code||'') === q ? 0 : 1;
+        if (aExact !== bExact) return aExact - bExact;
+        return parseInt(a.code||0) - parseInt(b.code||0);
+      })
+      .slice(0, 122)
+    : products.slice().sort((a,b) => parseInt(a.code||0) - parseInt(b.code||0));
+  if (!hits.length) {
+    dd.innerHTML = '<div class="nimike-option" style="color:var(--text-dim)">Ei tuloksia</div>';
+    dd.classList.add('open');
+    return;
+  }
+  dd.innerHTML = hits.map((p, i) =>
+    `<div class="nimike-option" data-index="${i}" onclick="selectNimike(${secId},${rowId},'${p.id}')">
+      <span class="nimike-code">${p.code||''}</span>${p.name}
+      <span style="color:var(--text-dim);font-size:10px;margin-left:6px;">${p.unit||''}</span>
+    </div>`
+  ).join('');
+  dd.classList.add('open');
+}
+
+function selectNimike(secId, rowId, productId) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  const prod = products.find(p => p.id === productId || String(p.id) === String(productId));
+  if (prod) {
+    row.productId = prod.id;
+    row.hinnastoTeksti = (prod.code ? prod.code + ' – ' : '') + prod.name;
+    if (!row.desc) row.desc = prod.name;
+    row.unit = prod.unit || row.unit;
+    row.basePrice = prod.price != null ? parseFloat(prod.price) : null;
+    if (!row.priceManual && row.basePrice !== null) row.price = row.basePrice;
+    row.isAssembly = prod.pricing_model === 'assembly';
+
+    // Päivitä kentät suoraan DOM:iin
+    const nimikeInput = document.getElementById(`nimike-${secId}-${rowId}`);
+    if (nimikeInput) nimikeInput.value = row.hinnastoTeksti;
+
+    // Päivitä kuvaus jos se muuttui
+    const descInputs = document.querySelectorAll(`#row-${secId}-${rowId} input[placeholder="Kuvaus"]`);
+    if (descInputs[0]) descInputs[0].value = row.desc || '';
+
+    // Päivitä yksikkö
+    const unitInputs = document.querySelectorAll(`#row-${secId}-${rowId} input[placeholder="kpl"]`);
+    if (unitInputs[0]) unitInputs[0].value = row.unit || '';
+
+    const priceInput = document.getElementById(`price-${secId}-${rowId}`);
+    if (priceInput) priceInput.value = row.price || '';
+
+    const rowSumEl = document.getElementById(`rowsum-${secId}-${rowId}`);
+    if (rowSumEl) {
+      const net = rowSum(row);
+      rowSumEl.innerHTML = `${fmt(net)} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(net*1.255)} €</span>`;
+    }
+
+    recalcTotals();
+  }
+  const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
+  if (dd) dd.classList.remove('open');
+
+  // Siirrä fokus kuvaus-kenttään
+  setTimeout(() => {
+    const descInputs = document.querySelectorAll(`#row-${secId}-${rowId} input[placeholder="Kuvaus"]`);
+    if (descInputs[0]) descInputs[0].focus();
+  }, 50);
+
+  autoSave();
+}
+
+function addRow(secId) {
+  const sec = sections.find(s => s.id === secId);
+  if (!sec) return;
+  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null, isAssembly: false });
+  renderSections();
+  autoSave();
+}
+
+function removeRow(secId, rowId) {
+  const sec = sections.find(s => s.id === secId);
+  if (!sec) return;
+  sec.rows = sec.rows.filter(r => r.id !== rowId);
+  renderSections();
+  autoSave();
+}
+
+function removeSection(id) {
+  if (sections.length <= 1) { alert('Vähintään yksi osio täytyy olla.'); return; }
+  if (!confirm('Poistetaanko osio ja kaikki sen rivit?')) return;
+  sections = sections.filter(s => s.id !== id);
+  renderSections();
+  autoSave();
+}
+
+function toggleSection(id) {
+  const sec = sections.find(s => s.id === id);
+  if (sec) { sec.active = !sec.active; renderSections(); autoSave(); }
+}
+
+function renameSection(id, val) {
+  const sec = sections.find(s => s.id === id);
+  if (sec) { sec.name = val; autoSave(); }
+}
+
+function moveSection(id, dir) {
+  const idx = sections.findIndex(s => s.id === id);
+  const nIdx = idx + dir;
+  if (nIdx < 0 || nIdx >= sections.length) return;
+  [sections[idx], sections[nIdx]] = [sections[nIdx], sections[idx]];
+  renderSections();
+  autoSave();
+}
+
+function onProductSelect(secId, rowId, productId) {
+  selectNimike(secId, rowId, productId);
+}
+
+function onNimikeKeyDown(e, secId, rowId) {
+  const dd = document.getElementById(`nimike-dd-${secId}-${rowId}`);
+  if (!dd || !dd.classList.contains('open')) return;
+  const items = dd.querySelectorAll('.nimike-option[data-index]');
+  if (!items.length) return;
+  const current = dd.querySelector('.nimike-option.active');
+  let idx = current ? parseInt(current.dataset.index) : -1;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    idx = Math.min(idx + 1, items.length - 1);
+    items.forEach(el => el.classList.remove('active'));
+    items[idx].classList.add('active');
+    items[idx].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    idx = Math.max(idx - 1, 0);
+    items.forEach(el => el.classList.remove('active'));
+    items[idx].classList.add('active');
+    items[idx].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (current) current.click();
+  } else if (e.key === 'Escape') {
+    dd.classList.remove('open');
+  }
+}
+
+function onRowInput(secId, rowId, field, val) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (row) { row[field] = val; updateRowSum(secId, rowId); autoSave(); }
+}
+
+function onPriceInput(secId, rowId, val) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  row.price = val;
+  row.priceManual = (row.basePrice !== null && parseFloat(val) !== parseFloat(row.basePrice));
+  updateRowSum(secId, rowId);
+  autoSave();
+}
+
+function restorePrice(secId, rowId) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row || row.basePrice === null) return;
+  row.price = row.basePrice;
+  row.priceManual = false;
+  renderSections();
+  autoSave();
+}
+
+function updateRowSum(secId, rowId) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  const el = document.getElementById(`rowsum-${secId}-${rowId}`);
+  if (el) {
+    const net = rowSum(row);
+    el.innerHTML = `${fmt(net)} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(net*1.255)} €</span>`;
+  }
+  const ss = document.getElementById(`subsub-${secId}`);
+  if (ss) ss.textContent = fmt(sectionSum(sec));
+  recalcTotals();
+}
+
+function rowSum(row) { return (parseFloat(row.qty)||0) * (parseFloat(row.price)||0); }
+
+function sectionSum(sec) {
+  if (!sec.active) return 0;
+  return sec.rows.reduce((a,r) => a + rowSum(r), 0);
+}
+
+function recalcTotals() {
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
+  const noTax = sub + adj;
+  const vat = noTax * 0.255;
+  const gross = noTax + vat;
+  document.getElementById('sumSubtotal').textContent = fmt(sub) + ' €';
+  document.getElementById('sumNoTax').textContent = fmt(noTax) + ' €';
+  document.getElementById('sumVat').textContent = fmt(vat) + ' €';
+  // Päivitä verollinen kenttä vain jos käyttäjä ei ole sitä editoimassa
+  const grossEl = document.getElementById('adjGross');
+  if (document.activeElement !== grossEl) {
+    grossEl.value = Math.round(gross * 100) / 100;
+  }
+  sections.forEach(sec => {
+    const el = document.getElementById(`subsub-${sec.id}`);
+    if (el) el.textContent = fmt(sectionSum(sec));
+  });
+}
+
+// Käyttäjä muuttaa verotonta pyöristystä → päivitä verollinen YHT
+function onAdjInput() {
+  recalcTotals();
+  autoSave();
+}
+
+// Käyttäjä kirjoittaa verollisen loppusumman → laske veroton pyöristys taaksepäin
+function onGrossInput() {
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const targetGross = parseFloat(document.getElementById('adjGross').value) || 0;
+  const targetNet = targetGross / 1.255;
+  const adj = Math.round((targetNet - sub) * 100) / 100;
+  document.getElementById('adjAmount').value = adj;
+  const noTax = sub + adj;
+  const vat = noTax * 0.255;
+  document.getElementById('sumSubtotal').textContent = fmt(sub) + ' €';
+  document.getElementById('sumNoTax').textContent = fmt(noTax) + ' €';
+  document.getElementById('sumVat').textContent = fmt(vat) + ' €';
+  autoSave();
+}
+
+function fmt(n) {
+  return Number(n).toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// =============================================
+// TALLENNUS
+// =============================================
+function buildQuoteData(status) {
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
+  const noTax = sub + adj;
+  const vat = noTax * 0.255;
+  return {
+    customer_id: document.getElementById('customerId').value || null,
+    quote_number: document.getElementById('quoteNumber').value || null,
+    status: 'COMPLETED', // myymäläostos on aina heti maksettu, ei tilavirtaa
+    sale_type: 'myymala',
+    notes: document.getElementById('quoteRef').value || null,
+    discount_amount: adj,
+    sections_json: JSON.stringify(sections),
+    is_template: false,
+    total_net: Math.round(noTax * 100) / 100,
+    total_vat: Math.round(vat * 100) / 100,
+    total_gross: Math.round((parseFloat(document.getElementById('adjGross').value)||0) * 100) / 100,
+  };
+}
+
+async function saveDraft() {
+  const el = document.getElementById('saveStatus');
+  el.className = 'saving'; el.textContent = 'Tallennetaan...';
+  try {
+    const data = buildQuoteData();
+    let result;
+    if (currentQuoteId) {
+      result = await sbPatch('quotes', currentQuoteId, data);
+    } else {
+      result = await sbPost('quotes', data);
+      if (result && result[0]) currentQuoteId = result[0].id;
+    }
+    el.className = 'saving ok'; el.textContent = '✓ Tallennettu';
+    setTimeout(() => { if (el.textContent === '✓ Tallennettu') el.textContent = ''; }, 2500);
+  } catch(e) {
+    el.className = 'saving err'; el.textContent = 'Virhe tallennuksessa';
+  }
+}
+
+// =============================================
+// AUTO-SAVE
+// =============================================
+let _autoSaveTimer = null;
+
+function autoSave() {
+  const el = document.getElementById('saveStatus');
+  // Jos ei vielä ID:tä, tallenna heti (uusi tarjous)
+  if (!currentQuoteId) {
+    saveDraft();
+    return;
+  }
+  // Muuten debounce 2 sekuntia
+  el.className = 'saving'; el.textContent = 'Muokattu...';
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => saveDraft(), 2000);
+}
+
+
+// =============================================
+// LATAUS (myymäläostoksen avaus — käytännössä vain kuitin uudelleentarkastelu)
+// =============================================
+async function loadQuote(id) {
+  const data = await sbGet('quotes', `?id=eq.${id}&select=*`);
+  const q = Array.isArray(data) ? data[0] : null;
+  if (!q) return;
+  currentQuoteId = q.id;
+  document.getElementById('quoteNumber').value = q.quote_number || '';
+  document.getElementById('quoteDate').value = (q.created_at||'').slice(0,10);
+  document.getElementById('quoteRef').value = q.notes || '';
+  document.getElementById('adjAmount').value = q.discount_amount || 0;
+  if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
+  if (q.customer_id) {
+    const cust = customers.find(c => c.id === q.customer_id);
+    if (cust) setCustomer(cust.id, cust.name);
+  }
+  if (q.sections_json) {
+    try {
+      sections = JSON.parse(q.sections_json);
+      sections.forEach(s => s.rows.forEach(r => { if (r.id > rowIdCounter) rowIdCounter = r.id; }));
+      sections.forEach(s => { if (s.id > sectionIdCounter) sectionIdCounter = s.id; });
+    } catch(e) { sections = []; addSection('Myymälämyynti'); }
+  }
+  renderSections();
+}
+
+// Käteisasiakas-pikanappi — ei vaadi nimen syöttöä, käyttää valmiiksi luotua "Käteisasiakas"-riviä customers-taulussa
+function setCashCustomer() {
+  const cash = customers.find(c => c.name === 'Käteisasiakas');
+  if (cash) {
+    setCustomer(cash.id, cash.name);
+  } else {
+    alert('Käteisasiakas-riviä ei löytynyt asiakasrekisteristä. Tarkista että se on luotu Supabaseen.');
+  }
+}
+
+// =============================================
+// TULOSTUS
+// =============================================
+function printQuote() {
+  if (!currentQuoteId) { alert('Tallenna ostos ensin.'); return; }
+  const showPrices = '1';
+  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}`, '_blank');
+}
+
+// =============================================
+// NAV
+// =============================================
+function toggleNav(e) {
+  e.stopPropagation();
+  document.getElementById('navDropdown').classList.toggle('open');
+}
+</script>
+</body>
+</html>
