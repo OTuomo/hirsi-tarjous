@@ -124,8 +124,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (hasPackingList) {
     packingSections.forEach(sec => {
+      if (sec.excluded) return;
       if (!sec.rows || !sec.rows.length) return;
-      const validRows = sec.rows.filter(row => row.isNote || ((row.nimikeTeksti || row.desc) && parseFloat(row.qty) > 0));
+      const validRows = sec.rows.filter(row => !row.excluded && (row.isNote || ((row.nimikeTeksti || row.desc) && parseFloat(row.qty) > 0)));
       if (!validRows.length) return;
       const pkgLabel = sec.packageNumber ? `PAKETTI ${sec.packageNumber} — ${sec.name}` : sec.name;
       rowsHTML += `<tr class="section-hdr"><td colspan="5">${pkgLabel}</td></tr>`;
