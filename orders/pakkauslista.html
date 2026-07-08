@@ -38,6 +38,11 @@
   .pl-row select:hover { border-color: var(--pl-accent); }
   .pl-row-del { background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; padding: 2px; }
   .pl-row-del:hover { color: #f87171; }
+  .pl-row.excluded { opacity: 0.45; }
+  .pl-row.excluded input, .pl-row.excluded select { pointer-events: none; background: transparent; border-color: transparent; text-decoration: line-through; }
+  .pl-row-note.excluded { opacity: 0.45; text-decoration: line-through; }
+  .pl-row-restore { background: transparent; border: none; color: var(--pl-accent); cursor: pointer; font-size: 13px; padding: 2px; white-space: nowrap; }
+  .pl-row-restore:hover { text-decoration: underline; }
   .pl-expand-link { font-size: 10px; color: #5b9bd5; cursor: pointer; font-family: 'IBM Plex Mono', monospace; }
   .pl-expand-link:hover { text-decoration: underline; }
   .pl-nimike-cell { display: flex; flex-direction: column; gap: 3px; }
@@ -48,6 +53,10 @@
   .pl-add-row:hover { border-color: var(--pl-accent); color: var(--pl-accent); }
   .pl-section-del { background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 4px 6px; }
   .pl-section-del:hover { color: #f87171; }
+  .pl-section-excluded { padding: 8px 14px; opacity: 0.55; }
+  .pl-section-excluded .pl-section-header { justify-content: space-between; }
+  .pl-section-excluded-name { font-size: 13px; font-weight: 600; text-decoration: line-through; }
+  .pl-section-excluded-tag { font-size: 11px; font-weight: 400; text-decoration: none; color: var(--text-dim); margin-left: 8px; }
 
   .pl-btn { background: var(--pl-accent); color: #0f1917; border: none; border-radius: 5px; padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer; }
   .pl-btn:hover { background: #14b8a6; }
@@ -176,33 +185,40 @@ function renderPackingBody() {
     body.innerHTML = `<div class="pl-empty-hint">Pakkauslista on vielä tyhjä.<br>Aloita kopioimalla tarjouksen rivit pohjaksi, tai lisää osio käsin.</div>`;
     return;
   }
-  body.innerHTML = packingSections.map(sec => `
+  body.innerHTML = packingSections.map(sec => sec.excluded ? `
+    <div class="pl-section pl-section-excluded" data-sec="${sec.id}">
+      <div class="pl-section-header">
+        <span class="pl-section-excluded-name">${esc(sec.name || '(nimetön osio)')}${sec.packageNumber ? ` — Paketti ${esc(String(sec.packageNumber))}` : ''} <span class="pl-section-excluded-tag">poistettu tulosteesta · ${sec.rows.length} rivi${sec.rows.length===1?'':'ä'}</span></span>
+        <button class="pl-row-restore" onclick="toggleSectionExcluded(${sec.id})" title="Palauta osio listalle">↺ palauta osio</button>
+      </div>
+    </div>
+  ` : `
     <div class="pl-section" data-sec="${sec.id}">
       <div class="pl-section-header">
         <input type="text" value="${esc(sec.name)}" oninput="onPackingSectionName(${sec.id},this.value)" placeholder="Osion nimi">
         <span class="pl-pkg-label">Paketti nro</span>
         <input type="number" class="pl-pkg-input" value="${sec.packageNumber||''}" oninput="onPackingSectionPkg(${sec.id},this.value)" placeholder="—" min="1" step="1">
-        <button class="pl-section-del" onclick="removePackingSection(${sec.id})" title="Poista osio">✕</button>
+        <button class="pl-section-del" onclick="toggleSectionExcluded(${sec.id})" title="Poista osio tulosteesta">✕</button>
       </div>
       ${sec.rows.map(row => row.isNote ? `
-        <div class="pl-row-note" data-row="${row.id}">
+        <div class="pl-row-note${row.excluded ? ' excluded' : ''}" data-row="${row.id}">
           <span>${esc(row.nimikeTeksti||'')}</span>
-          <button class="pl-row-del" onclick="removePackingRow(${sec.id},${row.id})" title="Poista rivi">✕</button>
+          <button class="${row.excluded ? 'pl-row-restore' : 'pl-row-del'}" onclick="toggleRowExcluded(${sec.id},${row.id})" title="${row.excluded ? 'Palauta rivi listalle' : 'Poista rivi tulosteesta'}">${row.excluded ? '↺ palauta' : '✕'}</button>
         </div>
       ` : `
-        <div class="pl-row" data-row="${row.id}">
+        <div class="pl-row${row.excluded ? ' excluded' : ''}" data-row="${row.id}">
           <div class="pl-nimike-cell">
-            <input type="text" value="${esc(row.nimikeTeksti||'')}" oninput="onPackingRowInput(${sec.id},${row.id},'nimikeTeksti',this.value)" placeholder="Kohde">
-            ${row.isAssembly && row.productId ? `<span class="pl-expand-link" onclick="expandPackingRow(${sec.id},${row.id})">⚙ ▾ avaa komponentit</span>` : ''}
+            <input type="text" value="${esc(row.nimikeTeksti||'')}" oninput="onPackingRowInput(${sec.id},${row.id},'nimikeTeksti',this.value)" placeholder="Kohde" ${row.excluded ? 'readonly' : ''}>
+            ${row.isAssembly && row.productId && !row.excluded ? `<span class="pl-expand-link" onclick="expandPackingRow(${sec.id},${row.id})">⚙ ▾ avaa komponentit</span>` : ''}
           </div>
-          <input type="text" value="${esc(row.desc||'')}" oninput="onPackingRowInput(${sec.id},${row.id},'desc',this.value)" placeholder="Kuvaus / lisätiedot">
-          <input type="number" value="${row.qty||''}" oninput="onPackingRowInput(${sec.id},${row.id},'qty',this.value)" placeholder="Määrä" step="0.01" style="text-align:right;">
-          <input type="text" value="${esc(row.unit||'')}" oninput="onPackingRowInput(${sec.id},${row.id},'unit',this.value)" placeholder="Yks">
-          <select onchange="moveRowToSection(${sec.id},${row.id},this.value)" title="Siirrä toiseen osioon">
+          <input type="text" value="${esc(row.desc||'')}" oninput="onPackingRowInput(${sec.id},${row.id},'desc',this.value)" placeholder="Kuvaus / lisätiedot" ${row.excluded ? 'readonly' : ''}>
+          <input type="number" value="${row.qty||''}" oninput="onPackingRowInput(${sec.id},${row.id},'qty',this.value)" placeholder="Määrä" step="0.01" style="text-align:right;" ${row.excluded ? 'readonly' : ''}>
+          <input type="text" value="${esc(row.unit||'')}" oninput="onPackingRowInput(${sec.id},${row.id},'unit',this.value)" placeholder="Yks" ${row.excluded ? 'readonly' : ''}>
+          <select onchange="moveRowToSection(${sec.id},${row.id},this.value)" title="Siirrä toiseen osioon" ${row.excluded ? 'disabled' : ''}>
             <option value="">↳ Siirrä osioon...</option>
-            ${packingSections.filter(s => s.id !== sec.id).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}
+            ${packingSections.filter(s => s.id !== sec.id && !s.excluded).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}
           </select>
-          <button class="pl-row-del" onclick="removePackingRow(${sec.id},${row.id})" title="Poista rivi">✕</button>
+          <button class="${row.excluded ? 'pl-row-restore' : 'pl-row-del'}" onclick="toggleRowExcluded(${sec.id},${row.id})" title="${row.excluded ? 'Palauta rivi listalle' : 'Poista rivi tulosteesta'}">${row.excluded ? '↺' : '✕'}</button>
         </div>
       `).join('')}
       <div class="pl-add-row" onclick="addPackingRow(${sec.id})">+ Lisää rivi</div>
@@ -247,9 +263,10 @@ function addPackingSection(name='') {
   addPackingRow(id);
 }
 
-function removePackingSection(secId) {
-  if (!confirm('Poistetaanko koko osio pakkauslistalta?')) return;
-  packingSections = packingSections.filter(s => s.id !== secId);
+function toggleSectionExcluded(secId) {
+  const sec = packingSections.find(s => s.id === secId);
+  if (!sec) return;
+  sec.excluded = !sec.excluded;
   renderPackingBody();
   autoSavePacking();
 }
@@ -272,10 +289,11 @@ function addPackingRow(secId) {
   renderPackingBody();
 }
 
-function removePackingRow(secId, rowId) {
+function toggleRowExcluded(secId, rowId) {
   const sec = packingSections.find(s => s.id === secId);
-  if (!sec) return;
-  sec.rows = sec.rows.filter(r => r.id !== rowId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  row.excluded = !row.excluded;
   renderPackingBody();
   autoSavePacking();
 }
