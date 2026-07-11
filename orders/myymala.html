@@ -1189,7 +1189,19 @@ async function loadQuote(id) {
   if (q.sections_json) {
     try {
       sections = JSON.parse(q.sections_json);
-      sections.forEach(s => s.rows.forEach(r => { if (r.id > rowIdCounter) rowIdCounter = r.id; }));
+      sections.forEach(s => s.rows.forEach(r => {
+        if (r.id > rowIdCounter) rowIdCounter = r.id;
+        // Vanhemmat ostokset (ennen kate%-ominaisuutta) eivät sisällä katePercent-kenttää
+        // riveillä, vaikka productId on tallessa. Täydennetään se tässä hinnastosta jotta
+        // kateprosentti-modaali toimii myös vanhoilla ostoksilla, ilman että hintoihin koskee.
+        if ((r.katePercent === undefined || r.katePercent === null) && r.productId) {
+          const prod = products.find(p => p.id === r.productId || String(p.id) === String(r.productId));
+          if (prod) {
+            r.isAssembly = prod.pricing_model === 'assembly';
+            r.katePercent = (!r.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
+          }
+        }
+      }));
       sections.forEach(s => { if (s.id > sectionIdCounter) sectionIdCounter = s.id; });
     } catch(e) { sections = []; addSection('Myymälämyynti'); }
   }
