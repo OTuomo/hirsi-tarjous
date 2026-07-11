@@ -159,12 +159,18 @@ window.addEventListener('DOMContentLoaded', async () => {
   let sections = [];
   try { sections = JSON.parse(q.sections_json || '[]'); } catch(e) {}
 
+  const discountPercent = parseFloat(q.discount_percent) || 0;
+  // HUOM: discountPercent vaikuttaa vain loppusummiin, ei näy omana rivinä tulosteella (päätetty 2026-07-xx,
+  // Tuomo ei ollut tavoitettavissa päättämään halutaanko "Alennus -X%" näkyä asiakkaalle). Jos halutaan
+  // näyttää jatkossa, lisää tähän esim. rivi doc-metaan tai summary-boxiin: `Alennus: -${discountPercent} %`.
+  // Ks. todo.txt.
   const adj = parseFloat(q.discount_amount) || 0;
   const sub = sections.reduce((a,s) => {
     if (!s.active) return a;
     return a + s.rows.reduce((b,r) => b + (parseFloat(r.qty)||0)*(parseFloat(r.price)||0), 0);
   }, 0);
-  const noTax = sub + adj;
+  const afterDiscount = sub * (1 - discountPercent / 100);
+  const noTax = afterDiscount + adj;
   const vat = noTax * 0.255;
   // Käytetään tallennettua total_gross jos saatavilla (pyöristetty arvo), muuten lasketaan
   const total = q.total_gross ? parseFloat(q.total_gross) : noTax + vat;
