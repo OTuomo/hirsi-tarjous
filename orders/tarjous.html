@@ -365,8 +365,13 @@
 
   <!-- YHTEENVETO -->
   <div class="summary-panel">
+    <div style="display:flex;flex-direction:column;align-items:stretch;">
     <table class="summary-table">
       <tr><td class="label">Välisumma</td><td class="value" id="sumSubtotal">0,00 €</td></tr>
+      <tr>
+        <td class="label">Alennus %</td>
+        <td class="value"><input class="adj" type="number" id="discountPercent" value="0" step="0.1" min="0" max="100" oninput="onDiscountPercentInput()"></td>
+      </tr>
       <tr>
         <td class="label">Pyöristys / alennus<br><span style="font-size:10px;font-weight:400;">(veroton)</span></td>
         <td class="value"><input class="adj" type="number" id="adjAmount" value="0" step="0.01" oninput="onAdjInput()"></td>
@@ -378,6 +383,11 @@
         <td class="value"><input class="adj" type="number" id="adjGross" value="0" step="0.01" oninput="onGrossInput()" style="font-size:15px;font-weight:600;color:var(--accent);width:110px;"></td>
       </tr>
     </table>
+    <div id="kateInfo" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:11px;color:var(--text-dim);text-align:right;display:none;">
+      <span style="font-weight:600;">Kate (sisäinen): </span><span id="kateValue">–</span>
+      <div id="kateNote" style="font-size:10px;margin-top:2px;"></div>
+    </div>
+    </div>
   </div>
 
   <!-- VAKIOTEKSTI -->
@@ -984,6 +994,7 @@ function renderRowHTML(secId, row) {
             step="0.01" min="0" style="text-align:right;">
           ${row.priceManual?`<button class="restore-btn" onclick="restorePrice(${secId},${row.id})" title="Palauta laskettu hinta">↺</button>`:''}
         </div>
+        <div id="pricevat-${secId}-${row.id}" style="text-align:right;font-size:10px;color:var(--text-dim);">${row.price ? fmt(parseFloat(row.price)*1.255)+' €' : ''}</div>
       </td>
       <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.3;" id="rowsum-${secId}-${row.id}">
         ${fmt(rowSum(row))} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(rowSum(row)*1.255)} €</span>
@@ -1014,6 +1025,7 @@ function renderCardHTML(secId, row) {
         <label>à-hinta</label>
         <input type="number" value="${row.price||''}" oninput="onPriceInput(${secId},${row.id},this.value)"
           class="${row.priceManual?'price-manual':''}" style="width:100px;">
+        <span id="pricevatcard-${secId}-${row.id}" style="font-size:10px;color:var(--text-dim);margin-left:4px;">${row.price ? '('+fmt(parseFloat(row.price)*1.255)+' € s.alv)' : ''}</span>
         <label style="margin-left:8px;">= ${fmt(rowSum(row))} €</label>
         <button class="del-btn" onclick="removeRow(${secId},${row.id})" style="margin-left:auto;">✕</button>
       </div>
@@ -1104,6 +1116,9 @@ function selectNimike(secId, rowId, productId) {
     row.basePrice = prod.price != null ? parseFloat(prod.price) : null;
     if (!row.priceManual && row.basePrice !== null) row.price = row.basePrice;
     row.isAssembly = prod.pricing_model === 'assembly';
+    // Kate% tallennetaan katelaskentaa varten. Kokoonpanotuotteiden kate ei ole luotettava
+    // (hinta koostuu komponenteista), joten niiden kate jätetään toistaiseksi tuntemattomaksi.
+    row.katePercent = (!row.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
 
     // Päivitä kentät suoraan DOM:iin
     const nimikeInput = document.getElementById(`nimike-${secId}-${rowId}`);
@@ -1119,6 +1134,9 @@ function selectNimike(secId, rowId, productId) {
 
     const priceInput = document.getElementById(`price-${secId}-${rowId}`);
     if (priceInput) priceInput.value = row.price || '';
+
+    const pv = document.getElementById(`pricevat-${secId}-${rowId}`);
+    if (pv) pv.textContent = row.price ? fmt(parseFloat(row.price)*1.255)+' €' : '';
 
     const rowSumEl = document.getElementById(`rowsum-${secId}-${rowId}`);
     if (rowSumEl) {
@@ -1143,7 +1161,7 @@ function selectNimike(secId, rowId, productId) {
 function addRow(secId) {
   const sec = sections.find(s => s.id === secId);
   if (!sec) return;
-  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null, isAssembly: false });
+  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null, isAssembly: false, katePercent: null });
   renderSections();
   autoSave();
 }
@@ -1250,6 +1268,10 @@ function updateRowSum(secId, rowId) {
     const net = rowSum(row);
     el.innerHTML = `${fmt(net)} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(net*1.255)} €</span>`;
   }
+  const pv = document.getElementById(`pricevat-${secId}-${rowId}`);
+  if (pv) pv.textContent = row.price ? fmt(parseFloat(row.price)*1.255)+' €' : '';
+  const pvc = document.getElementById(`pricevatcard-${secId}-${rowId}`);
+  if (pvc) pvc.textContent = row.price ? '('+fmt(parseFloat(row.price)*1.255)+' € s.alv)' : '';
   const ss = document.getElementById(`subsub-${secId}`);
   if (ss) ss.textContent = fmt(sectionSum(sec));
   recalcTotals();
@@ -1264,8 +1286,10 @@ function sectionSum(sec) {
 
 function recalcTotals() {
   const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+  const afterDiscount = sub * (1 - discountPercent / 100);
   const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
-  const noTax = sub + adj;
+  const noTax = afterDiscount + adj;
   const vat = noTax * 0.255;
   const gross = noTax + vat;
   document.getElementById('sumSubtotal').textContent = fmt(sub) + ' €';
@@ -1280,6 +1304,13 @@ function recalcTotals() {
     const el = document.getElementById(`subsub-${sec.id}`);
     if (el) el.textContent = fmt(sectionSum(sec));
   });
+  updateKateDisplay(sub, noTax);
+}
+
+// Käyttäjä muuttaa alennusprosenttia → päivitä koko yhteenveto
+function onDiscountPercentInput() {
+  recalcTotals();
+  autoSave();
 }
 
 // Käyttäjä muuttaa verotonta pyöristystä → päivitä verollinen YHT
@@ -1289,18 +1320,68 @@ function onAdjInput() {
 }
 
 // Käyttäjä kirjoittaa verollisen loppusumman → laske veroton pyöristys taaksepäin
+// (alennus% pysyy ennallaan, vain pyöristys-kenttä sovitetaan kohdalleen)
 function onGrossInput() {
   const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+  const afterDiscount = sub * (1 - discountPercent / 100);
   const targetGross = parseFloat(document.getElementById('adjGross').value) || 0;
   const targetNet = targetGross / 1.255;
-  const adj = Math.round((targetNet - sub) * 100) / 100;
+  const adj = Math.round((targetNet - afterDiscount) * 100) / 100;
   document.getElementById('adjAmount').value = adj;
-  const noTax = sub + adj;
+  const noTax = afterDiscount + adj;
   const vat = noTax * 0.255;
   document.getElementById('sumSubtotal').textContent = fmt(sub) + ' €';
   document.getElementById('sumNoTax').textContent = fmt(noTax) + ' €';
   document.getElementById('sumVat').textContent = fmt(vat) + ' €';
+  updateKateDisplay(sub, noTax);
   autoSave();
+}
+
+// =============================================
+// KATEPROSENTTI (sisäinen, ei koskaan tulosteelle)
+// =============================================
+// Lasketaan vain riveiltä joiden kate% on tiedossa (hinnastosta valitut, ei kokoonpanot
+// eikä vapaat tekstirivit). Alennus/pyöristys kohdistetaan suhteessa kaikkiin riveihin.
+function updateKateDisplay(sub, noTax) {
+  const infoEl = document.getElementById('kateInfo');
+  const valEl = document.getElementById('kateValue');
+  const noteEl = document.getElementById('kateNote');
+  if (!infoEl || !valEl || !noteEl) return;
+
+  let knownRevenue = 0, knownCost = 0, totalRevenue = 0;
+  sections.forEach(sec => {
+    if (!sec.active) return;
+    sec.rows.forEach(row => {
+      const rs = rowSum(row);
+      if (!rs) return;
+      totalRevenue += rs;
+      if (row.katePercent !== null && row.katePercent !== undefined && row.basePrice) {
+        const unitCost = row.basePrice / (1 + row.katePercent);
+        knownRevenue += rs;
+        knownCost += (parseFloat(row.qty) || 0) * unitCost;
+      }
+    });
+  });
+
+  if (totalRevenue <= 0 || knownRevenue <= 0) {
+    infoEl.style.display = 'none';
+    return;
+  }
+
+  const effectiveRatio = sub > 0 ? (noTax / sub) : 1;
+  const knownRevenueAfter = knownRevenue * effectiveRatio;
+  const katePct = knownRevenueAfter > 0 ? ((knownRevenueAfter - knownCost) / knownRevenueAfter) * 100 : null;
+
+  infoEl.style.display = 'block';
+  valEl.textContent = katePct !== null ? katePct.toLocaleString('fi-FI', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' %' : '–';
+
+  const unknownRevenue = totalRevenue - knownRevenue;
+  if (unknownRevenue > 1) {
+    noteEl.textContent = `Perustuu ${fmt(knownRevenue)} € / ${fmt(totalRevenue)} € tarjouksen summasta (hinnastotuotteet). Vapaat rivit / kokoonpanot eivät ole mukana.`;
+  } else {
+    noteEl.textContent = '';
+  }
 }
 
 function fmt(n) {
@@ -1312,8 +1393,10 @@ function fmt(n) {
 // =============================================
 function buildQuoteData(status) {
   const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+  const afterDiscount = sub * (1 - discountPercent / 100);
   const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
-  const noTax = sub + adj;
+  const noTax = afterDiscount + adj;
   const vat = noTax * 0.255;
   return {
     customer_id: document.getElementById('customerId').value || null,
@@ -1323,6 +1406,7 @@ function buildQuoteData(status) {
     notes: document.getElementById('quoteRef').value || null,
     footer_text: document.getElementById('defaultText').value || null,
     discount_amount: adj,
+    discount_percent: discountPercent,
     sections_json: JSON.stringify(sections),
     delivery_type: document.getElementById('deliveryType').value || null,
     delivery_week: document.getElementById('deliveryWeek').value.trim() || null,
@@ -1416,6 +1500,7 @@ async function loadQuote(id) {
   document.getElementById('quoteRef').value = q.notes || '';
   document.getElementById('defaultText').value = q.footer_text || '';
   document.getElementById('adjAmount').value = q.discount_amount || 0;
+  document.getElementById('discountPercent').value = q.discount_percent || 0;
   if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
   if (q.customer_id) {
     const cust = customers.find(c => c.id === q.customer_id);
@@ -1440,6 +1525,7 @@ async function copyQuoteFrom(id, keepPrices) {
   document.getElementById('quoteRef').value = q.notes || '';
   document.getElementById('defaultText').value = q.footer_text || '';
   document.getElementById('adjAmount').value = q.discount_amount || 0;
+  document.getElementById('discountPercent').value = q.discount_percent || 0;
   if (q.sections_json) {
     try {
       sections = JSON.parse(q.sections_json);
@@ -1454,6 +1540,7 @@ async function copyQuoteFrom(id, keepPrices) {
               r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
               r.price = r.basePrice || '';
               r.priceManual = false;
+              r.katePercent = (prod.pricing_model !== 'assembly' && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
             }
           }
         });
