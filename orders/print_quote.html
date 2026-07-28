@@ -108,6 +108,36 @@ function fmt(n) {
   return Number(n||0).toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// ALV — lasketaan aina rivin omasta vatPercent-arvosta (tallennettu sections_json:iin
+// tarjous.html/myymala.html:stä), ei kiinteällä kertoimella. Vanhemmilla tarjouksilla,
+// joita ei ole avattu uudemmalla tarjous.html:llä, vatPercent-kenttää ei vielä ole
+// riveillä — oletetaan silloin 25.5%, sama fallback kuin muuallakin sovelluksessa.
+function grossPrice(net, vatPercent) {
+  const vat = (vatPercent == null || vatPercent === '') ? 25.5 : parseFloat(vatPercent);
+  return (parseFloat(net) || 0) * (1 + (isNaN(vat) ? 25.5 : vat) / 100);
+}
+
+// Koko tarjouksen/kuitin "tehollinen" alv-% painotettuna riveittäin niiden verottomalla
+// summalla. Jos kaikilla riveillä sama alv-%, palauttaa täsmälleen sen.
+function computeQuoteVatRate(secs) {
+  let weighted = 0, totalNet = 0;
+  secs.forEach(sec => {
+    if (!sec.active) return;
+    sec.rows.forEach(row => {
+      const net = (parseFloat(row.qty)||0) * (parseFloat(row.price)||0);
+      if (!net) return;
+      const vp = (row.vatPercent == null || row.vatPercent === '') ? 25.5 : parseFloat(row.vatPercent);
+      weighted += net * (isNaN(vp) ? 25.5 : vp);
+      totalNet += net;
+    });
+  });
+  return totalNet > 0 ? weighted / totalNet : 25.5;
+}
+
+function fmtVatRate(rate) {
+  return rate.toLocaleString('fi-FI', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 function fmtDate(s) {
   if (!s) return '';
   return s.slice(0,10).split('-').reverse().join('.');
@@ -171,7 +201,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }, 0);
   const afterDiscount = sub * (1 - discountPercent / 100);
   const noTax = afterDiscount + adj;
-  const vat = noTax * 0.255;
+  const vatRate = computeQuoteVatRate(sections);
+  const vat = noTax * vatRate / 100;
   // Käytetään tallennettua total_gross jos saatavilla (pyöristetty arvo), muuten lasketaan
   const total = q.total_gross ? parseFloat(q.total_gross) : noTax + vat;
 
@@ -186,11 +217,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (!(parseFloat(row.qty) > 0)) return;
       const teksti = row.desc || row.nimikeTeksti || '';
       const rs = (parseFloat(row.qty)||0) * (parseFloat(row.price)||0);
-      const rsVat = rs * 1.255;
+      const rsVat = grossPrice(rs, row.vatPercent);
       rowsHTML += `<tr>
         <td>${teksti}</td>
         ${showQty ? `<td class="right">${row.qty || ''}</td><td>${row.unit || ''}</td>` : ''}
-        ${showPrices ? `<td class="right" style="line-height:1.3;">${row.price ? fmt(row.price) + ' €' : ''}<br>${row.price ? '<span style="font-size:7.5pt;color:#777;">' + fmt(parseFloat(row.price)*1.255) + ' €</span>' : ''}</td><td class="right" style="line-height:1.3;">${rs ? fmt(rs) + ' €' : ''}<br>${rs ? '<span style="font-size:7.5pt;color:#777;">' + fmt(rsVat) + ' €</span>' : ''}</td>` : ''}
+        ${showPrices ? `<td class="right" style="line-height:1.3;">${row.price ? fmt(row.price) + ' €' : ''}<br>${row.price ? '<span style="font-size:7.5pt;color:#777;">' + fmt(grossPrice(row.price, row.vatPercent)) + ' €</span>' : ''}</td><td class="right" style="line-height:1.3;">${rs ? fmt(rs) + ' €' : ''}<br>${rs ? '<span style="font-size:7.5pt;color:#777;">' + fmt(rsVat) + ' €</span>' : ''}</td>` : ''}
       </tr>`;
     });
   });
@@ -252,7 +283,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       <div class="summary-box">
         <table>
           <tr><td class="lbl">Alv 0%:</td><td class="val">${fmt(noTax)} €</td></tr>
-          <tr><td class="lbl">Alv 25,5%:</td><td class="val">${fmt(vat)} €</td></tr>
+          <tr><td class="lbl">Alv ${fmtVatRate(vatRate)}%:</td><td class="val">${fmt(vat)} €</td></tr>
           <tr class="total"><td class="lbl">YHT:</td><td class="val">${fmt(total)} €</td></tr>
         </table>
       </div>
