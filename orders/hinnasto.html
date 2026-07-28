@@ -483,7 +483,7 @@
       </div>
       <div class="form-group">
         <label>ALV %</label>
-        <input type="number" id="fVat" step="0.1" value="25.5" min="0" max="100">
+        <input type="number" id="fVat" step="0.1" value="25.5" min="0" max="100" oninput="updateGrossPreview()">
       </div>
 
       <!-- Tuotekoodi + Yksikkö -->
@@ -535,6 +535,7 @@
           <div class="form-group">
             <label>Myyntihinta alv 0% <span style="color:var(--accent)">(laskettu)</span></label>
             <input type="number" id="fPrice" step="0.0001" min="0" placeholder="—" style="color:var(--accent);">
+            <div id="grossPreviewSimple" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:4px;">—</div>
           </div>
         </div>
       </div>
@@ -591,6 +592,7 @@
                 <div id="calcJm" style="font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--accent);">—</div>
               </div>
             </div>
+            <div id="grossPreviewCubic" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:6px;">—</div>
             <input type="hidden" id="fPrice">
           </div>
         </div>
@@ -617,7 +619,8 @@
           </div>
           <div class="form-group full" style="background:rgba(91,155,213,0.07);border:1px solid rgba(91,155,213,0.2);border-radius:4px;padding:10px;">
             <label style="color:#5b9bd5;">Myyntihinta alv 0% <span style="color:var(--text-dim);font-weight:400;">(laskettu — voit muokata käsin)</span></label>
-            <input type="number" id="fPriceAssembly" step="0.0001" min="0" placeholder="—" oninput="onAssemblyPriceManualInput()">
+            <input type="number" id="fPriceAssembly" step="0.0001" min="0" placeholder="—" oninput="onAssemblyPriceManualInput(); updateGrossPreview();">
+            <div id="grossPreviewAssembly" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:4px;">—</div>
           </div>
         </div>
       </div>
@@ -839,6 +842,33 @@ function togglePricingFields() {
   document.getElementById('assemblyFields').style.display = model === 'assembly' ? '' : 'none';
   if (model === 'assembly') renderComponentsList();
   laskeMyynnin();
+  updateGrossPreview();
+}
+
+// Verollinen hinta lasketaan AINA tuotteen/lomakkeen omasta vat_percent-kentästä,
+// ei kiinteällä kertoimella — jos alv-kanta joskus muuttuu tai vaihtelee tuotteittain,
+// tämä näyttää oikein ilman koodimuutosta.
+function grossPrice(net, vatPercent) {
+  const vat = (vatPercent === null || vatPercent === undefined || vatPercent === '') ? 25.5 : parseFloat(vatPercent);
+  return (parseFloat(net) || 0) * (1 + (isNaN(vat) ? 25.5 : vat) / 100);
+}
+
+// Päivittää lomakkeen verollisen hinnan esikatselun aktiivisen hinnoittelumallin mukaan.
+function updateGrossPreview() {
+  const model = document.getElementById('fPricingModel').value;
+  const vat   = document.getElementById('fVat').value;
+
+  if (model === 'assembly') {
+    const net = parseFloat(document.getElementById('fPriceAssembly').value) || 0;
+    const el  = document.getElementById('grossPreviewAssembly');
+    if (el) el.textContent = net > 0 ? '≈ ' + fmtPrice(grossPrice(net, vat)) + ' € (sis. alv)' : '—';
+    return;
+  }
+
+  const net = parseFloat(document.getElementById('fPrice').value) || 0;
+  const targetId = model === 'cubic' ? 'grossPreviewCubic' : 'grossPreviewSimple';
+  const el = document.getElementById(targetId);
+  if (el) el.textContent = net > 0 ? '≈ ' + fmtPrice(grossPrice(net, vat)) + ' € (sis. alv)' : '—';
 }
 
 function laskeMyynnin() {
@@ -865,6 +895,7 @@ function laskeMyynnin() {
       ? jmHinta.toLocaleString('fi-FI', {minimumFractionDigits:4, maximumFractionDigits:4}) + ' €' : '—';
     document.getElementById('fPrice').value = jmHinta > 0 ? jmHinta.toFixed(4) : '';
   }
+  updateGrossPreview();
 }
 
 // ── Filters & sort ─────────────────────────────────────────
@@ -931,7 +962,7 @@ function renderTable() {
       <td>${esc(p.name || '')}${isAssembly ? ' <span class="badge badge-assembly" style="font-size:9px;">kokoonpano</span>' : ''}</td>
       <td>${p.category ? `<span class="cat">${esc(p.category)}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
       <td class="mono">${esc(p.unit || '—')}</td>
-      <td class="price" title="${esc(priceTooltip)}">${p.price != null ? fmtPrice(p.price) : '—'}</td>
+      <td class="price" title="${esc(priceTooltip)}">${p.price != null ? fmtPrice(p.price) : '—'}${p.price != null ? `<br><span style="font-size:10px;font-weight:400;color:var(--text-dim);">${fmtPrice(grossPrice(p.price, p.vat_percent))} € alv</span>` : ''}</td>
       <td class="mono" style="color:var(--text-dim)">${p.vat_percent != null ? p.vat_percent + ' %' : '—'}</td>
       ${varastoCell}
       <td>${statusBadge}</td>
@@ -955,7 +986,10 @@ function renderTable() {
     <div class="product-card">
       <div class="card-top">
         <div class="card-name">${esc(p.name || '—')}${isAssembly ? ' <span class="badge badge-assembly" style="font-size:9px;">kokoonpano</span>' : ''}</div>
-        <div class="card-price">${p.price != null ? fmtPrice(p.price) + ' €' : '—'}</div>
+        <div style="text-align:right;">
+          <div class="card-price">${p.price != null ? fmtPrice(p.price) + ' €' : '—'}</div>
+          ${p.price != null ? `<div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;">${fmtPrice(grossPrice(p.price, p.vat_percent))} € alv</div>` : ''}
+        </div>
       </div>
       <div class="card-bottom">
         <span class="card-code">${esc(p.code || '—')}</span>
@@ -1369,6 +1403,7 @@ function calcAssemblyPrice() {
   const total = sum * (1 + kate);
   document.getElementById('fPriceAssembly').value = total > 0 ? total.toFixed(4) : '';
   assemblyPriceManual = false;
+  updateGrossPreview();
 }
 
 function onAssemblyPriceManualInput() {
@@ -1394,6 +1429,10 @@ function clearForm() {
   renderComponentsList();
   if (document.getElementById('calcKuutio')) document.getElementById('calcKuutio').textContent = '—';
   if (document.getElementById('calcJm'))     document.getElementById('calcJm').textContent     = '—';
+  ['grossPreviewSimple','grossPreviewCubic','grossPreviewAssembly'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
   togglePricingFields();
 }
 
