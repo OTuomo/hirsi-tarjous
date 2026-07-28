@@ -80,6 +80,7 @@
   <h1>📦 PAKKAUSLISTA</h1>
   <span class="quote-info" id="quoteInfo">Ladataan...</span>
   <span class="saving" id="packingSaveStatus"></span>
+  <button class="pl-btn-ghost" onclick="closePackingList()" title="Sulje pakkauslista ja palaa tarjoukseen">← Takaisin tarjoukseen</button>
 </header>
 
 <div class="page" id="root">
@@ -351,6 +352,16 @@ function copyQuoteRowsToPacking() {
 
 function printPackingList() {
   window.open(`print_supply.html?id=${currentQuoteId}`, '_blank');
+}
+
+// Sulkee pakkauslistan ja tuo tarjous.html-ikkunan (josta tämä avattiin) takaisin näkyviin.
+// Pakkauslista avataan aina tarjous.html:stä window.open()-kutsulla, joten window.opener
+// on aina olemassa — ei tarvita erillistä varautumista sen puuttumiseen.
+function closePackingList() {
+  if (window.opener && !window.opener.closed) {
+    window.opener.focus();
+  }
+  window.close();
 }
 
 function autoSavePacking() {
