@@ -535,7 +535,7 @@
           <div class="form-group">
             <label>Myyntihinta alv 0% <span style="color:var(--accent)">(laskettu)</span></label>
             <input type="number" id="fPrice" step="0.0001" min="0" placeholder="—" style="color:var(--accent);">
-            <div id="grossPreviewSimple" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:4px;">—</div>
+            <div id="grossPreviewSimple" style="font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:4px;">—</div>
           </div>
         </div>
       </div>
@@ -592,7 +592,7 @@
                 <div id="calcJm" style="font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--accent);">—</div>
               </div>
             </div>
-            <div id="grossPreviewCubic" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:6px;">—</div>
+            <div id="grossPreviewCubic" style="font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:6px;">—</div>
             <input type="hidden" id="fPrice">
           </div>
         </div>
@@ -620,7 +620,7 @@
           <div class="form-group full" style="background:rgba(91,155,213,0.07);border:1px solid rgba(91,155,213,0.2);border-radius:4px;padding:10px;">
             <label style="color:#5b9bd5;">Myyntihinta alv 0% <span style="color:var(--text-dim);font-weight:400;">(laskettu — voit muokata käsin)</span></label>
             <input type="number" id="fPriceAssembly" step="0.0001" min="0" placeholder="—" oninput="onAssemblyPriceManualInput(); updateGrossPreview();">
-            <div id="grossPreviewAssembly" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:4px;">—</div>
+            <div id="grossPreviewAssembly" style="font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;margin-top:4px;">—</div>
           </div>
         </div>
       </div>
@@ -738,7 +738,9 @@ function renderLowStock() {
     if (!byCat[cat]) byCat[cat] = [];
     byCat[cat].push(p);
   });
-  container.innerHTML = Object.entries(byCat).sort(([a],[b]) => a.localeCompare(b,'fi')).map(([cat, prods]) => `
+  container.innerHTML = Object.entries(byCat).sort(([a],[b]) => a.localeCompare(b,'fi')).map(([cat, prods]) => {
+    const sorted = prods.sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'fi',{numeric:true}));
+    return `
     <div class="low-category">
       <div class="low-cat-title">${esc(cat)}</div>
       <div class="table-wrap" style="border-radius:0 0 4px 4px;">
@@ -749,7 +751,7 @@ function renderLowStock() {
             </tr>
           </thead>
           <tbody>
-            ${prods.sort((a,b)=>String(a.code||'').localeCompare(String(b.code||''),'fi',{numeric:true})).map(p => `
+            ${sorted.map(p => `
             <tr class="low-stock-row">
               <td class="mono">${esc(p.code||'—')}</td>
               <td>${esc(p.name||'')}</td>
@@ -760,8 +762,25 @@ function renderLowStock() {
             </tr>`).join('')}
           </tbody>
         </table>
+        <div class="card-list">
+          ${sorted.map(p => `
+          <div class="product-card">
+            <div class="card-top">
+              <div class="card-name">${esc(p.name||'—')}</div>
+              <div class="card-price" style="color:var(--danger);">${p.varasto_maara} ${esc(p.unit||'')}</div>
+            </div>
+            <div class="card-bottom">
+              <span class="card-code">${esc(p.code||'—')}</span>
+              <span class="mono" style="font-size:11px;color:var(--text-dim);">alaraja ${p.varasto_alaraja} ${esc(p.unit||'')}</span>
+              <div class="card-actions">
+                <button class="btn btn-ghost btn-sm btn-icon" onclick="openEdit('${p.id}')">✎</button>
+              </div>
+            </div>
+          </div>`).join('')}
+        </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function updateLowCount() {
@@ -962,7 +981,7 @@ function renderTable() {
       <td>${esc(p.name || '')}${isAssembly ? ' <span class="badge badge-assembly" style="font-size:9px;">kokoonpano</span>' : ''}</td>
       <td>${p.category ? `<span class="cat">${esc(p.category)}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
       <td class="mono">${esc(p.unit || '—')}</td>
-      <td class="price" title="${esc(priceTooltip)}">${p.price != null ? fmtPrice(p.price) : '—'}${p.price != null ? `<br><span style="font-size:10px;font-weight:400;color:var(--text-dim);">${fmtPrice(grossPrice(p.price, p.vat_percent))} € alv</span>` : ''}</td>
+      <td class="price" title="${esc(priceTooltip)}">${p.price != null ? fmtPrice(p.price) : '—'}${p.price != null ? `<br><span style="font-size:12px;font-weight:400;color:var(--text-dim);">${fmtPrice(grossPrice(p.price, p.vat_percent))} € alv</span>` : ''}</td>
       <td class="mono" style="color:var(--text-dim)">${p.vat_percent != null ? p.vat_percent + ' %' : '—'}</td>
       ${varastoCell}
       <td>${statusBadge}</td>
@@ -988,7 +1007,7 @@ function renderTable() {
         <div class="card-name">${esc(p.name || '—')}${isAssembly ? ' <span class="badge badge-assembly" style="font-size:9px;">kokoonpano</span>' : ''}</div>
         <div style="text-align:right;">
           <div class="card-price">${p.price != null ? fmtPrice(p.price) + ' €' : '—'}</div>
-          ${p.price != null ? `<div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;">${fmtPrice(grossPrice(p.price, p.vat_percent))} € alv</div>` : ''}
+          ${p.price != null ? `<div style="font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;">${fmtPrice(grossPrice(p.price, p.vat_percent))} € alv</div>` : ''}
         </div>
       </div>
       <div class="card-bottom">
