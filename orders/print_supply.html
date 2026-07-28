@@ -8,7 +8,16 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 10pt; color: #111; background: #fff; }
 
-  @page { size: A4; margin: 8mm 15mm 10mm 15mm; }
+  @page {
+    size: A4;
+    margin: 8mm 15mm 10mm 15mm;
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 7.5pt;
+      color: #444;
+    }
+  }
   .page-wrap { max-width: 180mm; margin: 0 auto; }
 
   .doc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8mm; border-bottom: 1px solid #ccc; padding-bottom: 5mm; }
@@ -222,7 +231,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       <div class="col right">
         <span>Y-Tunnus: 3579911-5</span>
         <div class="quote-num">Tarjousnumero ${q.quote_number || ''}</div>
-        <span>Sivu 1</span>
       </div>
     </div>
 
