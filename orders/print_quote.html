@@ -11,6 +11,12 @@
   @page {
     size: A4;
     margin: 18mm 15mm 28mm 15mm;
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 7.5pt;
+      color: #444;
+    }
   }
   .page-wrap { max-width: 180mm; margin: 0 auto; }
 
@@ -305,7 +311,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       <div class="col right">
         <span>Y-Tunnus: 3579911-5</span>
         <div class="quote-num">${isReceipt ? 'Kuittinumero' : 'Tarjousnumero'} ${q.quote_number || ''}</div>
-        <span>Sivu 1</span>
       </div>
     </div>
 
