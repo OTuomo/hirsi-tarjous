@@ -1361,30 +1361,30 @@ function fmtQty(n) {
 
 function computeKateBreakdown() {
   const groups = {};
-  let unknownQty = 0, unknownRevenue = 0, totalRevenue = 0, knownRevenue = 0, knownCost = 0;
+  let unknownRows = 0, unknownRevenue = 0, totalRevenue = 0, knownRevenue = 0, knownCost = 0;
   sections.forEach(sec => {
     if (!sec.active) return;
     sec.rows.forEach(row => {
       const rs = rowSum(row);
       if (!rs) return;
-      const qty = parseFloat(row.qty) || 0;
       totalRevenue += rs;
       if (row.katePercent !== null && row.katePercent !== undefined && row.basePrice) {
         const key = row.katePercent.toFixed(4);
-        if (!groups[key]) groups[key] = { katePercent: row.katePercent, qty: 0, revenue: 0, cost: 0 };
+        if (!groups[key]) groups[key] = { katePercent: row.katePercent, rows: 0, revenue: 0, cost: 0 };
+        const qty = parseFloat(row.qty) || 0;
         const unitCost = row.basePrice / (1 + row.katePercent);
-        groups[key].qty += qty;
+        groups[key].rows += 1;
         groups[key].revenue += rs;
         groups[key].cost += qty * unitCost;
         knownRevenue += rs;
         knownCost += qty * unitCost;
       } else {
-        unknownQty += qty;
+        unknownRows += 1;
         unknownRevenue += rs;
       }
     });
   });
-  return { groups, unknownQty, unknownRevenue, totalRevenue, knownRevenue, knownCost };
+  return { groups, unknownRows, unknownRevenue, totalRevenue, knownRevenue, knownCost };
 }
 
 function openKateModal() {
@@ -1401,14 +1401,14 @@ function openKateModal() {
     const g = data.groups[key];
     return `<tr>
       <td style="padding:4px 6px;">${(g.katePercent*100).toLocaleString('fi-FI',{maximumFractionDigits:1})} %</td>
-      <td class="right" style="padding:4px 6px;">${fmtQty(g.qty)} kpl</td>
+      <td class="right" style="padding:4px 6px;">${g.rows} rivi${g.rows===1?'':'ä'}</td>
       <td class="right" style="padding:4px 6px;">${fmt(g.revenue)} €</td>
     </tr>`;
   }).join('');
   if (data.unknownRevenue > 1) {
     rowsHtml += `<tr style="color:var(--text-dim);">
       <td style="padding:4px 6px;">Ei tiedossa</td>
-      <td class="right" style="padding:4px 6px;">${fmtQty(data.unknownQty)} kpl</td>
+      <td class="right" style="padding:4px 6px;">${data.unknownRows} rivi${data.unknownRows===1?'':'ä'}</td>
       <td class="right" style="padding:4px 6px;">${fmt(data.unknownRevenue)} €</td>
     </tr>`;
   }
@@ -1422,13 +1422,14 @@ function openKateModal() {
       <thead>
         <tr style="border-bottom:1px solid var(--border);color:var(--text-dim);font-size:11px;">
           <th style="text-align:left;padding:4px 6px;font-weight:600;">Kate</th>
-          <th class="right" style="padding:4px 6px;font-weight:600;">Määrä</th>
-          <th class="right" style="padding:4px 6px;font-weight:600;">Summa (veroton)</th>
+          <th class="right" style="padding:4px 6px;font-weight:600;">Rivejä</th>
+          <th class="right" style="padding:4px 6px;font-weight:600;">Summa (veroton, ennen alennusta)</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
     <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border);">
+      ${discountPercent > 0 ? `<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">Yllä olevat summat ovat ennen alennusta. Alennus ${discountPercent.toLocaleString('fi-FI',{maximumFractionDigits:1})} % (+ mahdollinen pyöristys) pienentää tuottoa kertoimella × ${effectiveRatio.toLocaleString('fi-FI',{minimumFractionDigits:3,maximumFractionDigits:3})} — tämä on jo huomioitu alla olevassa kokonaiskatteessa.</div>` : ''}
       <div style="font-size:14px;"><b>Koko tarjouksen kate alennuksen jälkeen: </b><span style="color:var(--accent);font-weight:600;">${katePct !== null ? katePct.toLocaleString('fi-FI', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' %' : '– (ei hinnastotuotteita)'}</span></div>
       ${data.unknownRevenue > 1 ? `<div style="font-size:10px;color:var(--text-dim);margin-top:6px;">Huom: ${fmt(data.unknownRevenue)} € tarjouksesta on kokoonpanoja tai vapaita "Kohde"-rivejä joiden kate ei ole tiedossa — ei mukana kateprosentissa.</div>` : ''}
     </div>
