@@ -1415,7 +1415,9 @@ function openKateModal() {
   if (!rowsHtml) rowsHtml = `<tr><td colspan="3" style="padding:8px 6px;color:var(--text-dim);">Ei rivejä vielä.</td></tr>`;
 
   const knownRevenueAfter = data.knownRevenue * effectiveRatio;
-  const katePct = (data.knownRevenue > 0 && knownRevenueAfter > 0) ? ((knownRevenueAfter - data.knownCost) / knownRevenueAfter) * 100 : null;
+  // Sama kate%-määritelmä kuin hinnastossa/per-rivi-taulukossa: kate lisätään OSTOHINNAN
+  // päälle (myyntihinta = ostohinta × (1+kate%)), joten nimittäjä on kustannus, ei myyntihinta.
+  const katePct = (data.knownCost > 0) ? ((knownRevenueAfter - data.knownCost) / data.knownCost) * 100 : null;
 
   document.getElementById('kateModalBody').innerHTML = `
     <table style="width:100%;border-collapse:collapse;">
