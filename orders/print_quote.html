@@ -114,6 +114,14 @@ function fmt(n) {
   return Number(n||0).toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Verollisen YKSIKKÖHINNAN (à-hinta) esikatseluun käytetään 4 desimaalia, samaan tapaan kuin
+// nettohintakin näytetään täydellä tarkkuudella kuutiohinnoittelussa. TÄTÄ EI KÄYTETÄ rivi- tai
+// tarjoussummiin — ne pysyvät 2 desimaalilla (fmt), koska ne ovat asiakkaalle näkyvää,
+// senttitarkkaa rahaa eivätkä saa koskaan poiketa laskun loppusummista.
+function fmt4(n) {
+  return Number(n||0).toLocaleString('fi-FI', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+}
+
 // ALV — lasketaan aina rivin omasta vatPercent-arvosta (tallennettu sections_json:iin
 // tarjous.html/myymala.html:stä), ei kiinteällä kertoimella. Vanhemmilla tarjouksilla,
 // joita ei ole avattu uudemmalla tarjous.html:llä, vatPercent-kenttää ei vielä ole
@@ -227,7 +235,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       rowsHTML += `<tr>
         <td>${teksti}</td>
         ${showQty ? `<td class="right">${row.qty || ''}</td><td>${row.unit || ''}</td>` : ''}
-        ${showPrices ? `<td class="right" style="line-height:1.3;">${row.price ? fmt(row.price) + ' €' : ''}<br>${row.price ? '<span style="font-size:7.5pt;color:#777;">' + fmt(grossPrice(row.price, row.vatPercent)) + ' €</span>' : ''}</td><td class="right" style="line-height:1.3;">${rs ? fmt(rs) + ' €' : ''}<br>${rs ? '<span style="font-size:7.5pt;color:#777;">' + fmt(rsVat) + ' €</span>' : ''}</td>` : ''}
+        ${showPrices ? `<td class="right" style="line-height:1.3;">${row.price ? fmt(row.price) + ' €' : ''}<br>${row.price ? '<span style="font-size:7.5pt;color:#777;">' + fmt4(grossPrice(row.price, row.vatPercent)) + ' €</span>' : ''}</td><td class="right" style="line-height:1.3;">${rs ? fmt(rs) + ' €' : ''}<br>${rs ? '<span style="font-size:7.5pt;color:#777;">' + fmt(rsVat) + ' €</span>' : ''}</td>` : ''}
       </tr>`;
     });
   });
