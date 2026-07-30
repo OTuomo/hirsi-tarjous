@@ -1004,7 +1004,7 @@ function renderRowHTML(secId, row) {
             step="0.01" min="0" style="text-align:right;">
           ${row.priceManual?`<button class="restore-btn" onclick="restorePrice(${secId},${row.id})" title="Palauta laskettu hinta">↺</button>`:''}
         </div>
-        <div id="pricevat-${secId}-${row.id}" style="text-align:right;font-size:10px;color:var(--text-dim);">${row.price ? fmt(grossPrice(row.price, row.vatPercent))+' €' : ''}</div>
+        <div id="pricevat-${secId}-${row.id}" style="text-align:right;font-size:10px;color:var(--text-dim);">${row.price ? fmt4(grossPrice(row.price, row.vatPercent))+' €' : ''}</div>
       </td>
       <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.3;" id="rowsum-${secId}-${row.id}">
         ${fmt(rowSum(row))} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(grossPrice(rowSum(row), row.vatPercent))} €</span>
@@ -1035,7 +1035,7 @@ function renderCardHTML(secId, row) {
         <label>à-hinta</label>
         <input type="number" value="${row.price||''}" oninput="onPriceInput(${secId},${row.id},this.value)"
           class="${row.priceManual?'price-manual':''}" style="width:100px;">
-        <span id="pricevatcard-${secId}-${row.id}" style="font-size:10px;color:var(--text-dim);margin-left:4px;">${row.price ? '('+fmt(grossPrice(row.price, row.vatPercent))+' € s.alv)' : ''}</span>
+        <span id="pricevatcard-${secId}-${row.id}" style="font-size:10px;color:var(--text-dim);margin-left:4px;">${row.price ? '('+fmt4(grossPrice(row.price, row.vatPercent))+' € s.alv)' : ''}</span>
         <label style="margin-left:8px;">= ${fmt(rowSum(row))} €</label>
         <button class="del-btn" onclick="removeRow(${secId},${row.id})" style="margin-left:auto;">✕</button>
       </div>
@@ -1149,7 +1149,7 @@ function selectNimike(secId, rowId, productId) {
     if (priceInput) priceInput.value = row.price || '';
 
     const pv = document.getElementById(`pricevat-${secId}-${rowId}`);
-    if (pv) pv.textContent = row.price ? fmt(grossPrice(row.price, row.vatPercent))+' €' : '';
+    if (pv) pv.textContent = row.price ? fmt4(grossPrice(row.price, row.vatPercent))+' €' : '';
 
     const rowSumEl = document.getElementById(`rowsum-${secId}-${rowId}`);
     if (rowSumEl) {
@@ -1282,9 +1282,9 @@ function updateRowSum(secId, rowId) {
     el.innerHTML = `${fmt(net)} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(grossPrice(net, row.vatPercent))} €</span>`;
   }
   const pv = document.getElementById(`pricevat-${secId}-${rowId}`);
-  if (pv) pv.textContent = row.price ? fmt(grossPrice(row.price, row.vatPercent))+' €' : '';
+  if (pv) pv.textContent = row.price ? fmt4(grossPrice(row.price, row.vatPercent))+' €' : '';
   const pvc = document.getElementById(`pricevatcard-${secId}-${rowId}`);
-  if (pvc) pvc.textContent = row.price ? '('+fmt(grossPrice(row.price, row.vatPercent))+' € s.alv)' : '';
+  if (pvc) pvc.textContent = row.price ? '('+fmt4(grossPrice(row.price, row.vatPercent))+' € s.alv)' : '';
   const ss = document.getElementById(`subsub-${secId}`);
   if (ss) ss.textContent = fmt(sectionSum(sec));
   recalcTotals();
@@ -1448,6 +1448,13 @@ document.getElementById('kateModal').addEventListener('click', e => {
 
 function fmt(n) {
   return Number(n).toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Verollisen YKSIKKÖHINNAN (à-hinta) esikatseluun käytetään 4 desimaalia, samaan tapaan kuin
+// nettohintakin näytetään täydellä tarkkuudella kuutiohinnoittelussa. TÄTÄ EI KÄYTETÄ rivi- tai
+// tarjoussummiin — ne pysyvät 2 desimaalilla (fmt), koska ne ovat oikeaa, senttitarkkaa rahaa.
+function fmt4(n) {
+  return Number(n).toLocaleString('fi-FI', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 }
 
 // =============================================
