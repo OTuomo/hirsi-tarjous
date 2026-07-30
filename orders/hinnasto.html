@@ -880,14 +880,14 @@ function updateGrossPreview() {
   if (model === 'assembly') {
     const net = parseFloat(document.getElementById('fPriceAssembly').value) || 0;
     const el  = document.getElementById('grossPreviewAssembly');
-    if (el) el.textContent = net > 0 ? '≈ ' + fmtPrice(grossPrice(net, vat)) + ' € (sis. alv)' : '—';
+    if (el) el.textContent = net > 0 ? '≈ ' + fmtPrice4(grossPrice(net, vat)) + ' € (sis. alv)' : '—';
     return;
   }
 
   const net = parseFloat(document.getElementById('fPrice').value) || 0;
   const targetId = model === 'cubic' ? 'grossPreviewCubic' : 'grossPreviewSimple';
   const el = document.getElementById(targetId);
-  if (el) el.textContent = net > 0 ? '≈ ' + fmtPrice(grossPrice(net, vat)) + ' € (sis. alv)' : '—';
+  if (el) el.textContent = net > 0 ? '≈ ' + fmtPrice4(grossPrice(net, vat)) + ' € (sis. alv)' : '—';
 }
 
 function laskeMyynnin() {
@@ -981,7 +981,7 @@ function renderTable() {
       <td>${esc(p.name || '')}${isAssembly ? ' <span class="badge badge-assembly" style="font-size:9px;">kokoonpano</span>' : ''}</td>
       <td>${p.category ? `<span class="cat">${esc(p.category)}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
       <td class="mono">${esc(p.unit || '—')}</td>
-      <td class="price" title="${esc(priceTooltip)}">${p.price != null ? fmtPrice(p.price) : '—'}${p.price != null ? `<br><span style="font-size:12px;font-weight:400;color:var(--text-dim);">${fmtPrice(grossPrice(p.price, p.vat_percent))} € alv</span>` : ''}</td>
+      <td class="price" title="${esc(priceTooltip)}">${p.price != null ? fmtPrice(p.price) : '—'}${p.price != null ? `<br><span style="font-size:12px;font-weight:400;color:var(--text-dim);">${fmtPrice4(grossPrice(p.price, p.vat_percent))} € alv</span>` : ''}</td>
       <td class="mono" style="color:var(--text-dim)">${p.vat_percent != null ? p.vat_percent + ' %' : '—'}</td>
       ${varastoCell}
       <td>${statusBadge}</td>
@@ -1007,7 +1007,7 @@ function renderTable() {
         <div class="card-name">${esc(p.name || '—')}${isAssembly ? ' <span class="badge badge-assembly" style="font-size:9px;">kokoonpano</span>' : ''}</div>
         <div style="text-align:right;">
           <div class="card-price">${p.price != null ? fmtPrice(p.price) + ' €' : '—'}</div>
-          ${p.price != null ? `<div style="font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;">${fmtPrice(grossPrice(p.price, p.vat_percent))} € alv</div>` : ''}
+          ${p.price != null ? `<div style="font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;">${fmtPrice4(grossPrice(p.price, p.vat_percent))} € alv</div>` : ''}
         </div>
       </div>
       <div class="card-bottom">
@@ -1457,6 +1457,14 @@ function clearForm() {
 
 function fmtPrice(n) {
   return Number(n).toLocaleString('fi-FI', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Verollisen YKSIKKÖHINNAN esikatseluun (ei koskaan rivi-/loppusummiin!) käytetään 4 desimaalia,
+// koska nettohintakin näytetään täydellä tarkkuudella (esim. kuutiohinnoittelun €/jm-arvot).
+// Kahdella desimaalilla pyöristetty yksikköhinta × määrä ei aina täsmää tarkkaan laskettuun
+// rivisummaan senttiä myöten — tämä on vain kosmeettinen esikatselu, ei koske itse laskentaan.
+function fmtPrice4(n) {
+  return Number(n).toLocaleString('fi-FI', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 }
 
 function esc(s) {
