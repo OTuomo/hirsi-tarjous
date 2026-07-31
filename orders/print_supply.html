@@ -43,21 +43,25 @@
   .product-table .section-hdr td { background: #f0f0f0; font-weight: 700; font-size: 9pt; border-bottom: 1px solid #bbb; border-top: 3px solid #555; padding: 5px 6px; }
   .product-table .assembly-note td { font-style: italic; color: #777; font-size: 9pt; padding: 4px 6px 2px; border-bottom: none; }
   .product-table tr.assembly-component td { padding-left: 14px; }
+  /* Estää rivin (ja osio-otsikon) katkeamisen kesken sivunvaihdon, sekä sen että osio-otsikko
+     jää yksin sivun loppuun ilman sen rivejä perässä */
+  .product-table tr { page-break-inside: avoid; break-inside: avoid; }
+  .product-table .section-hdr { page-break-after: avoid; break-after: avoid; }
+  .product-table tfoot td { border-bottom: none; padding: 0 6px; }
 
+  /* Footer on nyt taulukon <tfoot>, ei enää position:fixed — selain toistaa sen itse jokaisella
+     tulostetulla sivulla ja varaa sille oikeasti tilaa, jolloin tuoterivit eivät enää voi jäädä
+     sen alle piiloon sivunvaihdon kohdalla (vanha kovakoodattu bugi, korjattu 2026-07-xx). */
   .doc-footer {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    height: 18mm;
-    padding: 2mm 15mm 2mm;
-    border-top: 1px solid #bbb;
     display: flex; justify-content: space-between; align-items: center;
-    font-size: 7.5pt; color: #444; background: #fff;
+    padding: 3mm 0 1mm;
+    border-top: 1px solid #bbb;
+    font-size: 7.5pt; color: #444;
   }
   .doc-footer .col { display: flex; flex-direction: column; gap: 1px; line-height: 1.45; }
   .doc-footer .col.center { text-align: center; }
   .doc-footer .col.right { text-align: right; }
   .doc-footer .quote-num { font-size: 8.5pt; font-weight: 700; color: #111; margin-top: 2px; }
-  .page-wrap { padding-bottom: 22mm; }
 
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -66,7 +70,6 @@
   @media screen {
     body { background: #eee; padding: 20px; }
     .page-wrap { background: #fff; padding: 18mm 15mm 26mm; box-shadow: 0 2px 16px rgba(0,0,0,0.15); }
-    .doc-footer { position: static; border-top: 1px solid #bbb; margin-top: 16mm; }
   }
 
   .btn-print { position: fixed; top: 12px; right: 12px; background: #d97706; color: #fff; border: none; border-radius: 4px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; z-index: 99; }
@@ -215,24 +218,27 @@ window.addEventListener('DOMContentLoaded', async () => {
         </tr>
       </thead>
       <tbody>${rowsHTML}</tbody>
+      <tfoot>
+        <tr><td colspan="5">
+          <div class="doc-footer">
+            <div class="col">
+              <span>Okkosen Puutuote Oy</span>
+              <span>Sievintie 149</span>
+              <span>85160 Rautio</span>
+            </div>
+            <div class="col center">
+              <span>Puhelin: 0500-360 741</span>
+              <span>myynti@okkosenpuutuote.com</span>
+              <span>www.okkosenpuutuote.com</span>
+            </div>
+            <div class="col right">
+              <span>Y-Tunnus: 3579911-5</span>
+              <div class="quote-num">Tarjousnumero ${q.quote_number || ''}</div>
+            </div>
+          </div>
+        </td></tr>
+      </tfoot>
     </table>
-
-    <div class="doc-footer">
-      <div class="col">
-        <span>Okkosen Puutuote Oy</span>
-        <span>Sievintie 149</span>
-        <span>85160 Rautio</span>
-      </div>
-      <div class="col center">
-        <span>Puhelin: 0500-360 741</span>
-        <span>myynti@okkosenpuutuote.com</span>
-        <span>www.okkosenpuutuote.com</span>
-      </div>
-      <div class="col right">
-        <span>Y-Tunnus: 3579911-5</span>
-        <div class="quote-num">Tarjousnumero ${q.quote_number || ''}</div>
-      </div>
-    </div>
 
   </div>`;
 });
