@@ -167,6 +167,19 @@
   .week-input { background: transparent; border: none; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13px; width: 28px; text-align: center; padding: 0; outline: none; }
   .week-input::placeholder { color: var(--text-dim); }
   .week-dates { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); white-space: nowrap; flex: 1; }
+
+  /* KELLUVAT SIIRTYMÄNAPIT */
+  .scroll-nav { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 90; }
+  .scroll-nav-btn {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--panel); border: 1px solid var(--border); color: var(--accent);
+    font-size: 18px; font-weight: 700; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    transition: background 0.15s, transform 0.15s, border-color 0.15s;
+  }
+  .scroll-nav-btn:hover { background: var(--input-bg); border-color: var(--accent); transform: translateY(-2px); }
+  @media print { .scroll-nav { display: none !important; } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth-guard.js"></script>
@@ -362,6 +375,23 @@
     </div>
   </div>
 
+  <!-- VAKIOTEKSTI -->
+  <div class="panel">
+    <div class="panel-header">
+      Vakioteksti / huomiot
+      <span style="margin-left:auto;font-weight:400;font-size:11px;color:var(--text-dim);">Pohja:</span>
+      <select id="textTemplateSelect" onchange="applyTextTemplate(this.value)"
+        style="font-size:11px;padding:3px 6px;width:auto;margin-left:6px;text-transform:none;letter-spacing:0;">
+        <option value="">— valitse pohja —</option>
+        <option value="__none__">Ei tekstiä</option>
+      </select>
+      <button onclick="openTextTemplateModal()" style="margin-left:8px;padding:2px 8px;font-size:11px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;" title="Hallitse tekstipohjia">✎ Muokkaa pohjia</button>
+    </div>
+    <div class="panel-body default-text-wrap">
+      <textarea id="defaultText" oninput="autoSave()" placeholder="Vakioteksti tai toimitushuomiot..."></textarea>
+    </div>
+  </div>
+
   <!-- OSIOT JA TUOTERIVIT -->
   <div class="panel">
     <div class="panel-header">
@@ -400,23 +430,6 @@
     </table>
   </div>
 
-  <!-- VAKIOTEKSTI -->
-  <div class="panel">
-    <div class="panel-header">
-      Vakioteksti / huomiot
-      <span style="margin-left:auto;font-weight:400;font-size:11px;color:var(--text-dim);">Pohja:</span>
-      <select id="textTemplateSelect" onchange="applyTextTemplate(this.value)"
-        style="font-size:11px;padding:3px 6px;width:auto;margin-left:6px;text-transform:none;letter-spacing:0;">
-        <option value="">— valitse pohja —</option>
-        <option value="__none__">Ei tekstiä</option>
-      </select>
-      <button onclick="openTextTemplateModal()" style="margin-left:8px;padding:2px 8px;font-size:11px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;" title="Hallitse tekstipohjia">✎ Muokkaa pohjia</button>
-    </div>
-    <div class="panel-body default-text-wrap">
-      <textarea id="defaultText" oninput="autoSave()" placeholder="Vakioteksti tai toimitushuomiot..."></textarea>
-    </div>
-  </div>
-
   <!-- TOIMINTOPAINIKKEET -->
   <div class="action-bar">
     <!-- TUOTANNON ETENEMINEN (näkyy vain ORDERED-tilassa) -->
@@ -445,6 +458,12 @@
   </div>
 
 </div>
+
+<div class="scroll-nav">
+  <button type="button" class="scroll-nav-btn" onclick="scrollToTop()" title="Takaisin alkuun">↑</button>
+  <button type="button" class="scroll-nav-btn" onclick="scrollToBottom()" title="Siirry loppuun">↓</button>
+</div>
+
 <script>
 // =============================================
 // SUPABASE
@@ -1743,6 +1762,16 @@ function printQuote() {
 function toggleNav(e) {
   e.stopPropagation();
   document.getElementById('navDropdown').classList.toggle('open');
+}
+
+// =============================================
+// KELLUVAT SIIRTYMÄNAPIT
+// =============================================
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function scrollToBottom() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 }
 </script>
 </body>
