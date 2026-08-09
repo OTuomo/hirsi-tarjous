@@ -157,6 +157,39 @@ function fmtVatRate(rate) {
   return rate.toLocaleString('fi-FI', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+// =============================================
+// RIVIKOHTAINEN ALENNUS-% (2026-08) — sama logiikka kuin tarjous.html/myymala.html:ssä (oma
+// kopio, ei jaettuja JS-moduuleja projektin tyylin mukaisesti). Näytetään vain kun rivin à-hinta
+// on käsin muutettu MATALAMMAKSI kuin hinnaston basePrice (aito alennus) — jos hintaa on
+// nostettu käsin, ei näytetä mitään erikoista, rivi tulostuu kuten ennenkin.
+// =============================================
+function rowDiscountPercent(row) {
+  const base = parseFloat(row.basePrice);
+  if (row.basePrice === null || row.basePrice === undefined || isNaN(base) || base <= 0) return null;
+  const price = parseFloat(row.price);
+  if (isNaN(price) || price >= base) return null;
+  return (base - price) / base * 100;
+}
+
+function fmtPct(n) {
+  const s = n.toFixed(1);
+  return s.endsWith('.0') ? s.slice(0, -2) : s;
+}
+
+// Rakentaa à-hinta-solun sisällön. Normaalisti (ei alennusta): à-hinta + verollinen à-hinta
+// pienellä, kuten ennenkin — täysin muuttumaton. Kun rivillä on aito alennus, lisätään päälle
+// yliviivattu alkuperäinen hinnastohinta + alennus-%.
+function priceCellHTML(row) {
+  const priceStr = row.price ? fmt(row.price) + ' €' : '';
+  const grossStr = row.price ? '<span style="font-size:7.5pt;color:#777;">' + fmt4(grossPrice(row.price, row.vatPercent)) + ' €</span>' : '';
+  const pct = rowDiscountPercent(row);
+  if (pct !== null) {
+    const baseStr = fmt(row.basePrice) + ' €';
+    return `<span style="text-decoration:line-through;color:#999;font-size:7.5pt;">${baseStr}</span><br>${priceStr} <span style="color:#2e7d4f;font-weight:700;font-size:7.5pt;">-${fmtPct(pct)}%</span><br>${grossStr}`;
+  }
+  return `${priceStr}<br>${grossStr}`;
+}
+
 function fmtDate(s) {
   if (!s) return '';
   return s.slice(0,10).split('-').reverse().join('.');
@@ -240,7 +273,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       rowsHTML += `<tr>
         <td>${teksti}</td>
         ${showQty ? `<td class="right">${row.qty || ''}</td><td>${row.unit || ''}</td>` : ''}
-        ${showPrices ? `<td class="right" style="line-height:1.3;">${row.price ? fmt(row.price) + ' €' : ''}<br>${row.price ? '<span style="font-size:7.5pt;color:#777;">' + fmt4(grossPrice(row.price, row.vatPercent)) + ' €</span>' : ''}</td><td class="right" style="line-height:1.3;">${rs ? fmt(rs) + ' €' : ''}<br>${rs ? '<span style="font-size:7.5pt;color:#777;">' + fmt(rsVat) + ' €</span>' : ''}</td>` : ''}
+        ${showPrices ? `<td class="right" style="line-height:1.3;">${priceCellHTML(row)}</td><td class="right" style="line-height:1.3;">${rs ? fmt(rs) + ' €' : ''}<br>${rs ? '<span style="font-size:7.5pt;color:#777;">' + fmt(rsVat) + ' €</span>' : ''}</td>` : ''}
       </tr>`;
     });
   });
