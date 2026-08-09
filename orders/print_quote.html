@@ -177,17 +177,25 @@ function fmtPct(n) {
 }
 
 // Rakentaa à-hinta-solun sisällön. Normaalisti (ei alennusta): à-hinta + verollinen à-hinta
-// pienellä, kuten ennenkin — täysin muuttumaton. Kun rivillä on aito alennus, lisätään päälle
-// yliviivattu alkuperäinen hinnastohinta + alennus-%.
+// pienellä, kuten ennenkin — täysin muuttumaton. Kun rivillä on aito alennus, käytetään
+// 2-sarakkeista minitaulukkoa: sarake 1 = itse hinta (yliviivattu alkuperäinen / uusi / verollinen),
+// aina samassa pystysuorassa kohdassa riveittäin, sarake 2 = alennusbadge vain keskirivillä.
+// Näin "4,70" ja "4,46" pysyvät suoraan alekkain riippumatta badgen leveydestä — jos badge
+// olisi osa samaa oikealle tasattua riviä, se työntäisi hintaluvun eri kohtaan kuin ylärivillä
+// (huomattiin Tuomon tarkistuksessa 2026-08, kuvakaappaus print_quote.html:stä).
 function priceCellHTML(row) {
   const priceStr = row.price ? fmt(row.price) + ' €' : '';
-  const grossStr = row.price ? '<span style="font-size:7.5pt;color:#777;">' + fmt4(grossPrice(row.price, row.vatPercent)) + ' €</span>' : '';
+  const grossStr = row.price ? fmt4(grossPrice(row.price, row.vatPercent)) + ' €' : '';
   const pct = rowDiscountPercent(row);
   if (pct !== null) {
     const baseStr = fmt(row.basePrice) + ' €';
-    return `<span style="text-decoration:line-through;color:#999;font-size:7.5pt;">${baseStr}</span><br>${priceStr} <span style="color:#2e7d4f;font-weight:700;font-size:7.5pt;">-${fmtPct(pct)}%</span><br>${grossStr}`;
+    return `<table style="margin-left:auto;border-collapse:collapse;">
+      <tr><td style="text-align:right;padding:0;text-decoration:line-through;color:#999;font-size:7.5pt;">${baseStr}</td><td style="padding:0;"></td></tr>
+      <tr><td style="text-align:right;padding:0;">${priceStr}</td><td style="text-align:left;padding:0 0 0 4px;color:#2e7d4f;font-weight:700;font-size:7.5pt;">-${fmtPct(pct)}%</td></tr>
+      <tr><td style="text-align:right;padding:0;font-size:7.5pt;color:#777;">${grossStr}</td><td style="padding:0;"></td></tr>
+    </table>`;
   }
-  return `${priceStr}<br>${grossStr}`;
+  return `${priceStr}<br>${grossStr ? '<span style="font-size:7.5pt;color:#777;">' + grossStr + '</span>' : ''}`;
 }
 
 function fmtDate(s) {
