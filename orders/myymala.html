@@ -109,6 +109,9 @@
   .price-manual { background: rgba(217,119,6,0.18) !important; }
   .restore-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 11px; padding: 2px 4px; }
   .restore-btn:hover { color: var(--accent); }
+  /* Näkyy à-hinta-kentän vieressä kun käsin muokattu hinta on MATALAMPI kuin hinnaston basePrice
+     (aito alennus). Jos hintaa on nostettu käsin, tätä ei näytetä — vain restore-btn näkyy silloin. */
+  .discount-badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; color: var(--success); background: rgba(61,186,110,0.14); border: 1px solid rgba(61,186,110,0.35); border-radius: 3px; padding: 1px 5px; white-space: nowrap; }
   .del-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 14px; padding: 2px 5px; border-radius: 3px; }
   .del-btn:hover { background: rgba(232,64,64,0.15); }
   .add-row-wrap { padding: 6px 12px 10px; }
@@ -664,7 +667,7 @@ function renderRowHTML(secId, row) {
             oninput="onPriceInput(${secId},${row.id},this.value)"
             class="${row.priceManual?'price-manual':''}"
             step="0.01" min="0" style="text-align:right;">
-          ${row.priceManual?`<button class="restore-btn" onclick="restorePrice(${secId},${row.id})" title="Palauta laskettu hinta">↺</button>`:''}
+          <span id="pricebadge-${secId}-${row.id}">${renderPriceBadge(secId, row)}</span>
         </div>
         <div id="pricevat-${secId}-${row.id}" style="text-align:right;font-size:10px;color:var(--text-dim);">${row.price ? fmt4(grossPrice(row.price, row.vatPercent))+' €' : ''}</div>
       </td>
@@ -695,8 +698,9 @@ function renderCardHTML(secId, row) {
       </div>
       <div class="card-row">
         <label>à-hinta</label>
-        <input type="number" value="${row.price||''}" oninput="onPriceInput(${secId},${row.id},this.value)"
+        <input type="number" id="pricecard-${secId}-${row.id}" value="${row.price||''}" oninput="onPriceInput(${secId},${row.id},this.value)"
           class="${row.priceManual?'price-manual':''}" style="width:100px;">
+        <span id="pricebadgecard-${secId}-${row.id}" style="margin-left:4px;">${renderPriceBadge(secId, row)}</span>
         <span id="pricevatcard-${secId}-${row.id}" style="font-size:10px;color:var(--text-dim);margin-left:4px;">${row.price ? '('+fmt4(grossPrice(row.price, row.vatPercent))+' € s.alv)' : ''}</span>
         <label style="margin-left:8px;">= ${fmt(rowSum(row))} €</label>
         <button class="del-btn" onclick="removeRow(${secId},${row.id})" style="margin-left:auto;">✕</button>
@@ -921,7 +925,26 @@ function onPriceInput(secId, rowId, val) {
   row.price = val;
   row.priceManual = (row.basePrice !== null && parseFloat(val) !== parseFloat(row.basePrice));
   updateRowSum(secId, rowId);
+  updatePriceManualUI(secId, rowId);
   autoSave();
+}
+
+// Päivittää price-manual-korostuksen ja restore/alennus-badgen heti kirjoittaessa, koskematta
+// itse hintakenttään (vain classList + sisarelementin innerHTML) — jos koko rivin regeneroisi
+// innerHTML:llä, hintakenttä menettäisi fokuksen/kursorin joka näppäimenpainalluksella.
+function updatePriceManualUI(secId, rowId) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  const badgeHTML = renderPriceBadge(secId, row);
+  const priceInput = document.getElementById(`price-${secId}-${rowId}`);
+  if (priceInput) priceInput.classList.toggle('price-manual', !!row.priceManual);
+  const badge = document.getElementById(`pricebadge-${secId}-${rowId}`);
+  if (badge) badge.innerHTML = badgeHTML;
+  const priceInputCard = document.getElementById(`pricecard-${secId}-${rowId}`);
+  if (priceInputCard) priceInputCard.classList.toggle('price-manual', !!row.priceManual);
+  const badgeCard = document.getElementById(`pricebadgecard-${secId}-${rowId}`);
+  if (badgeCard) badgeCard.innerHTML = badgeHTML;
 }
 
 function restorePrice(secId, rowId) {
@@ -1125,6 +1148,40 @@ function fmt4(n) {
 function grossPrice(net, vatPercent) {
   const vat = (vatPercent == null || vatPercent === '') ? 25.5 : parseFloat(vatPercent);
   return (parseFloat(net) || 0) * (1 + (isNaN(vat) ? 25.5 : vat) / 100);
+}
+
+// =============================================
+// RIVIKOHTAINEN ALENNUS-% (2026-08) — vain kun käsin muokattu à-hinta on MATALAMPI kuin
+// hinnaston basePrice (aito alennus). Jos hintaa on nostettu käsin, palautetaan null — sitä
+// ei näytetä alennuksena. Käytetään sekä editorissa (tämä tiedosto) että print_quote.html:ssä
+// (oma kopio siellä, ei jaettuja JS-moduuleja projektin tyylin mukaisesti).
+// =============================================
+function rowDiscountPercent(row) {
+  const base = parseFloat(row.basePrice);
+  if (row.basePrice === null || row.basePrice === undefined || isNaN(base) || base <= 0) return null;
+  const price = parseFloat(row.price);
+  if (isNaN(price) || price >= base) return null;
+  return (base - price) / base * 100;
+}
+
+function fmtPct(n) {
+  const s = n.toFixed(1);
+  return s.endsWith('.0') ? s.slice(0, -2) : s;
+}
+
+// Renderöi restore-napin ja/tai alennusbadgen à-hinta-kentän viereen. Käytetään sekä
+// initial-renderissä (renderRowHTML/renderCardHTML) että live-päivityksessä (onPriceInput),
+// jotta molemmat pysyvät aina synkassa keskenään.
+function renderPriceBadge(secId, row) {
+  let html = '';
+  const pct = rowDiscountPercent(row);
+  if (pct !== null) {
+    html += `<span class="discount-badge" title="Alennus hinnaston hinnasta ${fmt(row.basePrice)} €">-${fmtPct(pct)}%</span>`;
+  }
+  if (row.priceManual) {
+    html += `<button class="restore-btn" onclick="restorePrice(${secId},${row.id})" title="Palauta laskettu hinta">↺</button>`;
+  }
+  return html;
 }
 
 // Koko ostoksen "tehollinen" alv-% painotettuna riveittäin niiden verottomalla summalla.
