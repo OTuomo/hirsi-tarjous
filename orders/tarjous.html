@@ -554,7 +554,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     fetchNextQuoteNumber();
   } else {
     if (custId) setCustomer(custId, decodeURIComponent(custName || ''));
-    addSection('Hirsikehikko');
+    addSection('Hirsikehikko', { silent: true }); // ei autosavea pelkästä avaamisesta, ks. addRow()
     fetchNextQuoteNumber();
   }
 });
@@ -936,11 +936,11 @@ function openPackingPage() {
 // =============================================
 // OSIOT
 // =============================================
-function addSection(name='') {
+function addSection(name='', opts={}) {
   const id = ++sectionIdCounter;
   sections.push({ id, name: name || `Osio ${id}`, active: true, rows: [] });
   renderSections();
-  addRow(id);
+  addRow(id, opts);
 }
 
 function renderSections() {
@@ -1199,12 +1199,16 @@ function selectNimike(secId, rowId, productId) {
   autoSave();
 }
 
-function addRow(secId) {
+function addRow(secId, opts={}) {
   const sec = sections.find(s => s.id === secId);
   if (!sec) return;
   sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null, isAssembly: false, katePercent: null, vatPercent: null });
   renderSections();
-  autoSave();
+  // silent=true käytetään VAIN sivun alkulatauksessa (uusi tyhjä tarjous) ja mallipohjan
+  // kopioinnin virhepolussa, jotta pelkkä lomakkeen avaaminen ei enää luo tyhjää tarjousriviä
+  // Supabaseen ennen kuin käyttäjä on oikeasti tehnyt jotain (2026-08 korjaus, sama bugi
+  // korjattiin ensin myymala.html:ään).
+  if (!opts.silent) autoSave();
 }
 
 function removeRow(secId, rowId) {
@@ -1773,7 +1777,7 @@ async function copyQuoteFrom(id, keepPrices) {
           }
         });
       });
-    } catch(e) { sections = []; addSection('Hirsikehikko'); }
+    } catch(e) { sections = []; addSection('Hirsikehikko', { silent: true }); } // currentQuoteId on vielä null kopiointihetkellä
   }
   renderSections();
 }
