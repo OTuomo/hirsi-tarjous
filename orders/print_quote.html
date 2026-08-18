@@ -310,9 +310,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     ${q.footer_text ? `<div class="footer-text">${q.footer_text}</div>` : ''}
   </td></tr>`;
 
-  // Myymälästä tulleet ostokset (sale_type='myymala') tulostetaan kuittina, muut tarjouksena
-  const isReceipt = q.sale_type === 'myymala';
-  document.title = (isReceipt ? 'Kuitti' : 'Tarjous') + ' — Okkosen Puutuote';
+  // Myymälästä tulleet ostokset (sale_type='myymala') tulostetaan joko kuittina (maksettu heti
+  // kassaan) tai tilausvahvistuksena (requires_invoice=true — Sanna laskuttaa erikseen erillisellä
+  // laskutusohjelmalla, tämä järjestelmä ei koskaan itse tulosta laskua). Kaikki muu on tarjous.
+  const isMyymala = q.sale_type === 'myymala';
+  const isReceipt = isMyymala && !q.requires_invoice;
+  const isMyymalaInvoice = isMyymala && !!q.requires_invoice;
+  const docTitle = isReceipt ? 'KUITTI' : isMyymalaInvoice ? 'TILAUSVAHVISTUS' : 'TARJOUS';
+  const numberLabel = isReceipt ? 'Kuittinumero' : isMyymalaInvoice ? 'Tilausnumero' : 'Tarjousnumero';
+  document.title = (isReceipt ? 'Kuitti' : isMyymalaInvoice ? 'Tilausvahvistus' : 'Tarjous') + ' — Okkosen Puutuote';
 
   document.getElementById('root').innerHTML = `
   <div class="page-wrap">
@@ -322,13 +328,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         <img src="https://otuomo.github.io/hirsi-tarjous/orders/okkonenlogopuu.svg" alt="Logo">
         <div class="company-name">OKKOSEN<br>PUUTUOTE</div>
       </div>
-      <div class="doc-title">${isReceipt ? 'KUITTI' : 'TARJOUS'}</div>
+      <div class="doc-title">${docTitle}</div>
       <div class="doc-meta">
         <table>
-          <tr><td>${isReceipt ? 'Kuittinumero' : 'Tarjousnumero'}</td><td>${q.quote_number || ''}</td></tr>
+          <tr><td>${numberLabel}</td><td>${q.quote_number || ''}</td></tr>
           ${q.delivery_week ? `<tr><td>Toimitusviikko</td><td>${fmtDeliveryWeek(q.delivery_week)}</td></tr>` : ''}
-          <tr><td>${isReceipt ? 'Päivämäärä' : 'Tarjouksen antopäivä'}</td><td>${fmtDate(q.created_at)}</td></tr>
-          ${isReceipt ? '' : `<tr><td>Tarjous voimassa</td><td>${fmtDate(q.valid_until)}</td></tr>`}
+          <tr><td>${isMyymala ? 'Päivämäärä' : 'Tarjouksen antopäivä'}</td><td>${fmtDate(q.created_at)}</td></tr>
+          ${isMyymala ? '' : `<tr><td>Tarjous voimassa</td><td>${fmtDate(q.valid_until)}</td></tr>`}
         </table>
       </div>
     </div>
@@ -349,7 +355,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     </div>
 
     ${q.notes ? `<div style="font-size:10pt;font-weight:600;margin-bottom:2mm;text-align:left;">${q.notes}</div>` : ''}
-    <div class="intro-text">${isReceipt ? 'Kiitos ostoksestasi!' : 'Kiitämme tarjouspyynnöstänne. Tarjoamme tuotteitamme teille seuraavasti:'}</div>
+    <div class="intro-text">${isReceipt ? 'Kiitos ostoksestasi!' : isMyymalaInvoice ? 'Toimitus/palvelu on suoritettu. Lasku lähetetään erikseen.' : 'Kiitämme tarjouspyynnöstänne. Tarjoamme tuotteitamme teille seuraavasti:'}</div>
 
     <table class="product-table">
       <thead>${theadHTML}</thead>
@@ -369,7 +375,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             </div>
             <div class="col right">
               <span>Y-Tunnus: 3579911-5</span>
-              <div class="quote-num">${isReceipt ? 'Kuittinumero' : 'Tarjousnumero'} ${q.quote_number || ''}</div>
+              <div class="quote-num">${numberLabel} ${q.quote_number || ''}</div>
             </div>
           </div>
         </td></tr>
