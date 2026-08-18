@@ -359,11 +359,17 @@ async function init() {
 }
 
 async function loadData() {
-  // Lataa tilatut projektit
+  // Lataa tilatut projektit. Myymälän puhtaat kassamyynnit (sale_type='myymala',
+  // requires_invoice=false) rajataan pois — ne on jo maksettu kassaan eivätkä tarvitse
+  // laskutusseurantaa. Sen sijaan myymälän rivit jotka on merkitty "Laskutetaan erikseen"
+  // (requires_invoice=true, esim. kovapalaterien teroitus yritysasiakkaalle) näkyvät edelleen,
+  // koska Sanna laskuttaa ne erikseen omalla laskutusohjelmallaan. (2026-08 korjaus, ks. todo.txt
+  // "Heti"-osio ja CLAUDE.md "Avoimet päätökset".)
   const { data: qData, error: qErr } = await db
     .from('quotes')
-    .select('id, quote_number, total_gross, status, customers(name)')
+    .select('id, quote_number, total_gross, status, sale_type, requires_invoice, customers(name)')
     .in('status', ['ORDERED', 'COMPLETED'])
+    .or('sale_type.neq.myymala,requires_invoice.eq.true')
     .order('created_at', { ascending: false });
 
   if (qErr) { showToast('Virhe projektien latauksessa', 'error'); return; }
