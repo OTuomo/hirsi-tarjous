@@ -194,6 +194,7 @@
   <h1>Myymälä</h1>
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
+    <button class="btn btn-secondary" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
     <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna ostos</button>
   </div>
 </header>
@@ -296,6 +297,10 @@
         <label>Huomiot</label>
         <input type="text" id="quoteRef" placeholder="Vapaa huomio ostosta" oninput="autoSave()">
       </div>
+      <div class="field" style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="requiresInvoice" onchange="onRequiresInvoiceChange()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;">
+        <label for="requiresInvoice" style="margin:0;cursor:pointer;font-weight:400;" title="Rastita jos ostos ei ole maksettu heti kassaan, vaan Sanna laskuttaa asiakasta erikseen. Ei vaikuta tilaan (pysyy Valmiina), mutta näkyy laskutus.html:ssä ja muuttaa tulosteen kuitista tilausvahvistukseksi.">Laskutetaan erikseen (ei maksettu heti kassaan)</label>
+      </div>
     </div>
   </div>
 
@@ -340,7 +345,7 @@
   <!-- TOIMINTOPAINIKKEET -->
   <div class="action-bar">
     <div class="spacer"></div>
-    <button class="btn btn-ghost" onclick="printQuote()">🖨 Tulosta kuitti</button>
+    <button class="btn btn-ghost" id="printQuoteBtn" onclick="printQuote()">🖨 Tulosta kuitti</button>
   </div>
 
 </div>
@@ -430,7 +435,10 @@ async function loadCustomers() {
 }
 
 async function loadProducts() {
-  const data = await sbGet('products', '?status=not.in.(stock_only,hidden)&order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,aihio_leveys,aihio_paksuus,kate_percent,vat_percent');
+  // Myymälässä näytetään active + stock_only (kaikki paitsi hidden) — toisin kuin tarjous.html,
+  // jossa stock_only-tuotteet on tarkoituksella rajattu pois (2026-08, Tuomon pyynnöstä: varastotuotteet
+  // pitää voida myydä/tilata myös myymälän kautta).
+  const data = await sbGet('products', '?status=neq.hidden&order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,aihio_leveys,aihio_paksuus,kate_percent,vat_percent');
   products = Array.isArray(data) ? data : [];
   console.log('Tuotteet ladattu:', products.length, 'kpl');
   products.forEach(p => {
@@ -1238,8 +1246,10 @@ function buildQuoteData(status) {
   return {
     customer_id: document.getElementById('customerId').value || null,
     quote_number: document.getElementById('quoteNumber').value || null,
-    status: 'COMPLETED', // myymäläostos on aina heti maksettu, ei tilavirtaa
+    status: 'COMPLETED', // myymäläostos katsotaan aina "valmiiksi/toimitetuksi" heti — ei tilavirtaa.
+                          // Huom: tämä EI tarkoita että se on maksettu, ks. requires_invoice alla.
     sale_type: 'myymala',
+    requires_invoice: document.getElementById('requiresInvoice').checked, // true = ei maksettu heti kassaan, Sanna laskuttaa erikseen
     notes: document.getElementById('quoteRef').value || null,
     discount_amount: adj,
     discount_percent: discountPercent,
@@ -1302,6 +1312,8 @@ async function loadQuote(id) {
   document.getElementById('quoteRef').value = q.notes || '';
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
+  document.getElementById('requiresInvoice').checked = !!q.requires_invoice;
+  updatePrintButtonLabel();
   if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
   if (q.customer_id) {
     const cust = customers.find(c => c.id === q.customer_id);
@@ -1336,6 +1348,20 @@ async function loadQuote(id) {
   renderSections();
 }
 
+// Laskutetaan erikseen -rasti (2026-08) — vaikuttaa vain siihen mitä printQuote() tulostaa
+// ja mitä laskutus.html näyttää; status pysyy aina COMPLETED, sale_type aina myymala.
+function onRequiresInvoiceChange() {
+  updatePrintButtonLabel();
+  autoSave();
+}
+
+function updatePrintButtonLabel() {
+  const btn = document.getElementById('printQuoteBtn');
+  if (!btn) return;
+  const requiresInvoice = document.getElementById('requiresInvoice').checked;
+  btn.textContent = requiresInvoice ? '🖨 Tulosta tilausvahvistus' : '🖨 Tulosta kuitti';
+}
+
 // Käteisasiakas-pikanappi — ei vaadi nimen syöttöä, käyttää valmiiksi luotua "Käteisasiakas"-riviä customers-taulussa
 function setCashCustomer() {
   const cash = customers.find(c => c.name === 'Käteisasiakas');
@@ -1344,6 +1370,16 @@ function setCashCustomer() {
   } else {
     alert('Käteisasiakas-riviä ei löytynyt asiakasrekisteristä. Tarkista että se on luotu Supabaseen.');
   }
+}
+
+// =============================================
+// PAKKAUSLISTA — avautuu omana sivuna, voidaan vetää toiselle näytölle.
+// pakkauslista.html/print_supply.html eivät riipu sale_type:sta, toimivat pelkän
+// tarjous-id:n perusteella — sama toteutus kuin tarjous.html:ssä (2026-08).
+// =============================================
+function openPackingPage() {
+  if (!currentQuoteId) { alert('Tallenna ostos ensin, niin pakkauslista voidaan yhdistää siihen.'); return; }
+  window.open(`pakkauslista.html?id=${currentQuoteId}`, '_blank');
 }
 
 // =============================================
