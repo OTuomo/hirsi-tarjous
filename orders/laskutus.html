@@ -271,6 +271,7 @@ input:focus, textarea:focus { border-color: var(--accent); }
     </div>
 
     <div class="stage-list" id="stageList"></div>
+    <div id="markAllPaidWrap"></div>
 
     <div class="modal-footer">
       <div class="modal-footer-left">
@@ -447,7 +448,7 @@ function renderSummary() {
 
   document.getElementById('sumLaskutettu').textContent = formatEur(laskutettu);
   document.getElementById('sumOdottaa').textContent    = formatEur(odottaa);
-  document.getElementById('sumMyohassa').textContent   = myohassa > 0 ? formatEur(myohassa) : '0 €';
+  document.getElementById('sumMyohassa').textContent   = myohassa > 0 ? formatEur(myohassa) : '0,00 €';
 }
 
 // ── Projektilista ─────────────────────────────────────
@@ -588,6 +589,15 @@ function openDetail(quoteId) {
     list.appendChild(row);
   });
 
+  // "Kuittaa koko lasku kerralla" -nappi (2026-08) — näytetään vain kun vaiheita on useampi kuin
+  // yksi ja jotain on vielä maksamatta. Yhden vaiheen laskuille tavallinen Maksettu-nappi on jo
+  // riittävä yhden klikkauksen ratkaisu, joten nappia ei näytetä turhaan silloin.
+  const unpaidCount = items.filter(i => i.status !== 'maksettu').length;
+  const wrap = document.getElementById('markAllPaidWrap');
+  wrap.innerHTML = (items.length > 1 && unpaidCount > 0)
+    ? `<button class="btn-stage" style="width:100%;margin-top:10px;padding:10px;font-size:12px;" onclick="markAllPaid()">✓ Kuittaa koko lasku maksetuksi (${unpaidCount} erää jäljellä)</button>`
+    : '';
+
   document.getElementById('detailModal').classList.add('open');
 }
 
@@ -722,6 +732,28 @@ async function resetStatus(itemId, e) {
   refreshModal();
 }
 
+// "Kuittaa koko lasku kerralla" (2026-08) — kun laskua ei oikeasti eritelty vaiheisiin vaan
+// se lähetetään ja maksetaan yhtenä kokonaisuutena, tämä välttää sen että jokainen vaihe pitää
+// käydä läpi erikseen Lähetä→Maksettu -modaaleilla. Merkitsee kaikki maksamattomat vaiheet
+// suoraan maksetuksi tämän päivän päivämäärällä; jos vaihetta ei ollut vielä merkitty
+// lähetetyksikään, myös sent_date täytetään samalla jotta tieto ei jää puuttumaan.
+async function markAllPaid() {
+  if (!activeQuoteId) return;
+  const items = (invoiceItems[activeQuoteId] || []).filter(i => i.status !== 'maksettu');
+  if (!items.length) return;
+  if (!confirm(`Merkitäänkö kaikki ${items.length} jäljellä olevaa erää kerralla maksetuksi?`)) return;
+  const today = new Date().toISOString().slice(0, 10);
+  for (const item of items) {
+    const patch = { status: 'maksettu', paid_date: today };
+    if (!item.sent_date) patch.sent_date = today;
+    const { error } = await db.from('invoice_items').update(patch).eq('id', item.id);
+    if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
+    updateLocalItem(item.id, patch);
+  }
+  showToast('Koko lasku merkitty maksetuksi!', 'success');
+  refreshModal();
+}
+
 function updateLocalItem(itemId, changes) {
   for (const qid of Object.keys(invoiceItems)) {
     const idx = invoiceItems[qid]?.findIndex(i => i.id === itemId);
@@ -741,7 +773,7 @@ function refreshModal() {
 // ── Apufunktiot ───────────────────────────────────────
 function formatEur(n) {
   if (!n && n !== 0) return '—';
-  return n.toLocaleString('fi-FI', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  return n.toLocaleString('fi-FI', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function formatDate(d) {
   if (!d) return '—';
