@@ -399,8 +399,12 @@
   <div class="panel">
     <div class="panel-header">
       Tuoterivit
-      <span style="margin-left:auto;"></span>
-      <button class="btn btn-secondary btn-sm" onclick="addSection()">+ Lisää osio</button>
+      <span style="margin-left:auto;font-weight:400;font-size:11px;color:var(--text-dim);">Lataa malli:</span>
+      <select id="rowTemplateSelect" onchange="applyTemplate(this.value)"
+        style="font-size:11px;padding:3px 6px;width:auto;margin-left:6px;text-transform:none;letter-spacing:0;">
+        <option value="">— valitse pohja —</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" style="margin-left:8px;" onclick="addSection()">+ Lisää osio</button>
     </div>
     <div class="panel-body" style="padding:12px;">
       <div id="sectionsContainer"></div>
@@ -519,6 +523,7 @@ async function sbRpc(fn, params={}) {
 let customers = [];
 let products = [];
 let textTemplates = [];
+let rowTemplates = [];
 let sections = [];
 let currentQuoteId = null;
 let currentStatus = 'DRAFT';
@@ -538,7 +543,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Odotetaan auth-guardin sessiota ennen Supabase-kutsuja
   await window._authReady;
 
-  await Promise.all([loadCustomers(), loadProducts(), loadTextTemplates()]);
+  await Promise.all([loadCustomers(), loadProducts(), loadTextTemplates(), loadRowTemplates()]);
 
   const params = new URLSearchParams(window.location.search);
   const openId = params.get('id');
@@ -609,6 +614,74 @@ function applyTextTemplate(val) {
   if (t) {
     if (document.getElementById('defaultText').value && !confirm('Korvataanko nykyinen teksti valitulla pohjalla?')) return;
     document.getElementById('defaultText').value = t.content;
+  }
+}
+
+// =============================================
+// MALLIPOHJAN RIVIEN LATAUS KESKEN LOMAKKEEN TÄYTÖN (2026-08)
+// Eri asia kuin copyQuoteFrom()/?copy= — tämä koskee VAIN rivejä (sections_json), ei koske
+// asiakasta, tarjousnumeroa, toimitusastetta eikä vakiotekstiä. Tarkoitettu tilanteeseen jossa
+// tarjous on jo aloitettu (esim. asiakas valittu) ja käyttäjä huomaa vasta sitten että mallille
+// olisi käyttöä.
+// =============================================
+async function loadRowTemplates() {
+  try {
+    const data = await sbGet('quotes', '?is_template=eq.true&select=id,template_name,quote_number&order=template_name.asc');
+    if (!Array.isArray(data)) return;
+    rowTemplates = data;
+    const sel = document.getElementById('rowTemplateSelect');
+    data.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.template_name || t.quote_number || 'Nimetön malli';
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+function sectionsHaveRealData() {
+  return sections.some(s => s.rows.some(r => r.productId || (r.nimikeTeksti || '').trim() || (r.desc || '').trim() || parseFloat(r.qty) > 0));
+}
+
+async function applyTemplate(templateId) {
+  const sel = document.getElementById('rowTemplateSelect');
+  if (!templateId) return;
+  if (sectionsHaveRealData() && !confirm('Tämä korvaa nykyiset rivit mallin sisällöllä. Jatketaanko?')) {
+    sel.value = '';
+    return;
+  }
+  const data = await sbGet('quotes', `?id=eq.${templateId}&select=sections_json`);
+  const q = Array.isArray(data) ? data[0] : null;
+  sel.value = ''; // nollataan heti — sama malli pitää voida valita uudelleen, eikä valikon pidä jäädä "jumiin" valintaan
+  if (!q || !q.sections_json) return;
+  try {
+    const templateSections = JSON.parse(q.sections_json);
+    sectionIdCounter = 0; rowIdCounter = 0;
+    templateSections.forEach(s => {
+      s.id = ++sectionIdCounter;
+      s.rows.forEach(r => {
+        r.id = ++rowIdCounter;
+        // Hinnat päivitetään aina tuoreimpaan hinnastoon kopioinnin yhteydessä (ei käytetä mallin
+        // sisällä mahdollisesti vanhentuneita hintoja) — sama periaate kuin copyQuoteFrom(keepPrices=false)
+        const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
+        if (prod) {
+          r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
+          r.price = r.basePrice || '';
+          r.priceManual = false;
+          r.isAssembly = prod.pricing_model === 'assembly';
+          r.katePercent = (!r.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
+          r.vatPercent = prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
+        } else if (r.vatPercent === undefined || r.vatPercent === null) {
+          r.vatPercent = 25.5;
+        }
+      });
+    });
+    sections = templateSections;
+    renderSections();
+    recalcTotals();
+    autoSave(); // oikea käyttäjän toiminto, tallennetaan normaalisti
+  } catch(e) {
+    alert('Mallin lataus epäonnistui — mallin rivitieto voi olla vioittunut.');
   }
 }
 
