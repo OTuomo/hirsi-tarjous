@@ -232,6 +232,11 @@
   }
   .tpl-card:hover { border-color:var(--accent-dim); }
   .tpl-card-name { font-size:15px; font-weight:600; color:var(--text); }
+  .tpl-rename-btn {
+    background:transparent; border:none; color:var(--text-dim); cursor:pointer;
+    font-size:13px; padding:1px 4px; border-radius:3px; vertical-align:middle;
+  }
+  .tpl-rename-btn:hover { color:var(--accent); background:var(--section-header); }
   .tpl-card-meta { font-size:12px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; display:flex; flex-direction:column; gap:3px; }
   .tpl-card-price { font-size:18px; font-weight:600; color:var(--accent); font-family:'IBM Plex Mono',monospace; }
   .tpl-card-btn {
@@ -507,12 +512,34 @@ function renderTemplates() {
     const nimi    = t.template_name || (t.customers && t.customers.name) || 'Nimeämätön pohja';
     const asiakas = t.customers && t.customers.name ? '<span>Asiakas: ' + esc(t.customers.name) + '</span>' : '';
     return '<div class="tpl-card">'
-      + '<div class="tpl-card-name">' + esc(nimi) + '</div>'
+      + '<div class="tpl-card-name">' + esc(nimi)
+      + ' <button class="tpl-rename-btn" onclick="event.stopPropagation();renameTemplate(\'' + t.id + '\')" title="Nimeä malli uudelleen">✎</button>'
+      + '</div>'
       + '<div class="tpl-card-meta"><span>Toimitus: ' + esc(toim) + '</span>' + asiakas + '</div>'
       + '<div class="tpl-card-price">' + hinta + '</div>'
       + '<button class="tpl-card-btn" onclick="copyTemplate(\'' + t.id + '\')">+ Kopioi uudeksi tarjoukseksi</button>'
       + '</div>';
   }).join('');
+}
+
+async function renameTemplate(id) {
+  const t = allQuotes.find(x => x.id === id);
+  if (!t) return;
+  const current = t.template_name || (t.customers && t.customers.name) || '';
+  const name = prompt('Uusi nimi mallille:', current);
+  if (name === null) return; // peruttu
+  const trimmed = name.trim();
+  if (!trimmed) { alert('Mallille pitää antaa nimi.'); return; }
+  await fetch(`${SUPABASE_URL}/rest/v1/quotes?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json', Prefer: 'return=representation'
+    },
+    body: JSON.stringify({ template_name: trimmed })
+  });
+  t.template_name = trimmed;
+  renderTemplates();
 }
 
 function copyTemplate(id) {
@@ -683,9 +710,21 @@ function renderTable(rows) {
 }
 
 async function setStatus(id, status, isTemplate) {
-  const body = isTemplate
-    ? { is_template: true, status: 'DRAFT' }
-    : { is_template: false, status };
+  let body;
+  if (isTemplate) {
+    // Malliksi merkittäessä nimi kysytään aina — muuten mallipohja jää nimeämättömäksi ja
+    // Mallipohjat-välilehdellä joudutaan turvautumaan asiakasnimeen tai "Nimeämätön pohja"
+    // -tekstiin (2026-08 korjaus, ks. CLAUDE.md).
+    const q = allQuotes.find(x => x.id === id);
+    const defaultName = (q && q.template_name) || (q && q.customer !== '—' ? q.customer : '') || '';
+    const name = prompt('Anna mallille nimi (näkyy Mallipohjat-välilehdellä):', defaultName);
+    if (name === null) return; // käyttäjä perui — ei muuteta mitään
+    const trimmed = name.trim();
+    if (!trimmed) { alert('Mallille pitää antaa nimi.'); return; }
+    body = { is_template: true, status: 'DRAFT', template_name: trimmed };
+  } else {
+    body = { is_template: false, status };
+  }
   await fetch(`${SUPABASE_URL}/rest/v1/quotes?id=eq.${id}`, {
     method: 'PATCH',
     headers: {
@@ -695,7 +734,11 @@ async function setStatus(id, status, isTemplate) {
     body: JSON.stringify(body)
   });
   const q = allQuotes.find(x => x.id === id);
-  if (q) { q.is_template = isTemplate; if (!isTemplate) q.status = status; }
+  if (q) {
+    q.is_template = isTemplate;
+    if (!isTemplate) q.status = status;
+    else q.template_name = body.template_name;
+  }
   updateCounts();
   applyFilters();
   document.querySelectorAll('.status-menu').forEach(m => m.classList.remove('open'));
