@@ -592,10 +592,13 @@ function openDetail(quoteId) {
   // "Kuittaa koko lasku kerralla" -nappi (2026-08) — näytetään vain kun vaiheita on useampi kuin
   // yksi ja jotain on vielä maksamatta. Yhden vaiheen laskuille tavallinen Maksettu-nappi on jo
   // riittävä yhden klikkauksen ratkaisu, joten nappia ei näytetä turhaan silloin.
-  const unpaidCount = items.filter(i => i.status !== 'maksettu').length;
+  // "Kuittaa koko lasku lähetetyksi" -nappi (2026-08) — näytetään vain kun vaiheita on useampi
+  // kuin yksi ja jokin niistä odottaa vielä lähetystä. Yhden vaiheen laskuille tavallinen
+  // Lähetä-nappi on jo riittävä yhden klikkauksen ratkaisu, joten nappia ei näytetä turhaan.
+  const pendingSendCount = items.filter(i => i.status === 'odottaa').length;
   const wrap = document.getElementById('markAllPaidWrap');
-  wrap.innerHTML = (items.length > 1 && unpaidCount > 0)
-    ? `<button class="btn-stage" style="width:100%;margin-top:10px;padding:10px;font-size:12px;" onclick="markAllPaid()">✓ Kuittaa koko lasku maksetuksi (${unpaidCount} erää jäljellä)</button>`
+  wrap.innerHTML = (items.length > 1 && pendingSendCount > 0)
+    ? `<button class="btn-stage" style="width:100%;margin-top:10px;padding:10px;font-size:12px;" onclick="markAllSent()">✓ Kuittaa koko lasku lähetetyksi (${pendingSendCount} erää jäljellä)</button>`
     : '';
 
   document.getElementById('detailModal').classList.add('open');
@@ -732,25 +735,31 @@ async function resetStatus(itemId, e) {
   refreshModal();
 }
 
-// "Kuittaa koko lasku kerralla" (2026-08) — kun laskua ei oikeasti eritelty vaiheisiin vaan
-// se lähetetään ja maksetaan yhtenä kokonaisuutena, tämä välttää sen että jokainen vaihe pitää
-// käydä läpi erikseen Lähetä→Maksettu -modaaleilla. Merkitsee kaikki maksamattomat vaiheet
-// suoraan maksetuksi tämän päivän päivämäärällä; jos vaihetta ei ollut vielä merkitty
-// lähetetyksikään, myös sent_date täytetään samalla jotta tieto ei jää puuttumaan.
-async function markAllPaid() {
+// "Kuittaa koko lasku lähetetyksi" (2026-08) — kun laskua ei oikeasti eritelty vaiheisiin vaan
+// se lähetetään yhtenä kokonaisuutena, tämä välttää sen että jokainen vaihe pitää käydä läpi
+// erikseen Lähetä-modaalilla. Merkitsee kaikki vielä odottaa-tilassa olevat vaiheet lähetetyksi
+// tämän päivän päivämäärällä, laskee eräpäivän oletusmaksuajalla (7 pv, sama oletus kuin
+// yksittäisessä Lähetä-modaalissa) ja luo muistutuksen jokaiselle — täysin sama lopputulos kuin
+// jos jokainen vaihe olisi lähetetty erikseen. Maksetuksi merkitseminen tehdään edelleen erikseen
+// kun raha oikeasti saapuu — näitä kahta ei niputeta samaan nappiin.
+async function markAllSent() {
   if (!activeQuoteId) return;
-  const items = (invoiceItems[activeQuoteId] || []).filter(i => i.status !== 'maksettu');
+  const items = (invoiceItems[activeQuoteId] || []).filter(i => i.status === 'odottaa');
   if (!items.length) return;
-  if (!confirm(`Merkitäänkö kaikki ${items.length} jäljellä olevaa erää kerralla maksetuksi?`)) return;
+  if (!confirm(`Merkitäänkö kaikki ${items.length} jäljellä olevaa erää kerralla lähetetyksi?`)) return;
   const today = new Date().toISOString().slice(0, 10);
+  const paymentDays = 7;
+  const dueDate = new Date(today);
+  dueDate.setDate(dueDate.getDate() + paymentDays);
+  const dueDateStr = dueDate.toISOString().slice(0, 10);
   for (const item of items) {
-    const patch = { status: 'maksettu', paid_date: today };
-    if (!item.sent_date) patch.sent_date = today;
+    const patch = { status: 'lahetetty', sent_date: today, due_date: dueDateStr, payment_days: paymentDays };
     const { error } = await db.from('invoice_items').update(patch).eq('id', item.id);
     if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
+    await createReminder(item.id, dueDateStr);
     updateLocalItem(item.id, patch);
   }
-  showToast('Koko lasku merkitty maksetuksi!', 'success');
+  showToast('Koko lasku merkitty lähetetyksi!', 'success');
   refreshModal();
 }
 
