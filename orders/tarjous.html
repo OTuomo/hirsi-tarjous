@@ -209,6 +209,7 @@
     <span class="saving" id="saveStatus"></span>
     <button class="btn btn-secondary" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
     <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna</button>
+    <button class="btn btn-secondary" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä tarjous jatkuu ennallaan">📑 Tallenna malliksi</button>
     <select id="statusSelect" onchange="changeStatus(this.value)"
       style="font-size:12px;padding:6px 10px;width:auto;font-family:'IBM Plex Mono',monospace;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:4px;">
       <option value="DRAFT">Luonnos</option>
@@ -217,7 +218,6 @@
       <option value="ORDERED">Tilattu</option>
       <option value="COMPLETED">Valmis</option>
       <option value="ARCHIVED">Arkisto</option>
-      <option value="MODEL">Malli</option>
     </select>
     <span class="status-badge draft" id="statusBadge">Luonnos</span>
   </div>
@@ -1705,6 +1705,44 @@ async function saveDraft() {
     setTimeout(() => { if (el.textContent === '✓ Tallennettu') el.textContent = ''; }, 2500);
   } catch(e) {
     el.className = 'saving err'; el.textContent = 'Virhe tallennuksessa';
+  }
+}
+
+// =============================================
+// TALLENNA MALLIKSI (2026-08) — ottaa lomakkeen TÄMÄNHETKISEN (mahdollisesti vielä
+// tallentamattoman) sisällön ja tallentaa sen UUTENA erillisenä mallirivinä. Alkuperäiseen
+// tarjoukseen (currentQuoteId) ei koskuta millään tavalla — käyttäjä jatkaa sen täyttämistä
+// normaalisti painikkeen painamisen jälkeen. Korvaa aiemman, rikkinäisen "Malli"-statusvalinnan
+// (se asetti vain status='MODEL' muttei koskaan is_template-lippua) — poistettu statusSelectistä.
+async function saveAsTemplate() {
+  const name = prompt('Anna mallille nimi (näkyy Mallipohjat-välilehdellä):');
+  if (name === null) return; // käyttäjä perui — ei tallenneta mitään
+  const trimmed = name.trim();
+  if (!trimmed) { alert('Mallille pitää antaa nimi.'); return; }
+
+  const data = buildQuoteData(currentStatus);
+  data.customer_id = null;       // malli on geneerinen, ei sidottu tiettyyn asiakkaaseen
+  data.quote_number = null;      // malleilla ei ole tarjousnumeroa (sama kuin Harjusauna/Täyspohja)
+  data.discount_amount = 0;
+  data.discount_percent = 0;     // alkuperäisen tarjouksen alennus ei saa "periytyä" malliin
+  data.is_template = true;
+  data.status = 'DRAFT';
+  data.template_name = trimmed;
+  // Loppusummat lasketaan tässä UUDELLEEN ilman alennusta (buildQuoteData laski ne yllä
+  // vielä alkuperäisen alennuksen kanssa) — muuten Mallipohjat-välilehden kortilla näkyvä
+  // hinta olisi ristiriidassa sen kanssa että discount_percent nollattiin juuri yllä.
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const vat = sub * computeQuoteVatRate(sections) / 100;
+  data.total_net = Math.round(sub * 100) / 100;
+  data.total_vat = Math.round(vat * 100) / 100;
+  data.total_gross = Math.round((sub + vat) * 100) / 100;
+
+  try {
+    await sbPost('quotes', data);
+    alert('Tallennettu malliksi: "' + trimmed + '" — löytyy nyt Mallipohjat-välilehdeltä. Tämä tarjous jatkuu ennallaan.');
+    loadRowTemplates(); // päivittää "Lataa malli"-pudotusvalikon heti, ilman sivun päivitystä
+  } catch(e) {
+    alert('Mallin tallennus epäonnistui.');
   }
 }
 
