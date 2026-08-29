@@ -196,6 +196,7 @@
     <span class="saving" id="saveStatus"></span>
     <button class="btn btn-secondary" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
     <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna ostos</button>
+    <button class="btn btn-secondary" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä ostos jatkuu ennallaan">📑 Tallenna malliksi</button>
   </div>
 </header>
 
@@ -1351,6 +1352,42 @@ async function saveDraft() {
     setTimeout(() => { if (el.textContent === '✓ Tallennettu') el.textContent = ''; }, 2500);
   } catch(e) {
     el.className = 'saving err'; el.textContent = 'Virhe tallennuksessa';
+  }
+}
+
+// =============================================
+// TALLENNA MALLIKSI (2026-08) — sama periaate kuin tarjous.html:ssä (oma kopio, ei jaettuja
+// JS-moduuleja). Ottaa lomakkeen tämänhetkisen sisällön ja tallentaa sen UUTENA erillisenä
+// mallirivinä — nykyistä ostosta (currentQuoteId) ei kosketa. requires_invoice/status nollataan
+// koska ne kuvaavat vain oikeaa kassamyyntiä, eivät koske mallia.
+async function saveAsTemplate() {
+  const name = prompt('Anna mallille nimi (näkyy Mallipohjat-välilehdellä):');
+  if (name === null) return; // käyttäjä perui — ei tallenneta mitään
+  const trimmed = name.trim();
+  if (!trimmed) { alert('Mallille pitää antaa nimi.'); return; }
+
+  const data = buildQuoteData();
+  data.customer_id = null;
+  data.quote_number = null;
+  data.discount_amount = 0;
+  data.discount_percent = 0;
+  data.is_template = true;
+  data.status = 'DRAFT';
+  data.requires_invoice = false; // ei koske mallia, vain oikeaa myymälämyyntiä
+  data.template_name = trimmed;
+  // Loppusummat lasketaan tässä UUDELLEEN ilman alennusta, samasta syystä kuin tarjous.html:ssä.
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const vat = sub * computeQuoteVatRate(sections) / 100;
+  data.total_net = Math.round(sub * 100) / 100;
+  data.total_vat = Math.round(vat * 100) / 100;
+  data.total_gross = Math.round((sub + vat) * 100) / 100;
+
+  try {
+    await sbPost('quotes', data);
+    alert('Tallennettu malliksi: "' + trimmed + '" — löytyy nyt Mallipohjat-välilehdeltä. Tämä ostos jatkuu ennallaan.');
+    loadRowTemplates();
+  } catch(e) {
+    alert('Mallin tallennus epäonnistui.');
   }
 }
 
