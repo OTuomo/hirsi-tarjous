@@ -139,6 +139,30 @@
   .status-badge.archived { background: #2a2a2a; color: #666; }
   .stale-banner { display: none; align-items: center; gap: 10px; background: #3d2e1e; border: 1px solid var(--warn); color: var(--warn); font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
   .stale-banner.show { display: flex; }
+  /* Sisäinen huomio (2026-08) — ei koskaan tulostu, näkyy vain tässä sovelluksessa. Sama
+     amber-varoitusväri kuin stale-bannerissa, jotta erottuu selvästi "tämä ei mene asiakkaalle". */
+  .internal-note-panel { display: none; background: #3d2e1e; border: 1px solid var(--warn); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
+  .internal-note-panel.show { display: block; }
+  .internal-note-panel label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--warn); font-weight: 600; margin-bottom: 6px; }
+  .internal-note-panel textarea { width: 100%; background: var(--input-bg); border: 1px solid var(--warn); border-radius: 6px; color: var(--text); padding: 8px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; resize: vertical; }
+  .internal-note-panel textarea:focus { outline: none; border-color: var(--accent); }
+  #noteToggleBtn.has-note { background: var(--warn); color: #1a1a1a; border-color: var(--warn); }
+  /* Viikkokalenteri-modaali (2026-08) */
+  .week-cal-btn { background: none; border: none; color: var(--text-dim); font-size: 14px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
+  .week-cal-btn:hover { color: var(--accent); }
+  .cal-modal { width: 320px; }
+  .cal-header { display: flex; align-items: center; justify-content: space-between; }
+  .cal-header .cal-month-label { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; }
+  .cal-grid { display: grid; grid-template-columns: 28px repeat(7, 1fr); gap: 2px; margin-top: 6px; }
+  .cal-cell { text-align: center; font-size: 12px; padding: 6px 0; border-radius: 4px; cursor: default; }
+  .cal-dow { color: var(--text-dim); font-size: 10px; font-weight: 600; cursor: default; }
+  .cal-week-num { color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; border-radius: 4px; }
+  .cal-week-num:hover { background: var(--accent-glow); color: var(--accent); }
+  .cal-day { cursor: pointer; color: var(--text); }
+  .cal-day:hover { background: var(--accent-glow); color: var(--accent); }
+  .cal-day.other-month { color: var(--text-dim); opacity: 0.4; }
+  .cal-day.today { border: 1px solid var(--accent); }
+  .cal-day.selected-week, .cal-week-num.selected-week { background: var(--accent); color: #1a1a1a; font-weight: 600; }
 
   /* MODAL */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center; }
@@ -207,6 +231,7 @@
   <h1>Tarjous</h1>
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
+    <button class="btn btn-secondary" id="noteToggleBtn" onclick="toggleInternalNote()" style="padding:6px 14px;font-size:12px;" title="Sisäinen huomio — näkyy vain tässä sovelluksessa, ei koskaan tulosteessa">🔒 Sisäinen huomio</button>
     <button class="btn btn-secondary" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
     <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna</button>
     <button class="btn btn-secondary" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä tarjous jatkuu ennallaan">📑 Tallenna malliksi</button>
@@ -247,6 +272,22 @@
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" onclick="closeTextTemplateModal()">Sulje</button>
       <button class="btn btn-primary btn-sm" onclick="saveNewTextTemplate()">Lisää pohja</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIIKKOKALENTERI MODAL -->
+<div class="modal-overlay" id="weekCalModal">
+  <div class="modal cal-modal">
+    <div class="cal-header">
+      <button type="button" class="week-arrow" onclick="calStepMonth(-1)" title="Edellinen kuukausi">&#8249;</button>
+      <span class="cal-month-label" id="calMonthLabel"></span>
+      <button type="button" class="week-arrow" onclick="calStepMonth(1)" title="Seuraava kuukausi">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:4px;">Klikkaa päivää tai viikkonumeroa valitaksesi koko viikon</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeWeekCalendar()">Sulje</button>
     </div>
   </div>
 </div>
@@ -317,6 +358,10 @@
 <div class="page">
 
   <div class="stale-banner" id="staleBanner">⏰ <span id="staleBannerText"></span></div>
+  <div class="internal-note-panel" id="internalNotePanel">
+    <label>🔒 Sisäinen huomio — ei näy tulosteessa, vain täällä</label>
+    <textarea id="internalNote" oninput="onInternalNoteInput()" placeholder="Esim. asiakkaan erikoistoive tai muu muistettava yksityiskohta..." rows="3"></textarea>
+  </div>
 
   <!-- PERUSTIEDOT -->
   <div class="panel">
@@ -363,6 +408,7 @@
               oninput="onWeekInput(this.value)" onblur="onWeekBlur(this.value)" onkeydown="if(event.key==='Enter'){onWeekBlur(this.value);this.blur();}">
             <span class="week-dates" id="weekDates"></span>
             <button type="button" class="week-arrow" onclick="stepWeek(1)" title="Seuraava viikko">&#8250;</button>
+            <button type="button" class="week-cal-btn" onclick="openWeekCalendar()" title="Valitse kalenterista">📅</button>
           </div>
           <input type="hidden" id="deliveryWeek">
         </div>
@@ -779,6 +825,22 @@ function getISOWeek(date) {
   return { week, year: d.getUTCFullYear() };
 }
 
+// =============================================
+// SISÄINEN HUOMIO (2026-08) — ei koskaan tulostu, tarkoitettu vain Tuomon/henkilökunnan
+// omaan käyttöön (esim. asiakkaan erikoistoive jota ei näytetä tarjouksella). Piilossa
+// oletuksena, avautuu automaattisesti jos tarjouksella on jo huomiotekstiä (ks. loadQuote/
+// copyQuoteFrom) — ettei sitä huomaisi jäävän piiloon vahingossa.
+// =============================================
+function toggleInternalNote() {
+  document.getElementById('internalNotePanel').classList.toggle('show');
+}
+
+function onInternalNoteInput() {
+  const val = document.getElementById('internalNote').value;
+  document.getElementById('noteToggleBtn').classList.toggle('has-note', !!val.trim());
+  autoSave();
+}
+
 function mondayOfWeek(year, week) {
   const jan4 = new Date(Date.UTC(year, 0, 4));
   const jan4day = jan4.getUTCDay() || 7;
@@ -823,17 +885,20 @@ function onWeekInput(val) {
   document.getElementById('weekDates').textContent = weekDateRange(year, w);
 }
 
-// Käyttäjä poistuu kentästä — tallenna arvo
+// Käyttäjä poistuu kentästä — tallenna arvo. HUOM (2026-08): tästä puuttui aiemmin autoSave()-
+// kutsu kokonaan — viikon muutos päivittyi vain näkyvään UI:hin muttei tallentunut, ellei jotain
+// muuta kenttää koskettu samalla. Korjattu.
 function onWeekBlur(val) {
   const w = parseInt(val, 10);
-  if (!val || isNaN(w) || w < 1 || w > 53) { clearWeekValue(); return; }
+  if (!val || isNaN(w) || w < 1 || w > 53) { clearWeekValue(); autoSave(); return; }
   const today = new Date();
   const { week: curWeek, year: curYear } = getISOWeek(today);
   const year = w < curWeek ? curYear + 1 : curYear;
   setWeekValue(year, w);
+  autoSave();
 }
 
-// Nuolinäppäimet
+// Nuolinäppäimet — sama puuttuva autoSave()-kutsu korjattu tähänkin.
 function stepWeek(delta) {
   const current = document.getElementById('deliveryWeek').value;
   let year, week;
@@ -847,6 +912,7 @@ function stepWeek(delta) {
   monday.setUTCDate(monday.getUTCDate() + delta * 7);
   const r = getISOWeek(monday);
   setWeekValue(r.year, r.week);
+  autoSave();
 }
 
 // Ladataan tallennettu arvo tarjouksesta
@@ -868,6 +934,90 @@ function closeTextTemplateModal() {
 document.getElementById('textTplModal').addEventListener('click', e => {
   if (e.target === document.getElementById('textTplModal')) closeTextTemplateModal();
 });
+
+// =============================================
+// VIIKKOKALENTERI-MODAALI (2026-08) — visuaalinen apu toimitusviikon valintaan nykyisen
+// numerosyötön/nuolinappien rinnalle, ei korvaa niitä. Käyttää samoja ISO-viikkolaskennan
+// apufunktioita (getISOWeek/mondayOfWeek/weekDateRange) jotka ovat jo olemassa yllä.
+// =============================================
+let calViewYear, calViewMonth; // kuukausi jota kalenteri tällä hetkellä näyttää (0-11)
+
+function openWeekCalendar() {
+  const current = document.getElementById('deliveryWeek').value;
+  let refDate;
+  if (current && current.includes('-')) {
+    const [y, w] = current.split('-').map(Number);
+    refDate = mondayOfWeek(y, w);
+  } else {
+    refDate = new Date();
+  }
+  calViewYear = refDate.getUTCFullYear ? refDate.getUTCFullYear() : refDate.getFullYear();
+  calViewMonth = refDate.getUTCMonth ? refDate.getUTCMonth() : refDate.getMonth();
+  renderWeekCalendar();
+  document.getElementById('weekCalModal').classList.add('open');
+}
+function closeWeekCalendar() {
+  document.getElementById('weekCalModal').classList.remove('open');
+}
+document.getElementById('weekCalModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('weekCalModal')) closeWeekCalendar();
+});
+
+function calStepMonth(delta) {
+  calViewMonth += delta;
+  if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+  if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+  renderWeekCalendar();
+}
+
+const CAL_DOW_LABELS = ['Ma','Ti','Ke','To','Pe','La','Su'];
+const CAL_MONTH_LABELS = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu','Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+
+function renderWeekCalendar() {
+  document.getElementById('calMonthLabel').textContent = `${CAL_MONTH_LABELS[calViewMonth]} ${calViewYear}`;
+
+  // Nykyinen valittu viikko (jos on) korostusta varten
+  const current = document.getElementById('deliveryWeek').value;
+  let selYear = null, selWeek = null;
+  if (current && current.includes('-')) [selYear, selWeek] = current.split('-').map(Number);
+
+  const today = new Date();
+
+  // Kuukauden 1. päivä ja sen viikonpäivä (ma=0...su=6), jotta ruudukko alkaa oikeasta kohdasta
+  const firstOfMonth = new Date(Date.UTC(calViewYear, calViewMonth, 1));
+  const firstDow = (firstOfMonth.getUTCDay() + 6) % 7; // ma=0
+  const gridStart = new Date(firstOfMonth);
+  gridStart.setUTCDate(gridStart.getUTCDate() - firstDow);
+
+  let html = '<div class="cal-cell cal-dow"></div>';
+  CAL_DOW_LABELS.forEach(d => html += `<div class="cal-cell cal-dow">${d}</div>`);
+
+  // 6 riviä (42 päivää) kattaa aina koko kuukauden riippumatta kuukauden pituudesta/alkupäivästä
+  for (let row = 0; row < 6; row++) {
+    const rowStart = new Date(gridStart);
+    rowStart.setUTCDate(rowStart.getUTCDate() + row * 7);
+    const { week: rowWeek, year: rowWeekYear } = getISOWeek(rowStart);
+    const isSelectedWeek = selWeek !== null && rowWeek === selWeek && rowWeekYear === selYear;
+    html += `<div class="cal-cell cal-week-num${isSelectedWeek?' selected-week':''}" onclick="pickWeekFromCalendar(${rowWeekYear},${rowWeek})" title="Valitse koko viikko ${rowWeek}">${rowWeek}</div>`;
+    for (let col = 0; col < 7; col++) {
+      const d = new Date(rowStart);
+      d.setUTCDate(d.getUTCDate() + col);
+      const inMonth = d.getUTCMonth() === calViewMonth;
+      const isToday = d.getUTCFullYear() === today.getFullYear() && d.getUTCMonth() === today.getMonth() && d.getUTCDate() === today.getDate();
+      const dWeek = getISOWeek(d);
+      const isSel = selWeek !== null && dWeek.week === selWeek && dWeek.year === selYear;
+      html += `<div class="cal-cell cal-day${inMonth?'':' other-month'}${isToday?' today':''}${isSel?' selected-week':''}" onclick="pickWeekFromCalendar(${dWeek.year},${dWeek.week})">${d.getUTCDate()}</div>`;
+    }
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function pickWeekFromCalendar(year, week) {
+  setWeekValue(year, week);
+  autoSave();
+  closeWeekCalendar();
+}
+
 
 function renderTplList() {
   const list = document.getElementById('tplList');
@@ -1676,6 +1826,7 @@ function buildQuoteData(status) {
     valid_until: document.getElementById('quoteValid').value || null,
     status: status || currentStatus,
     notes: document.getElementById('quoteRef').value || null,
+    internal_note: document.getElementById('internalNote').value.trim() || null,
     footer_text: document.getElementById('defaultText').value || null,
     discount_amount: adj,
     discount_percent: discountPercent,
@@ -1725,6 +1876,7 @@ async function saveAsTemplate() {
   data.quote_number = null;      // malleilla ei ole tarjousnumeroa (sama kuin Harjusauna/Täyspohja)
   data.discount_amount = 0;
   data.discount_percent = 0;     // alkuperäisen tarjouksen alennus ei saa "periytyä" malliin
+  data.internal_note = null;     // sisäinen huomio koskee tätä yksittäistä tarjousta, ei mallia
   data.is_template = true;
   data.status = 'DRAFT';
   data.template_name = trimmed;
@@ -1808,6 +1960,9 @@ async function loadQuote(id) {
   document.getElementById('prodToimitettu').checked  = q.prod_toimitettu  || false;
   document.getElementById('deliveryType').value = q.delivery_type || '';
   document.getElementById('quoteRef').value = q.notes || '';
+  document.getElementById('internalNote').value = q.internal_note || '';
+  document.getElementById('noteToggleBtn').classList.toggle('has-note', !!q.internal_note);
+  if (q.internal_note) document.getElementById('internalNotePanel').classList.add('show');
   document.getElementById('defaultText').value = q.footer_text || '';
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
@@ -1852,6 +2007,9 @@ async function copyQuoteFrom(id, keepPrices) {
   if (!q) return;
   document.getElementById('deliveryType').value = q.delivery_type || '';
   document.getElementById('quoteRef').value = q.notes || '';
+  document.getElementById('internalNote').value = q.internal_note || '';
+  document.getElementById('noteToggleBtn').classList.toggle('has-note', !!q.internal_note);
+  if (q.internal_note) document.getElementById('internalNotePanel').classList.add('show');
   document.getElementById('defaultText').value = q.footer_text || '';
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
