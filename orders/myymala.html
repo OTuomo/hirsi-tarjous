@@ -139,6 +139,15 @@
   .status-badge.archived { background: #2a2a2a; color: #666; }
   .stale-banner { display: none; align-items: center; gap: 10px; background: #3d2e1e; border: 1px solid var(--warn); color: var(--warn); font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
   .stale-banner.show { display: flex; }
+  /* Sisäinen huomio (2026-08) — ei koskaan tulostu, näkyy vain tässä sovelluksessa. Sama
+     amber-varoitusväri kuin stale-bannerissa (tarjous.html), jotta erottuu selvästi "tämä ei
+     mene asiakkaalle" — eri asia kuin yllä oleva "Huomiot"-kenttä joka TULOSTUU kuittiin. */
+  .internal-note-panel { display: none; background: #3d2e1e; border: 1px solid var(--warn); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
+  .internal-note-panel.show { display: block; }
+  .internal-note-panel label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--warn); font-weight: 600; margin-bottom: 6px; }
+  .internal-note-panel textarea { width: 100%; background: var(--input-bg); border: 1px solid var(--warn); border-radius: 6px; color: var(--text); padding: 8px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; resize: vertical; }
+  .internal-note-panel textarea:focus { outline: none; border-color: var(--accent); }
+  #noteToggleBtn.has-note { background: var(--warn); color: #1a1a1a; border-color: var(--warn); }
 
   /* MODAL */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center; }
@@ -194,6 +203,7 @@
   <h1>Myymälä</h1>
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
+    <button class="btn btn-secondary" id="noteToggleBtn" onclick="toggleInternalNote()" style="padding:6px 14px;font-size:12px;" title="Sisäinen huomio — näkyy vain tässä sovelluksessa, ei koskaan tulosteessa">🔒 Sisäinen huomio</button>
     <button class="btn btn-secondary" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
     <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna ostos</button>
     <button class="btn btn-secondary" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä ostos jatkuu ennallaan">📑 Tallenna malliksi</button>
@@ -265,6 +275,10 @@
 </div>
 
 <div class="page">
+  <div class="internal-note-panel" id="internalNotePanel">
+    <label>🔒 Sisäinen huomio — ei näy tulosteessa, vain täällä</label>
+    <textarea id="internalNote" oninput="onInternalNoteInput()" placeholder="Esim. asiakkaan erikoistoive tai muu muistettava yksityiskohta..." rows="3"></textarea>
+  </div>
 
   <!-- PERUSTIEDOT -->
   <div class="panel">
@@ -1326,6 +1340,7 @@ function buildQuoteData(status) {
     sale_type: 'myymala',
     requires_invoice: document.getElementById('requiresInvoice').checked, // true = ei maksettu heti kassaan, Sanna laskuttaa erikseen
     notes: document.getElementById('quoteRef').value || null,
+    internal_note: document.getElementById('internalNote').value.trim() || null,
     discount_amount: adj,
     discount_percent: discountPercent,
     sections_json: JSON.stringify(sections),
@@ -1371,6 +1386,7 @@ async function saveAsTemplate() {
   data.quote_number = null;
   data.discount_amount = 0;
   data.discount_percent = 0;
+  data.internal_note = null; // sisäinen huomio koskee tätä yksittäistä ostosta, ei mallia
   data.is_template = true;
   data.status = 'DRAFT';
   data.requires_invoice = false; // ei koske mallia, vain oikeaa myymälämyyntiä
@@ -1389,6 +1405,22 @@ async function saveAsTemplate() {
   } catch(e) {
     alert('Mallin tallennus epäonnistui.');
   }
+}
+
+// =============================================
+// SISÄINEN HUOMIO (2026-08) — ei koskaan tulostu, tarkoitettu vain Tuomon/henkilökunnan
+// omaan käyttöön. Eri asia kuin yllä oleva "Huomiot"-kenttä (notes) joka TULOSTUU kuittiin/
+// tilausvahvistukseen. Piilossa oletuksena, avautuu automaattisesti jos ostoksella on jo
+// huomiotekstiä (ks. loadQuote) — ettei sitä huomaisi jäävän piiloon vahingossa.
+// =============================================
+function toggleInternalNote() {
+  document.getElementById('internalNotePanel').classList.toggle('show');
+}
+
+function onInternalNoteInput() {
+  const val = document.getElementById('internalNote').value;
+  document.getElementById('noteToggleBtn').classList.toggle('has-note', !!val.trim());
+  autoSave();
 }
 
 // =============================================
@@ -1421,6 +1453,9 @@ async function loadQuote(id) {
   document.getElementById('quoteNumber').value = q.quote_number || '';
   document.getElementById('quoteDate').value = (q.created_at||'').slice(0,10);
   document.getElementById('quoteRef').value = q.notes || '';
+  document.getElementById('internalNote').value = q.internal_note || '';
+  document.getElementById('noteToggleBtn').classList.toggle('has-note', !!q.internal_note);
+  if (q.internal_note) document.getElementById('internalNotePanel').classList.add('show');
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
   document.getElementById('requiresInvoice').checked = !!q.requires_invoice;
