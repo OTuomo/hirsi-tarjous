@@ -219,6 +219,20 @@
   textarea { resize: vertical; min-height: 60px; }
   select option { background: var(--panel); }
 
+  /* KLIKATTAVA PUHELIN/SÄHKÖPOSTI (2026-09) — puhelin/sähköposti ovat aina <input>-kenttiä
+     (vaihtavat readonly-tilaa muokkausnapista), joten niitä ei voi tehdä suoraan linkeiksi.
+     Pieni kuvake-linkki kentän oikeaan reunaan toimii riippumatta muokkaustilasta. */
+  .field-with-link { position: relative; }
+  .field-with-link input { padding-right: 30px; }
+  .field-with-link input[readonly] { padding-right: 26px; }
+  .contact-link {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim); text-decoration: none; font-size: 13px; border-radius: 4px;
+  }
+  .contact-link:hover { color: var(--accent); background: var(--accent-glow); }
+  .contact-link.hidden { display: none; }
+
   /* MOBIILI */
   .mobile-back {
     display: none; padding: 10px 16px;
@@ -427,11 +441,17 @@
           <div class="field-grid cols4-contact">
             <div class="field">
               <label>Puhelin</label>
-              <input type="text" id="f_phone" placeholder="040 1234567" oninput="markDirty()">
+              <div class="field-with-link">
+                <input type="text" id="f_phone" placeholder="040 1234567" oninput="markDirty()">
+                <a href="#" id="f_phone_link" class="contact-link hidden" title="Soita" target="_blank" rel="noopener">📞</a>
+              </div>
             </div>
             <div class="field">
               <label>Sähköposti</label>
-              <input type="text" id="f_email" placeholder="asiakas@yritys.fi" oninput="markDirty()">
+              <div class="field-with-link">
+                <input type="text" id="f_email" placeholder="asiakas@yritys.fi" oninput="markDirty()">
+                <a href="#" id="f_email_link" class="contact-link hidden" title="Lähetä sähköpostia" target="_blank" rel="noopener">✉️</a>
+              </div>
             </div>
             <div class="field">
               <label>Sähköposti 2</label>
@@ -715,6 +735,17 @@ function setFields(c) {
     const el = document.getElementById(id);
     if (el) el.value = val || '';
   }
+  // Klikattavat puhelin/sähköposti-linkit (ks. .contact-link CSS) — päivitetään aina kun
+  // asiakas valitaan/vaihtuu, ei jokaisella näppäimenpainalluksella muokatessa.
+  updateContactLink('f_phone_link', c.phone ? `tel:${c.phone.replace(/\s+/g, '')}` : null);
+  updateContactLink('f_email_link', c.email ? `mailto:${c.email.trim()}` : null);
+}
+
+function updateContactLink(id, href) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (href) { el.href = href; el.classList.remove('hidden'); }
+  else { el.removeAttribute('href'); el.classList.add('hidden'); }
 }
 
 function setReadonly(ro) {
