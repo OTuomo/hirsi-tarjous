@@ -922,7 +922,7 @@ async function createCustomer() {
 async function loadOrders(customerId) {
   document.getElementById('orderList').innerHTML = '<div class="empty-state" style="padding:24px;">Ladataan...</div>';
   document.getElementById('orderCount').textContent = '...';
-  const data = await supabaseGet('quotes', `?customer_id=eq.${customerId}&order=created_at.desc&select=id,order_date,status,notes,kohde`);
+  const data = await supabaseGet('quotes', `?customer_id=eq.${customerId}&order=created_at.desc&select=id,created_at,quote_number,status,notes`);
   const orders = Array.isArray(data) ? data : [];
   document.getElementById('orderCount').textContent = `${orders.length} tarjousta`;
   if (!orders.length) {
