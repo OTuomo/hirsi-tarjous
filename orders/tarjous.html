@@ -1292,7 +1292,10 @@ function renderWeekCalendar() {
 // meneekö valinta toimitusviikkoon (null, alkuperäinen käytös) vai johonkin milestoneen.
 function pickWeekFromCalendar(year, week) {
   if (calTarget) {
-    saveMilestone(calTarget, { target_week: `${year}-${week}` });
+    // Nollatäyte (05 eikä 5) — kalenteri.html vertaa viikkoja merkkijonoina "YYYY-WW"-muodossa,
+    // ja ilman nollatäytettä viikot 1-9 eivät koskaan täsmäisi (sama bugi kuin
+    // toimitusviikossa on jo, ei korjattu tässä — ks. muistio).
+    saveMilestone(calTarget, { target_week: `${year}-${String(week).padStart(2, '0')}` });
   } else {
     setWeekValue(year, week);
     autoSave();
