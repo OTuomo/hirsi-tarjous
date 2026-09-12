@@ -720,6 +720,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   } else if (copyId) {
     const keepPrices = params.get('keepPrices') === '1';
     await copyQuoteFrom(copyId, keepPrices);
+    // copyQuoteFrom() ei koskaan aseta asiakasta — jos kutsuja tiesi sen valmiiksi (esim.
+    // asiakkaat.html:n "⧉ Kopioi uudeksi tilaukseksi samalle asiakkaalle" -nappi), asetetaan
+    // se tässä kopion päälle. Ei ristiriitaa, koska kumpikaan kohta ei kirjoita samaan kenttään.
+    if (custId) setCustomer(custId, decodeURIComponent(custName || ''));
     fetchNextQuoteNumber();
   } else {
     if (custId) setCustomer(custId, decodeURIComponent(custName || ''));
