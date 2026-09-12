@@ -163,6 +163,8 @@
   .milestone-week-btn { background: var(--input-bg); border: 1px solid var(--border); color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 5px 10px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
   .milestone-week-btn:hover { border-color: var(--accent); color: var(--accent); }
   .milestone-week-btn.set { color: var(--text); }
+  .milestone-clear-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px; padding: 2px 5px; line-height: 1; }
+  .milestone-clear-btn:hover { color: var(--danger); }
   .milestone-done-toggle { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer; white-space: nowrap; }
   .milestone-done-toggle input { width: auto; cursor: pointer; }
   .milestone-late-badge { display: none; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; color: var(--danger); background: rgba(232,64,64,0.14); border: 1px solid rgba(232,64,64,0.35); border-radius: 3px; padding: 2px 7px; white-space: nowrap; }
@@ -436,6 +438,7 @@
             <span class="week-dates" id="weekDates"></span>
             <button type="button" class="week-arrow" onclick="stepWeek(1)" title="Seuraava viikko">&#8250;</button>
             <button type="button" class="week-cal-btn" onclick="openWeekCalendar()" title="Valitse kalenterista">📅</button>
+            <button type="button" class="week-cal-btn" onclick="clearDeliveryWeek()" title="Poista toimitusviikko (esim. tilaus siirtyi toistaiseksi)">✕</button>
           </div>
           <input type="hidden" id="deliveryWeek">
         </div>
@@ -467,6 +470,7 @@
         <div class="milestone-row" data-type="piirustukset">
           <span class="milestone-label">🖼️ Piirustukset ja suunnitelmat</span>
           <button type="button" class="milestone-week-btn" id="ms_piirustukset_btn" onclick="openWeekCalendar('piirustukset')">— aseta viikko —</button>
+          <button type="button" class="milestone-clear-btn" id="ms_piirustukset_clear" onclick="clearMilestoneWeek('piirustukset')" title="Poista viikko">✕</button>
           <label class="milestone-done-toggle">
             <input type="checkbox" id="ms_piirustukset_done" onchange="onMilestoneDoneToggle('piirustukset', this.checked)">
             Valmis
@@ -481,6 +485,7 @@
         <div class="milestone-row" data-type="ikkuna_ovi">
           <span class="milestone-label">🪟 Ikkuna/ovi-tilaus</span>
           <button type="button" class="milestone-week-btn" id="ms_ikkuna_ovi_btn" onclick="openWeekCalendar('ikkuna_ovi')">— aseta viikko —</button>
+          <button type="button" class="milestone-clear-btn" id="ms_ikkuna_ovi_clear" onclick="clearMilestoneWeek('ikkuna_ovi')" title="Poista viikko">✕</button>
           <label class="milestone-done-toggle">
             <input type="checkbox" id="ms_ikkuna_ovi_done" onchange="onMilestoneDoneToggle('ikkuna_ovi', this.checked)">
             Valmis
@@ -495,6 +500,7 @@
         <div class="milestone-row" data-type="puuosat">
           <span class="milestone-label">🪵 Puuosien tilaus</span>
           <button type="button" class="milestone-week-btn" id="ms_puuosat_btn" onclick="openWeekCalendar('puuosat')">— aseta viikko —</button>
+          <button type="button" class="milestone-clear-btn" id="ms_puuosat_clear" onclick="clearMilestoneWeek('puuosat')" title="Poista viikko">✕</button>
           <label class="milestone-done-toggle">
             <input type="checkbox" id="ms_puuosat_done" onchange="onMilestoneDoneToggle('puuosat', this.checked)">
             Valmis
@@ -509,6 +515,7 @@
         <div class="milestone-row" data-type="tuotanto">
           <span class="milestone-label">🏭 Tuotanto</span>
           <button type="button" class="milestone-week-btn" id="ms_tuotanto_btn" onclick="openWeekCalendar('tuotanto')">— aseta viikko —</button>
+          <button type="button" class="milestone-clear-btn" id="ms_tuotanto_clear" onclick="clearMilestoneWeek('tuotanto')" title="Poista viikko">✕</button>
           <label class="milestone-done-toggle">
             <input type="checkbox" id="ms_tuotanto_done" onchange="onMilestoneDoneToggle('tuotanto', this.checked)">
             Valmis
@@ -976,6 +983,14 @@ function clearWeekValue() {
   document.getElementById('weekDates').textContent = '';
 }
 
+// Poistaa toimitusviikon kokonaan (esim. asiakas siirsi tilauksen toistaiseksi eikä uutta
+// ajankohtaa vielä tiedetä) — katoaa samalla kalenterista, koska kalenteri suodattaa
+// delivery_week-kentän perusteella.
+function clearDeliveryWeek() {
+  clearWeekValue();
+  autoSave();
+}
+
 // Käyttäjä kirjoittaa viikkonumeron
 function onWeekInput(val) {
   const w = parseInt(val, 10);
@@ -1103,6 +1118,13 @@ function toggleMilestoneNote(type) {
 // Kenttä vahvistuu (blur/Enter) — tallennetaan
 function onMilestoneNoteBlur(type, val) {
   saveMilestone(type, { note: val.trim() || '' });
+}
+
+// Poistaa yksittäisen merkkipaalun viikon (esim. tilaus siirtyi toistaiseksi). Huomio ja
+// valmis-täppä jäävät koskemattomiksi — jos molemmat ovat myös tyhjiä, saveMilestone()
+// siivoaa rivin kannasta kokonaan automaattisesti (ks. sen sisäinen tyhjennyslogiikka).
+function clearMilestoneWeek(type) {
+  saveMilestone(type, { target_week: '' });
 }
 
 function onMilestoneDoneToggle(type, checked) {
