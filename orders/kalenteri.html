@@ -386,6 +386,10 @@
     .mobile-list { display: block; }
     .cal-title { font-size: 18px; min-width: 0; }
     .legend { display: none; }
+    /* Sama ennaltaehkäisevä korjaus kuin tarjous.html:ssä (2026-09) — yläpalkin napit (nyt kaksi:
+       tulostus + uloskirjautuminen) eivät saa työntää koko sivua leveämmäksi kuin puhelimen
+       näyttö, koska se rikkoisi position:fixed-elementtien asemoinnin. */
+    header { overflow-x: auto; }
 
     .week-block {
       background: var(--panel);
@@ -429,6 +433,7 @@
   </div>
   <h1>Kalenteri</h1>
   <div class="header-right">
+    <a class="btn-logout" href="print_kalenteri.html" target="_blank" rel="noopener" title="Avaa tulostettava kahvihuoneen kalenteri uuteen välilehteen">🖨 Tulosta kahvihuone</a>
     <button class="btn-logout" onclick="logout()">Kirjaudu ulos</button>
   </div>
 </header>
