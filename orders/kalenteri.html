@@ -30,6 +30,8 @@
     --invoice-fg: #92400e;
     --invoice-overdue-bg: #fee2e2;
     --invoice-overdue-fg: #dc2626;
+    --milestone-bg: #e0e7ff;
+    --milestone-fg: #4338ca;
     --todo-bg:   #f3e8ff;
     --todo-fg:   #7c3aed;
     --shadow:    0 1px 4px rgba(100,60,20,0.08);
@@ -296,6 +298,17 @@
     color: var(--invoice-overdue-fg);
     border-left-color: var(--invoice-overdue-fg);
   }
+  .event-milestone {
+    background: var(--milestone-bg);
+    color: var(--milestone-fg);
+    border-left: 3px solid var(--milestone-fg);
+  }
+  /* Sama punainen kuin erääntyneellä laskulla — yksi väri "tätä on myöhässä" -tilalle koko sovelluksessa */
+  .event-milestone.late {
+    background: var(--invoice-overdue-bg);
+    color: var(--invoice-overdue-fg);
+    border-left-color: var(--invoice-overdue-fg);
+  }
 
   /* ── LISÄÄ POISSAOLO MODAL ────────────────────────────── */
   .modal-backdrop {
@@ -445,7 +458,11 @@
       </div>
       <div class="legend-item">
         <div class="legend-dot" style="background:var(--invoice-overdue-bg);border-left:3px solid var(--invoice-overdue-fg);"></div>
-        Erääntynyt
+        Erääntynyt / myöhässä
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--milestone-bg);border-left:3px solid var(--milestone-fg);"></div>
+        Merkkipaalu
       </div>
           <div class="legend-item">
         <div class="legend-dot" style="background:#fef9ec;border-left:3px solid #d97706;"></div>
@@ -525,6 +542,14 @@ let quotes    = [];
 let todos     = [];
 let invoices  = []; // laskutuserät joilla on due_date
 let forestSpots = []; // puukasat joilla on pickup_date
+let milestones = []; // order_milestones-rivit joilla on target_week, ei vielä valmiit
+
+const MILESTONE_TYPES_CAL = {
+  piirustukset: { emoji: '🖼️', label: 'Piirustukset' },
+  ikkuna_ovi:   { emoji: '🪟', label: 'Ikkuna/ovi' },
+  puuosat:      { emoji: '🪵', label: 'Puuosat' },
+  tuotanto:     { emoji: '🏭', label: 'Tuotanto' },
+};
 
 const MONTHS_FI = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
                    'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
@@ -581,9 +606,28 @@ async function loadData() {
       .select('id, puulaji, maara_m3, pickup_date, forest_spots(id, kauppa_numero, nimi, tila)')
       .not('pickup_date', 'is', null);
     forestSpots = (fData || []).filter(i => i.forest_spots && i.forest_spots.tila !== 'noudettu');
+
+    // Hae keskeneräiset merkkipaalut (piirustukset/ikkuna-ovi/puuosat/tuotanto) joilla on viikko
+    // asetettu. Valmiiksi merkityt eivät näy kalenterissa enää, sama periaate kuin maksetut
+    // laskut jäävät pois yllä olevasta invoice_items-hausta.
+    const { data: mData } = await db
+      .from('order_milestones')
+      .select('id, milestone_type, target_week, quote_id, quotes(quote_number, customers(name))')
+      .eq('is_done', false)
+      .not('target_week', 'is', null);
+    milestones = mData || [];
   } catch(e) {
     console.error('loadData:', e);
   }
+}
+
+// Normalisoi viikkoavaimen "YYYY-WW"-muotoon nollatäytteellä (esim. "2026-5" -> "2026-05").
+// order_milestones.target_week tallennetaan jo nollatäytettynä (ks. tarjous.html), mutta tämä
+// suojaa myös siltä varalta että joku rivi on tallennettu aiemmin ilman sitä.
+function normalizeWeekKey(wk) {
+  if (!wk || !wk.includes('-')) return wk;
+  const [y, w] = wk.split('-');
+  return `${y}-${String(parseInt(w, 10)).padStart(2, '0')}`;
 }
 
 // ── Viikkonumero ───────────────────────────────────────
@@ -653,6 +697,7 @@ function buildDayCell(date, otherMonth, today) {
   const isToday   = date.getTime() === today.getTime();
   const weekKey   = getWeekNumber(date);
   const isMonday  = (date.getDay() === 1);
+  const dateStr   = date.toISOString().slice(0, 10);
 
   cell.className = 'cal-day'
     + (otherMonth ? ' other-month' : '')
@@ -673,8 +718,28 @@ function buildDayCell(date, otherMonth, today) {
       const ev = document.createElement('a');
       ev.className = 'event event-' + (q.status === 'COMPLETED' ? 'completed' : 'ordered');
       ev.href = 'tarjous.html?id=' + q.id;
+      ev.target = '_blank';
+      ev.rel = 'noopener';
       ev.textContent = (q.customers?.name || q.quote_number || '—');
       ev.title = (q.quote_number || '') + ' · ' + (q.customers?.name || '') + ' · vko ' + weekKey.split('-')[1];
+      cell.appendChild(ev);
+    });
+
+    // Merkkipaalut tällä viikolla — sama paikka/tyyli kuin toimitusviikot, oma väri per rivi.
+    // "Myöhässä" = viikko on jo mennyt eikä merkkipaalua ole merkitty valmiiksi (ks. loadData,
+    // joka jo suodattaa pois is_done=true-rivit — kaikki tässä listassa on siis keskeneräisiä).
+    const weekMilestones = milestones.filter(m => normalizeWeekKey(m.target_week) === weekKey);
+    weekMilestones.forEach(m => {
+      const cfg = MILESTONE_TYPES_CAL[m.milestone_type] || { emoji: '📌', label: m.milestone_type };
+      const isLate = normalizeWeekKey(m.target_week) < getWeekNumber(today);
+      const ev = document.createElement('a');
+      ev.className = 'event event-milestone' + (isLate ? ' late' : '');
+      ev.href = 'tarjous.html?id=' + m.quote_id;
+      ev.target = '_blank';
+      ev.rel = 'noopener';
+      const customerName = m.quotes?.customers?.name || m.quotes?.quote_number || '—';
+      ev.textContent = cfg.emoji + ' ' + cfg.label + ' · ' + customerName;
+      ev.title = cfg.label + ' · ' + customerName + (isLate ? ' · MYÖHÄSSÄ' : '');
       cell.appendChild(ev);
     });
   }
@@ -686,6 +751,8 @@ function buildDayCell(date, otherMonth, today) {
     const ev = document.createElement('a');
     ev.className = 'event event-invoice' + (isOverdue ? ' overdue' : '');
     ev.href = 'laskutus.html';
+    ev.target = '_blank';
+    ev.rel = 'noopener';
     const customerName = inv.quotes?.customers?.name || inv.quotes?.quote_number || '—';
     const amt = inv.amount ? ' · ' + Math.round(inv.amount).toLocaleString('fi-FI') + ' €' : '';
     ev.textContent = '💰 ' + customerName + amt;
@@ -694,7 +761,6 @@ function buildDayCell(date, otherMonth, today) {
   });
 
   // Tehtävät
-  const dateStr = date.toISOString().slice(0, 10);
   const dayTodos = todos.filter(t => {
     if (t.due_date) return t.due_date === dateStr;
     return t.due_week === weekKey && (isMonday || date.getDate() === 1);
@@ -717,6 +783,8 @@ function buildDayCell(date, otherMonth, today) {
     const ev = document.createElement('a');
     ev.className = 'event event-forest';
     ev.href = 'metsalog.html';
+    ev.target = '_blank';
+    ev.rel = 'noopener';
     const vol = i.maara_m3 ? ' ' + i.maara_m3 + ' m³' : '';
     ev.textContent = '🌲 #' + (spot.kauppa_numero || '?') + ' ' + i.puulaji + vol;
     ev.title = (spot.nimi || '') + ' · ' + i.puulaji + vol;
@@ -758,6 +826,15 @@ function renderMobileList() {
     }
   });
 
+  // Lisää keskeneräiset merkkipaalut (samat kuin desktop-näkymässä, ks. loadData)
+  milestones.forEach(m => {
+    const wk = normalizeWeekKey(m.target_week);
+    if (weeks.has(wk)) {
+      const isLate = wk < getWeekNumber(new Date());
+      weeks.get(wk).push({ type: 'milestone', m, isLate });
+    }
+  });
+
   // Lisää todot
   todos.forEach(t => {
     if (weeks.has(t.due_week)) {
@@ -786,6 +863,8 @@ function renderMobileList() {
           const a = document.createElement('a');
           a.className = 'event event-' + ev.type;
           a.href = 'tarjous.html?id=' + ev.q.id;
+          a.target = '_blank';
+          a.rel = 'noopener';
           a.textContent = ev.q.customers?.name || ev.q.quote_number || '—';
           body.appendChild(a);
         } else if (ev.t) {
@@ -799,9 +878,21 @@ function renderMobileList() {
           const a = document.createElement('a');
           a.className = 'event event-forest';
           a.href = 'metsalog.html';
+          a.target = '_blank';
+          a.rel = 'noopener';
           const vol = ev.s.maara_m3 ? ' · ' + ev.s.maara_m3 + ' m³' : '';
           const vol2 = ev.s._maara ? ' ' + ev.s._maara + ' m³' : '';
           a.textContent = '🌲 #' + (ev.s.kauppa_numero || '?') + ' ' + (ev.s._puulaji || '') + vol2;
+          body.appendChild(a);
+        } else if (ev.m) {
+          const cfg = MILESTONE_TYPES_CAL[ev.m.milestone_type] || { emoji: '📌', label: ev.m.milestone_type };
+          const a = document.createElement('a');
+          a.className = 'event event-milestone' + (ev.isLate ? ' late' : '');
+          a.href = 'tarjous.html?id=' + ev.m.quote_id;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          const customerName = ev.m.quotes?.customers?.name || ev.m.quotes?.quote_number || '—';
+          a.textContent = cfg.emoji + ' ' + cfg.label + ' · ' + customerName;
           body.appendChild(a);
         }
       });
