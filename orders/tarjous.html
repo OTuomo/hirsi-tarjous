@@ -149,11 +149,20 @@
   #noteToggleBtn.has-note { background: var(--warn); color: #1a1a1a; border-color: var(--warn); }
   /* Merkkipaalut (2026-09) — käsin asetettavat viikot tilaus-/tuotantoaikataulun avainkohdille
      (piirustukset, ikkuna/ovi-tilaus, puuosien tilaus, tuotanto). Ei liity varastosaldoon,
-     pelkkää aikataulutusta. Katso order_milestones-taulu. */
+     pelkkää aikataulutusta. Katso order_milestones-taulu. Piilossa oletuksena, avautuu
+     Toimitusviikon alla olevasta linkistä — pidetään huomaamattomana, koska vain osa
+     tarjouksista tarvitsee näitä. */
+  .milestone-toggle-link { background: none; border: none; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; padding: 4px 0 0; text-align: left; }
+  .milestone-toggle-link:hover { color: var(--accent); }
+  .milestones-panel { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .milestones-panel.show { display: block; }
   .milestone-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid #33302a; flex-wrap: wrap; }
   .milestone-row:last-child { border-bottom: none; }
   .milestone-row.is-done .milestone-label { opacity: 0.5; }
-  .milestone-label { flex: 1 1 220px; font-size: 13px; color: var(--text); }
+  .milestone-label { flex: 1 1 200px; font-size: 12px; color: var(--text); }
+  .milestone-week-btn { background: var(--input-bg); border: 1px solid var(--border); color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 5px 10px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+  .milestone-week-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .milestone-week-btn.set { color: var(--text); }
   .milestone-done-toggle { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer; white-space: nowrap; }
   .milestone-done-toggle input { width: auto; cursor: pointer; }
   .milestone-late-badge { display: none; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; color: var(--danger); background: rgba(232,64,64,0.14); border: 1px solid rgba(232,64,64,0.35); border-radius: 3px; padding: 2px 7px; white-space: nowrap; }
@@ -422,6 +431,7 @@
             <button type="button" class="week-cal-btn" onclick="openWeekCalendar()" title="Valitse kalenterista">📅</button>
           </div>
           <input type="hidden" id="deliveryWeek">
+          <button type="button" class="milestone-toggle-link" id="milestoneToggleBtn" onclick="toggleMilestonesPanel()">📌 Merkkipaalut ▾</button>
         </div>
         <div class="field" style="flex:1 1 auto;">
           <label>Kohde / viite</label>
@@ -432,81 +442,47 @@
           <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- MERKKIPAALUT (2026-09) — käsin asetettavat viikot, ei riippuvuutta toimitusviikosta.
-       Tuomon nimeämät neljä tyyppiä. Toimitusviikko pysyy omana kenttänään yllä, ei tässä. -->
-  <div class="panel">
-    <div class="panel-header">📌 Merkkipaalut</div>
-    <div class="panel-body">
-      <div class="milestone-row" data-type="piirustukset">
-        <span class="milestone-label">🖼️ Piirustukset ja suunnitelmat</span>
-        <div class="week-picker">
-          <button type="button" class="week-arrow" onclick="stepMilestoneWeek('piirustukset',-1)" title="Edellinen viikko">&#8249;</button>
-          <input type="text" class="week-input" id="ms_piirustukset_week" placeholder="vko" maxlength="2"
-            oninput="onMilestoneWeekInput('piirustukset', this.value)"
-            onblur="onMilestoneWeekBlur('piirustukset', this.value)"
-            onkeydown="if(event.key==='Enter'){onMilestoneWeekBlur('piirustukset',this.value);this.blur();}">
-          <span class="week-dates" id="ms_piirustukset_dates"></span>
-          <button type="button" class="week-arrow" onclick="stepMilestoneWeek('piirustukset',1)" title="Seuraava viikko">&#8250;</button>
+      <!-- MERKKIPAALUT (2026-09) — piilossa oletuksena, avautuu Toimitusviikon alla olevasta
+           linkistä samaan kohtaan. Käsin asetettavat viikot, ei riippuvuutta toimitusviikosta.
+           Viikko valitaan samalla 📅-kalenterimodaalilla kuin toimitusviikko (ks. openWeekCalendar). -->
+      <div class="milestones-panel" id="milestonesPanel">
+        <div class="milestone-row" data-type="piirustukset">
+          <span class="milestone-label">🖼️ Piirustukset ja suunnitelmat</span>
+          <button type="button" class="milestone-week-btn" id="ms_piirustukset_btn" onclick="openWeekCalendar('piirustukset')">— aseta viikko —</button>
+          <label class="milestone-done-toggle">
+            <input type="checkbox" id="ms_piirustukset_done" onchange="onMilestoneDoneToggle('piirustukset', this.checked)">
+            Valmis
+          </label>
+          <span class="milestone-late-badge" id="ms_piirustukset_late">Myöhässä</span>
         </div>
-        <label class="milestone-done-toggle">
-          <input type="checkbox" id="ms_piirustukset_done" onchange="onMilestoneDoneToggle('piirustukset', this.checked)">
-          Valmis
-        </label>
-        <span class="milestone-late-badge" id="ms_piirustukset_late">Myöhässä</span>
-      </div>
-      <div class="milestone-row" data-type="ikkuna_ovi">
-        <span class="milestone-label">🪟 Ikkuna/ovi-tilaus</span>
-        <div class="week-picker">
-          <button type="button" class="week-arrow" onclick="stepMilestoneWeek('ikkuna_ovi',-1)" title="Edellinen viikko">&#8249;</button>
-          <input type="text" class="week-input" id="ms_ikkuna_ovi_week" placeholder="vko" maxlength="2"
-            oninput="onMilestoneWeekInput('ikkuna_ovi', this.value)"
-            onblur="onMilestoneWeekBlur('ikkuna_ovi', this.value)"
-            onkeydown="if(event.key==='Enter'){onMilestoneWeekBlur('ikkuna_ovi',this.value);this.blur();}">
-          <span class="week-dates" id="ms_ikkuna_ovi_dates"></span>
-          <button type="button" class="week-arrow" onclick="stepMilestoneWeek('ikkuna_ovi',1)" title="Seuraava viikko">&#8250;</button>
+        <div class="milestone-row" data-type="ikkuna_ovi">
+          <span class="milestone-label">🪟 Ikkuna/ovi-tilaus</span>
+          <button type="button" class="milestone-week-btn" id="ms_ikkuna_ovi_btn" onclick="openWeekCalendar('ikkuna_ovi')">— aseta viikko —</button>
+          <label class="milestone-done-toggle">
+            <input type="checkbox" id="ms_ikkuna_ovi_done" onchange="onMilestoneDoneToggle('ikkuna_ovi', this.checked)">
+            Valmis
+          </label>
+          <span class="milestone-late-badge" id="ms_ikkuna_ovi_late">Myöhässä</span>
         </div>
-        <label class="milestone-done-toggle">
-          <input type="checkbox" id="ms_ikkuna_ovi_done" onchange="onMilestoneDoneToggle('ikkuna_ovi', this.checked)">
-          Valmis
-        </label>
-        <span class="milestone-late-badge" id="ms_ikkuna_ovi_late">Myöhässä</span>
-      </div>
-      <div class="milestone-row" data-type="puuosat">
-        <span class="milestone-label">🪵 Puuosien tilaus</span>
-        <div class="week-picker">
-          <button type="button" class="week-arrow" onclick="stepMilestoneWeek('puuosat',-1)" title="Edellinen viikko">&#8249;</button>
-          <input type="text" class="week-input" id="ms_puuosat_week" placeholder="vko" maxlength="2"
-            oninput="onMilestoneWeekInput('puuosat', this.value)"
-            onblur="onMilestoneWeekBlur('puuosat', this.value)"
-            onkeydown="if(event.key==='Enter'){onMilestoneWeekBlur('puuosat',this.value);this.blur();}">
-          <span class="week-dates" id="ms_puuosat_dates"></span>
-          <button type="button" class="week-arrow" onclick="stepMilestoneWeek('puuosat',1)" title="Seuraava viikko">&#8250;</button>
+        <div class="milestone-row" data-type="puuosat">
+          <span class="milestone-label">🪵 Puuosien tilaus</span>
+          <button type="button" class="milestone-week-btn" id="ms_puuosat_btn" onclick="openWeekCalendar('puuosat')">— aseta viikko —</button>
+          <label class="milestone-done-toggle">
+            <input type="checkbox" id="ms_puuosat_done" onchange="onMilestoneDoneToggle('puuosat', this.checked)">
+            Valmis
+          </label>
+          <span class="milestone-late-badge" id="ms_puuosat_late">Myöhässä</span>
         </div>
-        <label class="milestone-done-toggle">
-          <input type="checkbox" id="ms_puuosat_done" onchange="onMilestoneDoneToggle('puuosat', this.checked)">
-          Valmis
-        </label>
-        <span class="milestone-late-badge" id="ms_puuosat_late">Myöhässä</span>
-      </div>
-      <div class="milestone-row" data-type="tuotanto">
-        <span class="milestone-label">🏭 Tuotanto</span>
-        <div class="week-picker">
-          <button type="button" class="week-arrow" onclick="stepMilestoneWeek('tuotanto',-1)" title="Edellinen viikko">&#8249;</button>
-          <input type="text" class="week-input" id="ms_tuotanto_week" placeholder="vko" maxlength="2"
-            oninput="onMilestoneWeekInput('tuotanto', this.value)"
-            onblur="onMilestoneWeekBlur('tuotanto', this.value)"
-            onkeydown="if(event.key==='Enter'){onMilestoneWeekBlur('tuotanto',this.value);this.blur();}">
-          <span class="week-dates" id="ms_tuotanto_dates"></span>
-          <button type="button" class="week-arrow" onclick="stepMilestoneWeek('tuotanto',1)" title="Seuraava viikko">&#8250;</button>
+        <div class="milestone-row" data-type="tuotanto">
+          <span class="milestone-label">🏭 Tuotanto</span>
+          <button type="button" class="milestone-week-btn" id="ms_tuotanto_btn" onclick="openWeekCalendar('tuotanto')">— aseta viikko —</button>
+          <label class="milestone-done-toggle">
+            <input type="checkbox" id="ms_tuotanto_done" onchange="onMilestoneDoneToggle('tuotanto', this.checked)">
+            Valmis
+          </label>
+          <span class="milestone-late-badge" id="ms_tuotanto_late">Myöhässä</span>
         </div>
-        <label class="milestone-done-toggle">
-          <input type="checkbox" id="ms_tuotanto_done" onchange="onMilestoneDoneToggle('tuotanto', this.checked)">
-          Valmis
-        </label>
-        <span class="milestone-late-badge" id="ms_tuotanto_late">Myöhässä</span>
       </div>
     </div>
   </div>
@@ -1045,66 +1021,47 @@ function isMilestoneLate(m) {
   return (y < curYear) || (y === curYear && w < curWeek);
 }
 
+// Näyttää merkkipaalun tilan pienenä nappina ("— aseta viikko —" tai "Vko 32 · 4.8.–10.8.")
+// jota klikkaamalla avautuu sama 📅-kalenterimodaali kuin toimitusviikolla (ks. openWeekCalendar).
 function renderMilestoneRow(type) {
   const m = milestones[type] || emptyMilestone();
-  const weekInput = document.getElementById(`ms_${type}_week`);
+  const btn = document.getElementById(`ms_${type}_btn`);
   const doneBox = document.getElementById(`ms_${type}_done`);
-  const datesEl = document.getElementById(`ms_${type}_dates`);
   const lateEl = document.getElementById(`ms_${type}_late`);
-  if (!weekInput) return; // sivu ei ole vielä renderöinyt paneelia
+  if (!btn) return; // sivu ei ole vielä renderöinyt paneelia
   if (m.target_week && m.target_week.includes('-')) {
     const [y, w] = m.target_week.split('-').map(Number);
-    weekInput.value = String(w);
-    datesEl.textContent = weekDateRange(y, w);
+    btn.textContent = `Vko ${w} · ${weekDateRange(y, w)}`;
+    btn.classList.add('set');
   } else {
-    weekInput.value = '';
-    datesEl.textContent = '';
+    btn.textContent = '— aseta viikko —';
+    btn.classList.remove('set');
   }
   doneBox.checked = m.is_done;
   lateEl.classList.toggle('show', isMilestoneLate(m));
-  const rowEl = weekInput.closest('.milestone-row');
+  const rowEl = btn.closest('.milestone-row');
   if (rowEl) rowEl.classList.toggle('is-done', m.is_done);
-}
-
-// Elävä esikatselu kirjoittaessa — ei vielä tallenna, sama periaate kuin toimitusviikon onWeekInput()
-function onMilestoneWeekInput(type, val) {
-  const w = parseInt(val, 10);
-  const datesEl = document.getElementById(`ms_${type}_dates`);
-  if (!val || isNaN(w) || w < 1 || w > 53) { datesEl.textContent = ''; return; }
-  const today = new Date();
-  const { week: curWeek, year: curYear } = getISOWeek(today);
-  const year = w < curWeek ? curYear + 1 : curYear;
-  datesEl.textContent = weekDateRange(year, w);
-}
-
-// Kenttä vahvistuu (blur/Enter) — tallennetaan
-function onMilestoneWeekBlur(type, val) {
-  const w = parseInt(val, 10);
-  if (!val || isNaN(w) || w < 1 || w > 53) { saveMilestone(type, { target_week: '' }); return; }
-  const today = new Date();
-  const { week: curWeek, year: curYear } = getISOWeek(today);
-  const year = w < curWeek ? curYear + 1 : curYear;
-  saveMilestone(type, { target_week: `${year}-${w}` });
-}
-
-// Nuolinapit — siirtää viikkoa suoraan (sama kuvio kuin toimitusviikon stepWeek())
-function stepMilestoneWeek(type, delta) {
-  const m = milestones[type] || emptyMilestone();
-  let year, week;
-  if (m.target_week && m.target_week.includes('-')) {
-    [year, week] = m.target_week.split('-').map(Number);
-  } else {
-    const r = getISOWeek(new Date());
-    year = r.year; week = r.week;
-  }
-  const monday = mondayOfWeek(year, week);
-  monday.setUTCDate(monday.getUTCDate() + delta * 7);
-  const r = getISOWeek(monday);
-  saveMilestone(type, { target_week: `${r.year}-${r.week}` });
+  updateMilestoneToggleLabel();
 }
 
 function onMilestoneDoneToggle(type, checked) {
   saveMilestone(type, { is_done: checked });
+}
+
+// Piilossa/auki-linkki Toimitusviikon alla. Näyttää suluissa montako neljästä on asetettu,
+// jotta huomaa yhdellä silmäyksellä ilman että paneelia tarvitsee avata.
+function toggleMilestonesPanel() {
+  document.getElementById('milestonesPanel').classList.toggle('show');
+  updateMilestoneToggleLabel();
+}
+
+function updateMilestoneToggleLabel() {
+  const btn = document.getElementById('milestoneToggleBtn');
+  if (!btn) return;
+  const setCount = MILESTONE_TYPES.filter(t => milestones[t] && milestones[t].target_week).length;
+  const isOpen = document.getElementById('milestonesPanel').classList.contains('show');
+  const suffix = setCount ? ` (${setCount}/${MILESTONE_TYPES.length})` : '';
+  btn.textContent = `📌 Merkkipaalut${suffix} ${isOpen ? '▴' : '▾'}`;
 }
 
 // Tallentaa yhden merkkipaalun kentän kannnan order_milestones-tauluun. Luo rivin jos ei
@@ -1168,9 +1125,17 @@ document.getElementById('textTplModal').addEventListener('click', e => {
 // apufunktioita (getISOWeek/mondayOfWeek/weekDateRange) jotka ovat jo olemassa yllä.
 // =============================================
 let calViewYear, calViewMonth; // kuukausi jota kalenteri tällä hetkellä näyttää (0-11)
+let calTarget = null; // null = toimitusviikko, muuten milestone-tyyppi (esim. 'ikkuna_ovi')
 
-function openWeekCalendar() {
-  const current = document.getElementById('deliveryWeek').value;
+// Palauttaa kalenterin kohteen nykyisen tallennetun viikon '{year}-{week}' tai null.
+function calTargetCurrentValue() {
+  if (calTarget) return (milestones[calTarget] && milestones[calTarget].target_week) || '';
+  return document.getElementById('deliveryWeek').value;
+}
+
+function openWeekCalendar(target) {
+  calTarget = target || null;
+  const current = calTargetCurrentValue();
   let refDate;
   if (current && current.includes('-')) {
     const [y, w] = current.split('-').map(Number);
@@ -1203,8 +1168,9 @@ const CAL_MONTH_LABELS = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu
 function renderWeekCalendar() {
   document.getElementById('calMonthLabel').textContent = `${CAL_MONTH_LABELS[calViewMonth]} ${calViewYear}`;
 
-  // Nykyinen valittu viikko (jos on) korostusta varten
-  const current = document.getElementById('deliveryWeek').value;
+  // Nykyinen valittu viikko (jos on) korostusta varten — toimitusviikko tai milestone,
+  // riippuen calTarget-muuttujasta (asetetaan openWeekCalendar():ssa)
+  const current = calTargetCurrentValue();
   let selYear = null, selWeek = null;
   if (current && current.includes('-')) [selYear, selWeek] = current.split('-').map(Number);
 
@@ -1239,9 +1205,15 @@ function renderWeekCalendar() {
   document.getElementById('calGrid').innerHTML = html;
 }
 
+// Kutsutaan kun käyttäjä klikkaa päivää tai viikkonumeroa modaalissa. calTarget ratkaisee
+// meneekö valinta toimitusviikkoon (null, alkuperäinen käytös) vai johonkin milestoneen.
 function pickWeekFromCalendar(year, week) {
-  setWeekValue(year, week);
-  autoSave();
+  if (calTarget) {
+    saveMilestone(calTarget, { target_week: `${year}-${week}` });
+  } else {
+    setWeekValue(year, week);
+    autoSave();
+  }
   closeWeekCalendar();
 }
 
