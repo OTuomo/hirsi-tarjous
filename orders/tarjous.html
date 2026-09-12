@@ -972,7 +972,11 @@ function weekDateRange(year, week) {
 
 // Asettaa viikkoselain-UI:n ja hidden inputin
 function setWeekValue(year, week) {
-  document.getElementById('deliveryWeek').value = `${year}-${week}`;
+  // Nollatäyte (05 eikä 5) — kalenteri.html vertaa viikkoja merkkijonoina "YYYY-WW"-muodossa,
+  // ja ilman nollatäytettä viikot 1-9 eivät koskaan täsmänneet eivätkä siis näkyneet
+  // kalenterissa (korjattu 2026-09, ks. keskustelu Tomin kanssa — kannassa ei ollut
+  // vahingoittunutta dataa tarkistushetkellä).
+  document.getElementById('deliveryWeek').value = `${year}-${String(week).padStart(2, '0')}`;
   document.getElementById('weekInput').value = String(week);
   document.getElementById('weekDates').textContent = weekDateRange(year, week);
 }
