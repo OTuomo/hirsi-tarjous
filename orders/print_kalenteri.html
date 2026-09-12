@@ -295,18 +295,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   html += `<table class="item-table">`;
+  let anyUpcoming = false;
   weeksInRange.forEach(wk => {
+    const items = byWeek.get(wk) || [];
+    if (!items.length) return; // tyhjä viikko jätetään kokonaan pois, ei vie turhaa tilaa
+    anyUpcoming = true;
     const [y, w] = wk.split('-').map(Number);
     html += `<tr class="week-hdr"><td colspan="3">VIIKKO ${w} · ${weekDateRange(y, w)}</td></tr>`;
-    const items = byWeek.get(wk) || [];
-    if (!items.length) {
-      html += `<tr class="week-empty"><td colspan="3">Ei tapahtumia tällä viikolla</td></tr>`;
-    } else {
-      items.forEach(it => {
-        html += `<tr><td class="icon-cell">${it.icon}</td><td class="type-cell">${esc(it.type)}</td><td class="desc-cell">${esc(it.name)}</td></tr>`;
-      });
-    }
+    items.forEach(it => {
+      html += `<tr><td class="icon-cell">${it.icon}</td><td class="type-cell">${esc(it.type)}</td><td class="desc-cell">${esc(it.name)}</td></tr>`;
+    });
   });
+  if (!anyUpcoming) {
+    html += `<tr class="week-empty"><td colspan="3">Ei tulevia tapahtumia valitulla aikavälillä</td></tr>`;
+  }
   html += `</table>`;
 
   const content = document.getElementById('content');
