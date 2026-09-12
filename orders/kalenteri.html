@@ -713,7 +713,7 @@ function buildDayCell(date, otherMonth, today) {
 
   // Toimitukset tällä viikolla — näytetään maanantailla
   if (isMonday || date.getDate() === 1) {
-    const weekQuotes = quotes.filter(q => q.delivery_week === weekKey);
+    const weekQuotes = quotes.filter(q => normalizeWeekKey(q.delivery_week) === weekKey);
     weekQuotes.forEach(q => {
       const ev = document.createElement('a');
       ev.className = 'event event-' + (q.status === 'COMPLETED' ? 'completed' : 'ordered');
@@ -811,8 +811,9 @@ function renderMobileList() {
 
   // Lisää toimitukset
   quotes.forEach(q => {
-    if (weeks.has(q.delivery_week)) {
-      weeks.get(q.delivery_week).push({ type: q.status === 'COMPLETED' ? 'completed' : 'ordered', q });
+    const wk = normalizeWeekKey(q.delivery_week);
+    if (weeks.has(wk)) {
+      weeks.get(wk).push({ type: q.status === 'COMPLETED' ? 'completed' : 'ordered', q });
     }
   });
 
