@@ -75,6 +75,8 @@
   .customer-info-display { margin-top: 6px; padding: 7px 11px; background: #222018; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; color: var(--text-dim); line-height: 1.6; display: none; }
   .customer-info-display.show { display: block; }
   .customer-info-display .cid-label { color: var(--accent); font-weight: 600; font-size: 11px; letter-spacing: 0.04em; margin-right: 4px; }
+  .customer-info-display .cid-link { color: var(--text-dim); text-decoration: none; border-bottom: 1px dotted var(--text-dim); }
+  .customer-info-display .cid-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
 
   /* NIMIKEHAKU */
   .nimike-wrap { position: relative; }
@@ -912,10 +914,10 @@ function renderCustomerInfo(cust) {
     lines.push(`<div><span class="cid-label">Laskutus</span>${[cust.billing_address, [cust.billing_postal_code, cust.billing_city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}</div>`);
   }
   if (cust.email) {
-    lines.push(`<div><span class="cid-label">Email</span>${cust.email}</div>`);
+    lines.push(`<div><span class="cid-label">Email</span><a href="mailto:${esc(cust.email.trim())}" class="cid-link">${esc(cust.email)}</a></div>`);
   }
   if (cust.phone) {
-    lines.push(`<div><span class="cid-label">Puhelin</span>${cust.phone}</div>`);
+    lines.push(`<div><span class="cid-label">Puhelin</span><a href="tel:${esc(cust.phone.replace(/\s+/g,''))}" class="cid-link">${esc(cust.phone)}</a></div>`);
   }
   if (!lines.length) { box.classList.remove('show'); box.innerHTML = ''; return; }
   box.innerHTML = lines.join('');
