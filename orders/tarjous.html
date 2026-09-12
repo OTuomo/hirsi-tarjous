@@ -167,6 +167,13 @@
   .milestone-done-toggle input { width: auto; cursor: pointer; }
   .milestone-late-badge { display: none; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; color: var(--danger); background: rgba(232,64,64,0.14); border: 1px solid rgba(232,64,64,0.35); border-radius: 3px; padding: 2px 7px; white-space: nowrap; }
   .milestone-late-badge.show { display: inline-block; }
+  .milestone-note-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 2px 4px; line-height: 1; }
+  .milestone-note-btn:hover { color: var(--accent); }
+  .milestone-note-btn.has-note { color: var(--warn); }
+  .milestone-note-wrap { display: none; flex-basis: 100%; margin-top: 6px; }
+  .milestone-note-wrap.show { display: block; }
+  .milestone-note-input { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; padding: 6px 9px; border-radius: 4px; }
+  .milestone-note-input:focus { outline: none; border-color: var(--accent); }
   /* Viikkokalenteri-modaali (2026-08) */
   .week-cal-btn { background: none; border: none; color: var(--text-dim); font-size: 14px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
   .week-cal-btn:hover { color: var(--accent); }
@@ -431,7 +438,6 @@
             <button type="button" class="week-cal-btn" onclick="openWeekCalendar()" title="Valitse kalenterista">📅</button>
           </div>
           <input type="hidden" id="deliveryWeek">
-          <button type="button" class="milestone-toggle-link" id="milestoneToggleBtn" onclick="toggleMilestonesPanel()">📌 Merkkipaalut ▾</button>
         </div>
         <div class="field" style="flex:1 1 auto;">
           <label>Kohde / viite</label>
@@ -443,9 +449,20 @@
         </div>
       </div>
 
-      <!-- MERKKIPAALUT (2026-09) — piilossa oletuksena, avautuu Toimitusviikon alla olevasta
-           linkistä samaan kohtaan. Käsin asetettavat viikot, ei riippuvuutta toimitusviikosta.
-           Viikko valitaan samalla 📅-kalenterimodaalilla kuin toimitusviikko (ks. openWeekCalendar). -->
+      <!-- Toggle-linkki on omalla rivillään basics-row2:n ULKOPUOLELLA (ei .field-luokan sisällä) —
+           basics-row2 käyttää align-items:flex-end, ja jos linkki olisi Toimitusviikko-kentän
+           sisällä, se tekisi siitä muita kenttiä korkeamman ja työntäisi Kohde/viite- ja
+           Tarjousnumero-kentät alaspäin (huomattu 2026-09, korjattu). leveys:180px pitää sen
+           silti visuaalisesti Toimitusviikon alapuolella. -->
+      <div style="width:180px;">
+        <button type="button" class="milestone-toggle-link" id="milestoneToggleBtn" onclick="toggleMilestonesPanel()">📌 Merkkipaalut ▾</button>
+      </div>
+
+      <!-- MERKKIPAALUT (2026-09) — piilossa oletuksena, avautuu yllä olevasta linkistä samaan
+           kohtaan. Käsin asetettavat viikot, ei riippuvuutta toimitusviikosta. Viikko valitaan
+           samalla 📅-kalenterimodaalilla kuin toimitusviikko (ks. openWeekCalendar). Jokaisella
+           rivillä myös vapaaehtoinen 📝-huomio (order_milestones.note) omaa muistia varten —
+           ei tulostu koskaan, ei liity varastoon, pelkkä itselle jätettävä vapaa teksti. -->
       <div class="milestones-panel" id="milestonesPanel">
         <div class="milestone-row" data-type="piirustukset">
           <span class="milestone-label">🖼️ Piirustukset ja suunnitelmat</span>
@@ -454,7 +471,12 @@
             <input type="checkbox" id="ms_piirustukset_done" onchange="onMilestoneDoneToggle('piirustukset', this.checked)">
             Valmis
           </label>
+          <button type="button" class="milestone-note-btn" id="ms_piirustukset_notebtn" onclick="toggleMilestoneNote('piirustukset')" title="Oma huomio">📝</button>
           <span class="milestone-late-badge" id="ms_piirustukset_late">Myöhässä</span>
+          <div class="milestone-note-wrap" id="ms_piirustukset_notewrap">
+            <input type="text" class="milestone-note-input" id="ms_piirustukset_note" placeholder="Oma huomio, esim. 'Ikkunat tilattu, tilausvahvistus ei ole vielä tullut'..."
+              onblur="onMilestoneNoteBlur('piirustukset', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
         </div>
         <div class="milestone-row" data-type="ikkuna_ovi">
           <span class="milestone-label">🪟 Ikkuna/ovi-tilaus</span>
@@ -463,7 +485,12 @@
             <input type="checkbox" id="ms_ikkuna_ovi_done" onchange="onMilestoneDoneToggle('ikkuna_ovi', this.checked)">
             Valmis
           </label>
+          <button type="button" class="milestone-note-btn" id="ms_ikkuna_ovi_notebtn" onclick="toggleMilestoneNote('ikkuna_ovi')" title="Oma huomio">📝</button>
           <span class="milestone-late-badge" id="ms_ikkuna_ovi_late">Myöhässä</span>
+          <div class="milestone-note-wrap" id="ms_ikkuna_ovi_notewrap">
+            <input type="text" class="milestone-note-input" id="ms_ikkuna_ovi_note" placeholder="Oma huomio, esim. 'Ikkunat tilattu, tilausvahvistus ei ole vielä tullut'..."
+              onblur="onMilestoneNoteBlur('ikkuna_ovi', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
         </div>
         <div class="milestone-row" data-type="puuosat">
           <span class="milestone-label">🪵 Puuosien tilaus</span>
@@ -472,7 +499,12 @@
             <input type="checkbox" id="ms_puuosat_done" onchange="onMilestoneDoneToggle('puuosat', this.checked)">
             Valmis
           </label>
+          <button type="button" class="milestone-note-btn" id="ms_puuosat_notebtn" onclick="toggleMilestoneNote('puuosat')" title="Oma huomio">📝</button>
           <span class="milestone-late-badge" id="ms_puuosat_late">Myöhässä</span>
+          <div class="milestone-note-wrap" id="ms_puuosat_notewrap">
+            <input type="text" class="milestone-note-input" id="ms_puuosat_note" placeholder="Oma huomio..."
+              onblur="onMilestoneNoteBlur('puuosat', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
         </div>
         <div class="milestone-row" data-type="tuotanto">
           <span class="milestone-label">🏭 Tuotanto</span>
@@ -481,7 +513,12 @@
             <input type="checkbox" id="ms_tuotanto_done" onchange="onMilestoneDoneToggle('tuotanto', this.checked)">
             Valmis
           </label>
+          <button type="button" class="milestone-note-btn" id="ms_tuotanto_notebtn" onclick="toggleMilestoneNote('tuotanto')" title="Oma huomio">📝</button>
           <span class="milestone-late-badge" id="ms_tuotanto_late">Myöhässä</span>
+          <div class="milestone-note-wrap" id="ms_tuotanto_notewrap">
+            <input type="text" class="milestone-note-input" id="ms_tuotanto_note" placeholder="Oma huomio..."
+              onblur="onMilestoneNoteBlur('tuotanto', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
         </div>
       </div>
     </div>
@@ -636,7 +673,7 @@ let rowTemplates = [];
 let sections = [];
 let currentQuoteId = null;
 const MILESTONE_TYPES = ['piirustukset', 'ikkuna_ovi', 'puuosat', 'tuotanto'];
-function emptyMilestone() { return { id: null, target_week: '', is_done: false }; }
+function emptyMilestone() { return { id: null, target_week: '', is_done: false, note: '' }; }
 let milestones = MILESTONE_TYPES.reduce((acc, t) => { acc[t] = emptyMilestone(); return acc; }, {});
 let currentStatus = 'DRAFT';
 let currentStatusChangedAt = null;
@@ -1000,11 +1037,11 @@ async function loadMilestones(quoteId) {
   milestones = MILESTONE_TYPES.reduce((acc, t) => { acc[t] = emptyMilestone(); return acc; }, {});
   if (quoteId) {
     try {
-      const data = await sbGet('order_milestones', `?quote_id=eq.${quoteId}&select=id,milestone_type,target_week,is_done`);
+      const data = await sbGet('order_milestones', `?quote_id=eq.${quoteId}&select=id,milestone_type,target_week,is_done,note`);
       if (Array.isArray(data)) {
         data.forEach(row => {
           if (MILESTONE_TYPES.includes(row.milestone_type)) {
-            milestones[row.milestone_type] = { id: row.id, target_week: row.target_week || '', is_done: !!row.is_done };
+            milestones[row.milestone_type] = { id: row.id, target_week: row.target_week || '', is_done: !!row.is_done, note: row.note || '' };
           }
         });
       }
@@ -1028,6 +1065,9 @@ function renderMilestoneRow(type) {
   const btn = document.getElementById(`ms_${type}_btn`);
   const doneBox = document.getElementById(`ms_${type}_done`);
   const lateEl = document.getElementById(`ms_${type}_late`);
+  const noteBtn = document.getElementById(`ms_${type}_notebtn`);
+  const noteInput = document.getElementById(`ms_${type}_note`);
+  const noteWrap = document.getElementById(`ms_${type}_notewrap`);
   if (!btn) return; // sivu ei ole vielä renderöinyt paneelia
   if (m.target_week && m.target_week.includes('-')) {
     const [y, w] = m.target_week.split('-').map(Number);
@@ -1041,7 +1081,28 @@ function renderMilestoneRow(type) {
   lateEl.classList.toggle('show', isMilestoneLate(m));
   const rowEl = btn.closest('.milestone-row');
   if (rowEl) rowEl.classList.toggle('is-done', m.is_done);
+  const hasNote = !!(m.note && m.note.trim());
+  if (noteInput) noteInput.value = m.note || '';
+  if (noteBtn) noteBtn.classList.toggle('has-note', hasNote);
+  // Huomio näkyy automaattisesti auki jos siinä on jo sisältöä (sama periaate kuin sisäisen
+  // huomion paneelilla) — ettei se jää vahingossa huomaamatta piilossa.
+  if (noteWrap && hasNote) noteWrap.classList.add('show');
   updateMilestoneToggleLabel();
+}
+
+// Näyttää/piilottaa yhden merkkipaalun oman huomiokentän
+function toggleMilestoneNote(type) {
+  const wrap = document.getElementById(`ms_${type}_notewrap`);
+  if (!wrap) return;
+  wrap.classList.toggle('show');
+  if (wrap.classList.contains('show')) {
+    setTimeout(() => { const inp = document.getElementById(`ms_${type}_note`); if (inp) inp.focus(); }, 50);
+  }
+}
+
+// Kenttä vahvistuu (blur/Enter) — tallennetaan
+function onMilestoneNoteBlur(type, val) {
+  saveMilestone(type, { note: val.trim() || '' });
 }
 
 function onMilestoneDoneToggle(type, checked) {
@@ -1080,10 +1141,10 @@ async function saveMilestone(type, patch) {
   }
   const m = milestones[type] || emptyMilestone();
   const updated = Object.assign({}, m, patch);
-  // Tyhjä viikko + ei valmis = merkkipaalua ei enää käytetä tällä tarjouksella -> poistetaan
-  // rivi kannasta kokonaan, ettei jää roikkumaan tyhjänä (sama siisteysperiaate kuin
-  // sales_type='myymala' tyhjien tarjousten siivouksessa aiemmin).
-  if (!updated.target_week && !updated.is_done) {
+  // Tyhjä viikko + ei valmis + ei huomiota = merkkipaalua ei enää käytetä tällä tarjouksella
+  // -> poistetaan rivi kannasta kokonaan, ettei jää roikkumaan tyhjänä (sama siisteysperiaate
+  // kuin sales_type='myymala' tyhjien tarjousten siivouksessa aiemmin).
+  if (!updated.target_week && !updated.is_done && !(updated.note && updated.note.trim())) {
     if (updated.id) {
       try { await sbDelete('order_milestones', updated.id); } catch(e) { console.error('saveMilestone delete:', e); }
     }
@@ -1093,11 +1154,11 @@ async function saveMilestone(type, patch) {
   }
   try {
     if (updated.id) {
-      await sbPatch('order_milestones', updated.id, { target_week: updated.target_week || null, is_done: updated.is_done });
+      await sbPatch('order_milestones', updated.id, { target_week: updated.target_week || null, is_done: updated.is_done, note: updated.note || null });
     } else {
       const result = await sbPost('order_milestones', {
         quote_id: currentQuoteId, milestone_type: type,
-        target_week: updated.target_week || null, is_done: updated.is_done
+        target_week: updated.target_week || null, is_done: updated.is_done, note: updated.note || null
       });
       if (result && result[0]) updated.id = result[0].id;
     }
