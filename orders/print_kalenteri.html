@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<title>Kahvihuoneen kalenteri — Okkosen Puutuote</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 10pt; color: #111; background: #fff; }
+
+  @page {
+    size: A4;
+    margin: 12mm 15mm 12mm 15mm;
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 7.5pt;
+      color: #444;
+    }
+  }
+  .page-wrap { max-width: 180mm; margin: 0 auto; }
+
+  /* Sama doc-header-kaava kuin print_quote.html/print_supply.html:ssä */
+  .doc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 7mm; border-bottom: 1px solid #ccc; padding-bottom: 4mm; }
+  .logo-area { display: flex; align-items: center; gap: 10px; }
+  .logo-area img { height: 34px; width: auto; }
+  .logo-area .company-name { font-size: 12pt; font-weight: 700; line-height: 1.15; }
+  .doc-title { font-size: 12pt; font-weight: 700; letter-spacing: 0.06em; text-align: center; flex: 1; padding-top: 3px; line-height: 1.35; }
+  .doc-meta { text-align: right; font-size: 9pt; min-width: 55mm; }
+  .doc-meta table { margin-left: auto; border-collapse: collapse; }
+  .doc-meta td { padding: 2px 4px; }
+  .doc-meta td:first-child { color: #555; white-space: nowrap; }
+  .doc-meta td:last-child { font-weight: 600; }
+
+  /* Myöhässä-lohko — oma korostettu laatikko ylimpänä */
+  .overdue-box { background: #fef2f2; border: 1.5px solid #dc2626; border-radius: 5px; padding: 3.5mm 4mm 1mm; margin-bottom: 6mm; }
+  .overdue-title { color: #b91c1c; font-weight: 700; font-size: 10.5pt; margin-bottom: 2mm; letter-spacing: 0.02em; }
+  .overdue-box .item-table { margin-bottom: 0; }
+  .overdue-box .item-table td { border-bottom: 1px dotted #f0b8b8; }
+  .overdue-box .item-table tr:last-child td { border-bottom: none; }
+
+  /* Viikoittain ryhmitelty tapahtumataulukko */
+  .item-table { width: 100%; border-collapse: collapse; margin-bottom: 7mm; font-size: 10pt; }
+  .item-table .week-hdr td { background: #f0f0f0; font-weight: 700; font-size: 9.5pt; border-bottom: 1px solid #bbb; border-top: 3px solid #555; padding: 5px 6px; letter-spacing: 0.02em; }
+  .item-table .week-empty td { color: #999; font-style: italic; font-size: 9pt; padding: 5px 6px; border-bottom: 1px dotted #ddd; }
+  .item-table td { padding: 8px 6px; border-bottom: 1px dotted #ccc; vertical-align: middle; }
+  .item-table tr:last-child td { border-bottom: 1px dotted #ccc; }
+  .item-table .icon-cell { width: 9mm; font-size: 13pt; text-align: center; }
+  .item-table .type-cell { width: 32mm; color: #666; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.04em; }
+  .item-table .desc-cell { font-weight: 600; font-size: 10pt; }
+  .item-table .desc-cell .sub { display: block; font-weight: 400; color: #777; font-size: 8.5pt; margin-top: 1px; }
+  /* Estää rivin/otsikon katkeamisen kesken sivunvaihdon */
+  .item-table tr { page-break-inside: avoid; break-inside: avoid; }
+  .item-table .week-hdr { page-break-after: avoid; break-after: avoid; }
+
+  .doc-footer-note { text-align: center; font-size: 8pt; color: #888; border-top: 1px solid #ddd; padding-top: 3mm; margin-top: 4mm; }
+  .loading { text-align: center; padding: 40px; font-size: 14px; color: #888; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  @media screen {
+    body { background: #eee; padding: 20px; }
+    .page-wrap { background: #fff; padding: 16mm 15mm 20mm; box-shadow: 0 2px 16px rgba(0,0,0,0.15); }
+  }
+
+  /* Näytön yläreunan kontrollit — EI koskaan tulosteessa (@media print piilottaa .no-print) */
+  .print-controls {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: #1c1a14; color: #ededf0;
+    padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .print-controls label { display: flex; align-items: center; gap: 6px; color: #ccc; }
+  .print-controls input[type="date"] { font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 4px 6px; border-radius: 4px; border: 1px solid #4a4535; background: #333028; color: #fff; }
+  .print-controls .spacer { flex: 1; }
+  .btn-refresh { background: #4a4535; color: #fff; border: none; border-radius: 4px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .btn-refresh:hover { background: #5a5545; }
+  .btn-print { background: #d97706; color: #fff; border: none; border-radius: 4px; padding: 7px 16px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .btn-print:hover { background: #b45309; }
+  body { padding-top: 52px; } /* tilaa kiinteälle kontrollipalkille näytöllä */
+  @media print { body { padding-top: 0; } }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+</head>
+<body>
+
+<div class="print-controls no-print">
+  <label>Alkaen <input type="date" id="fromDate"></label>
+  <label>Päättyen <input type="date" id="toDate"></label>
+  <button class="btn-refresh" id="btnRefresh">Päivitä</button>
+  <div class="spacer"></div>
+  <button class="btn-print" onclick="window.print()">🖨 Tulosta</button>
+</div>
+
+<div class="page-wrap">
+  <div class="doc-header">
+    <div class="logo-area">
+      <img src="https://otuomo.github.io/hirsi-tarjous/orders/okkonenlogopuu.svg" alt="Logo">
+      <div class="company-name">OKKOSEN<br>PUUTUOTE</div>
+    </div>
+    <div class="doc-title">KAHVIHUONEEN<br>KALENTERI</div>
+    <div class="doc-meta" id="docMeta"></div>
+  </div>
+
+  <div id="content" class="loading">Ladataan...</div>
+
+  <div class="doc-footer-note">Okkosen Puutuote — sisäinen tuloste, ei asiakkaalle</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
+
+async function sbGet(table, params = '') {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+  });
+  return r.json();
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Sama nelikko kuin kalenteri.html:ssä — omana kopionaan, ei jaettuja JS-moduuleita tässä sovelluksessa
+const MILESTONE_TYPES_CAL = {
+  piirustukset: { emoji: '🖼️', label: 'Piirustukset' },
+  ikkuna_ovi:   { emoji: '🪟', label: 'Ikkuna/ovi' },
+  puuosat:      { emoji: '🪵', label: 'Puuosat' },
+  tuotanto:     { emoji: '🏭', label: 'Tuotanto' },
+};
+
+// ── Päivämäärä-/viikkoapurit (kopioitu samalla ISO-logiikalla kuin tarjous.html/kalenteri.html) ──
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return { week, year: d.getUTCFullYear() };
+}
+function weekKeyOf(date) {
+  const { week, year } = getISOWeek(date);
+  return `${year}-${String(week).padStart(2,'0')}`;
+}
+function normalizeWeekKey(wk) {
+  if (!wk || !wk.includes('-')) return wk;
+  const [y, w] = wk.split('-');
+  return `${y}-${String(parseInt(w, 10)).padStart(2, '0')}`;
+}
+function mondayOfWeek(year, week) {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (jan4day - 1) + (week - 1) * 7);
+  return monday;
+}
+function weekDateRange(year, week) {
+  const monday = mondayOfWeek(year, week);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const fmt = d => `${d.getUTCDate()}.${d.getUTCMonth()+1}.`;
+  const suffix = sunday.getUTCFullYear() !== monday.getUTCFullYear()
+    ? `${sunday.getUTCFullYear()}` : `${monday.getUTCFullYear()}`;
+  return `${fmt(monday)}–${fmt(sunday)}${suffix}`;
+}
+// Paikallinen (ei UTC-siirtymän aiheuttamaa virhettä) YYYY-MM-DD-merkkijono. HUOM: date.toISOString()
+// EI kelpaa tähän — se muuntaa UTC-aikaan ja voi siirtää päivän taaksepäin Suomen kesäajan (+3)
+// aikana, esim. paikallinen keskiyö 12.9. muuttuu UTC:ssa 21:00 11.9. ("2026-09-11" väärin).
+function isoStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function parseISODate(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function fmtDateFi(isoDateStr) {
+  return isoDateStr.slice(0,10).split('-').reverse().join('.');
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await window._authReady;
+
+  const params = new URLSearchParams(window.location.search);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = isoStr(today);
+  const currentWeekKey = weekKeyOf(today);
+
+  const fromStr = params.get('from') || todayStr;
+  let toStr = params.get('to');
+  if (!toStr) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 30);
+    toStr = isoStr(d);
+  }
+  document.getElementById('fromDate').value = fromStr;
+  document.getElementById('toDate').value = toStr;
+  document.getElementById('btnRefresh').onclick = () => {
+    const f = document.getElementById('fromDate').value;
+    const t = document.getElementById('toDate').value;
+    window.location.href = `print_kalenteri.html?from=${f}&to=${t}`;
+  };
+
+  document.getElementById('docMeta').innerHTML = `
+    <table>
+      <tr><td>Tulostettu</td><td>${fmtDateFi(todayStr)}</td></tr>
+      <tr><td>Aikaväli</td><td>${fmtDateFi(fromStr)}–${fmtDateFi(toStr)}</td></tr>
+    </table>`;
+
+  const fromDate = parseISODate(fromStr);
+  const toDate = parseISODate(toStr);
+
+  // ── Data ──────────────────────────────────────────────
+  const [quotesData, milestonesData, todosData] = await Promise.all([
+    sbGet('quotes', '?select=id,quote_number,delivery_week,status,customers(name)&status=in.(ORDERED,COMPLETED)&delivery_week=not.is.null'),
+    sbGet('order_milestones', '?select=id,milestone_type,target_week,quote_id,quotes(quote_number,customers(name))&is_done=eq.false&target_week=not.is.null'),
+    sbGet('todos', '?select=id,title,notes,due_date,due_week,due_time,is_shared,is_done&is_shared=eq.true&is_done=eq.false'),
+  ]);
+  const quotes = Array.isArray(quotesData) ? quotesData : [];
+  const milestones = Array.isArray(milestonesData) ? milestonesData : [];
+  // Vain jaetut, keskeneräiset todot JOILLA on joku ajankohta (muuten ei tiedetä minne ne kuuluisivat)
+  const todos = (Array.isArray(todosData) ? todosData : []).filter(t => t.due_date || t.due_week);
+
+  // ── Kerää tapahtumat: myöhässä vs. viikoittain "tulossa" ──
+  const overdue = [];
+  const byWeek = new Map();
+  function pushToWeek(wk, item) {
+    if (!byWeek.has(wk)) byWeek.set(wk, []);
+    byWeek.get(wk).push(item);
+  }
+
+  quotes.forEach(q => {
+    const wk = normalizeWeekKey(q.delivery_week);
+    const name = q.customers?.name || q.quote_number || '—';
+    if (wk < currentWeekKey) {
+      overdue.push({ icon: '🚚', type: 'Toimitus', name, sub: `toimitus oli vko ${wk.split('-')[1]}` });
+    } else {
+      pushToWeek(wk, { icon: '🚚', type: 'Toimitus', name });
+    }
+  });
+
+  milestones.forEach(m => {
+    const wk = normalizeWeekKey(m.target_week);
+    const cfg = MILESTONE_TYPES_CAL[m.milestone_type] || { emoji: '📌', label: m.milestone_type };
+    const name = m.quotes?.customers?.name || m.quotes?.quote_number || '—';
+    if (wk < currentWeekKey) {
+      overdue.push({ icon: cfg.emoji, type: cfg.label, name, sub: `piti hoitaa vko ${wk.split('-')[1]}` });
+    } else {
+      pushToWeek(wk, { icon: cfg.emoji, type: cfg.label, name });
+    }
+  });
+
+  todos.forEach(t => {
+    const timePrefix = t.due_time ? t.due_time.slice(0,5) + ' ' : '';
+    const name = timePrefix + t.title;
+    let wk, isLate, sub;
+    if (t.due_date) {
+      wk = weekKeyOf(parseISODate(t.due_date));
+      isLate = t.due_date < todayStr;
+      sub = `piti tehdä ${fmtDateFi(t.due_date)}`;
+    } else {
+      wk = normalizeWeekKey(t.due_week);
+      isLate = wk < currentWeekKey;
+      sub = `piti tehdä vko ${wk.split('-')[1]}`;
+    }
+    if (isLate) {
+      overdue.push({ icon: '✓', type: 'Tehtävä', name, sub });
+    } else {
+      pushToWeek(wk, { icon: '✓', type: 'Tehtävä', name });
+    }
+  });
+
+  // ── Viikot jotka valittu aikaväli kattaa (järjestyksessä) ──
+  const weeksInRange = [];
+  const seenWeeks = new Set();
+  for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
+    const wk = weekKeyOf(d);
+    if (!seenWeeks.has(wk)) { seenWeeks.add(wk); weeksInRange.push(wk); }
+  }
+
+  // ── Renderöi ──────────────────────────────────────────
+  let html = '';
+
+  if (overdue.length) {
+    html += `<div class="overdue-box"><div class="overdue-title">⚠️ MYÖHÄSSÄ</div><table class="item-table">`;
+    overdue.forEach(it => {
+      html += `<tr><td class="icon-cell">${it.icon}</td><td class="type-cell">${esc(it.type)}</td><td class="desc-cell">${esc(it.name)}<span class="sub">${esc(it.sub)}</span></td></tr>`;
+    });
+    html += `</table></div>`;
+  }
+
+  html += `<table class="item-table">`;
+  weeksInRange.forEach(wk => {
+    const [y, w] = wk.split('-').map(Number);
+    html += `<tr class="week-hdr"><td colspan="3">VIIKKO ${w} · ${weekDateRange(y, w)}</td></tr>`;
+    const items = byWeek.get(wk) || [];
+    if (!items.length) {
+      html += `<tr class="week-empty"><td colspan="3">Ei tapahtumia tällä viikolla</td></tr>`;
+    } else {
+      items.forEach(it => {
+        html += `<tr><td class="icon-cell">${it.icon}</td><td class="type-cell">${esc(it.type)}</td><td class="desc-cell">${esc(it.name)}</td></tr>`;
+      });
+    }
+  });
+  html += `</table>`;
+
+  const content = document.getElementById('content');
+  content.className = '';
+  content.innerHTML = html;
+});
+</script>
+</body>
+</html>
