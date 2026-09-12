@@ -952,20 +952,23 @@ async function loadOrders(customerId) {
 
 function uusiTilaus() {
   if (!activeCustomer) return;
-  localStorage.setItem('newOrderCustomerId', activeCustomer.id);
-  localStorage.setItem('newOrderCustomerName', activeCustomer.name);
-  window.open('tarjous.html', '_blank');
+  const url = `tarjous.html?customer=${activeCustomer.id}&name=${encodeURIComponent(activeCustomer.name)}`;
+  window.open(url, '_blank');
 }
 
 function avaaTilaus(orderId) {
-  localStorage.setItem('openOrderId', orderId);
-  window.open('tarjous.html', '_blank');
+  window.open(`tarjous.html?id=${orderId}`, '_blank');
 }
 
+// Sama vahvistuskysymys kuin tarjous.html:n omassa "⧉ Kopioi tarjous" -napissa (copyQuote()),
+// jotta käyttäytyminen on identtinen riippumatta mistä kopiointi käynnistetään.
 function kopioi(orderId, keepCustomer) {
-  localStorage.setItem('copyOrderId', orderId);
-  localStorage.setItem('copyKeepCustomer', keepCustomer ? 'true' : 'false');
-  window.open('tarjous.html', '_blank');
+  const keepPrices = confirm('Kopioidaanko hinnat sellaisenaan?\n\nOK = Säilytä vanhat hinnat\nPeruuta = Hae uudet hinnat hinnastosta');
+  let url = `tarjous.html?copy=${orderId}&keepPrices=${keepPrices ? '1' : '0'}`;
+  if (keepCustomer && activeCustomer) {
+    url += `&customer=${activeCustomer.id}&name=${encodeURIComponent(activeCustomer.name)}`;
+  }
+  window.open(url, '_blank');
 }
 
 // =============================================
