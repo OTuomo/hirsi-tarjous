@@ -217,8 +217,20 @@
        näkymättömän sivun keskelle eikä oikeasti näkyvän ruudun keskelle (huomattu 2026-09,
        testattu mobiilissa ensimmäistä kertaa). Rajataan ylivuoto omaksi vaakavierityskaistaksi
        header-elementin sisään, jolloin body/viewport pysyy laitteen todellisessa leveydessä. */
-    header { overflow-x: auto; }
-    header::-webkit-scrollbar { display: none; }
+    /* Yläpalkin napit (Sisäinen huomio, Pakkauslista, Tallenna jne.) eivät mahdu kapealle
+       ruudulle ja työnsivät ilman tätä koko SIVUN leveämmäksi kuin puhelimen näyttö — minkä
+       seurauksena position:fixed-modaalit (esim. viikkokalenteri) asemoituivat sen leveämmän,
+       näkymättömän sivun keskelle eikä oikeasti näkyvän ruudun keskelle (huomattu 2026-09-12,
+       testattu mobiilissa ensimmäistä kertaa). Rajataan ylivuoto omaksi vaakavierityskaistaksi
+       .header-right-elementin sisään — EI koko header-elementtiin, koska ☰-valikon avattava
+       .nav-dropdown on headerin toinen lapsi (nav-menu-wrap), ei header-rightin sisällä.
+       Ensimmäinen yritys laittoi overflow-x:auto koko headeriin, mikä leikkasi valikon pois
+       näkyvistä (CSS pakottaa overflow-y:autoksi kun overflow-x ei ole visible) — korjattu
+       heti kun huomattiin, ks. Muistiinpanot. min-width:0 tarvitaan koska flex-lapset eivät
+       oletuksena kutistu content-leveyttä pienemmäksi, mikä muuten estäisi overflow-x:auto:n
+       toimimasta ja sivu venyisi silti leveämmäksi. */
+    .header-right { overflow-x: auto; min-width: 0; }
+    .header-right::-webkit-scrollbar { display: none; }
   }
   .product-card-list { display: none; }
   .product-card { background: var(--input-bg); border: 1px solid var(--border); border-radius: 5px; padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
