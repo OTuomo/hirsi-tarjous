@@ -388,8 +388,14 @@
     .legend { display: none; }
     /* Sama ennaltaehkäisevä korjaus kuin tarjous.html:ssä (2026-09) — yläpalkin napit (nyt kaksi:
        tulostus + uloskirjautuminen) eivät saa työntää koko sivua leveämmäksi kuin puhelimen
-       näyttö, koska se rikkoisi position:fixed-elementtien asemoinnin. */
-    header { overflow-x: auto; }
+       näyttö, koska se rikkoisi position:fixed-elementtien asemoinnin. KORJATTU 2026-09-12:
+       ensimmäinen versio laittoi tämän koko header-elementtiin, mikä leikkasi ☰-valikon
+       avattavan .nav-dropdown:n pois näkyvistä (se on headerin toinen lapsi, ei
+       header-rightin sisällä — CSS pakottaa overflow-y:n autoksi kun overflow-x ei ole
+       visible, mikä leikkaa kaiken headerin ulkopuolelle ulottuvan). Kohdistettu nyt vain
+       .header-right-elementtiin, joka on sisarelementti eikä sisällä valikkoa ollenkaan. */
+    .header-right { overflow-x: auto; min-width: 0; }
+    .header-right::-webkit-scrollbar { display: none; }
 
     .week-block {
       background: var(--panel);
