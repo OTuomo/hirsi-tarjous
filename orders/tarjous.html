@@ -126,6 +126,17 @@
   .summary-table .value { text-align: right; color: var(--text); }
   .summary-table .big td { font-size: 16px; font-weight: 600; color: var(--accent); padding-top: 8px; border-top: 1px solid var(--border); }
   .summary-table input.adj { width: 90px; text-align: right; padding: 4px 7px; font-size: 12px; }
+  /* LISÄALENNUS (2026-09) — toinen alennuskierros YHT:n päälle, piilossa oletuksena */
+  .extra-discount-toggle { background: none; border: none; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; padding: 6px 0 0; text-align: right; width: 100%; }
+  .extra-discount-toggle:hover { color: var(--accent); }
+  .extra-discount-panel { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); text-align: left; }
+  .extra-discount-panel.show { display: block; }
+  .extra-discount-panel .ed-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .extra-discount-panel .ed-row label { flex-shrink: 0; color: var(--text-dim); }
+  .extra-discount-panel select { width: auto; font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 4px 7px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); border-radius: 4px; }
+  .extra-discount-final { font-size: 14px; font-weight: 600; color: var(--accent); text-align: right; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+  .extra-discount-kate { font-size: 11px; color: var(--text-dim); text-align: right; margin-top: 4px; }
+  .extra-discount-kate .kate-low { color: var(--danger); font-weight: 600; }
   .default-text-wrap textarea { width: 100%; min-height: 100px; font-size: 12px; }
   .action-bar { display: flex; gap: 10px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
   /* Varmista että status-valikko ei leikkaudu sivun alareunassa */
@@ -608,6 +619,30 @@
       <tr class="big">
         <td class="label">YHT (verollinen)</td>
         <td class="value"><input class="adj" type="number" id="adjGross" value="0" step="0.01" oninput="onGrossInput()" style="font-size:15px;font-weight:600;color:var(--accent);width:110px;"></td>
+      </tr>
+      <tr>
+        <td colspan="2">
+          <button type="button" class="extra-discount-toggle" id="extraDiscountToggleBtn" onclick="toggleExtraDiscount()">➕ Lisäalennus ▾</button>
+          <div class="extra-discount-panel" id="extraDiscountPanel">
+            <div class="ed-row">
+              <label>Lisäalennus %</label>
+              <input class="adj" type="number" id="extraDiscountPercent" value="0" step="0.1" min="0" max="100" oninput="onExtraDiscountPercentInput()">
+            </div>
+            <div class="ed-row">
+              <label>Lisäalennus €</label>
+              <input class="adj" type="number" id="extraDiscountAmount" value="0" step="0.01" oninput="onExtraDiscountAmountInput()">
+            </div>
+            <div class="ed-row">
+              <label>Näytä tulosteella</label>
+              <select id="extraDiscountDisplay" onchange="onExtraDiscountDisplayChange()">
+                <option value="percent">Prosentteina</option>
+                <option value="amount">Euroina</option>
+              </select>
+            </div>
+            <div class="extra-discount-final">Lopullinen hinta: <span id="finalGrossDisplay">0,00 €</span></div>
+            <div class="extra-discount-kate" id="extraDiscountKateInfo"></div>
+          </div>
+        </td>
       </tr>
     </table>
   </div>
@@ -1908,6 +1943,7 @@ function recalcTotals() {
     const el = document.getElementById(`subsub-${sec.id}`);
     if (el) el.textContent = fmt(sectionSum(sec));
   });
+  renderExtraDiscountPanel();
 }
 
 // Käyttäjä muuttaa alennusprosenttia → päivitä koko yhteenveto
@@ -1938,6 +1974,7 @@ function onGrossInput() {
   document.getElementById('sumSubtotal').textContent = fmt(sub) + ' €';
   document.getElementById('sumNoTax').textContent = fmt(noTax) + ' €';
   document.getElementById('sumVat').textContent = fmt(vat) + ' €';
+  renderExtraDiscountPanel();
   autoSave();
 }
 
@@ -1976,6 +2013,100 @@ function computeKateBreakdown() {
     });
   });
   return { groups, unknownRows, unknownRevenue, totalRevenue, knownRevenue, knownCost };
+}
+
+// =============================================
+// LISÄALENNUS (2026-09) — toinen alennuskierros YHT:n (verollisen, jo pyöristetyn) päälle.
+// Eri asia kuin ylempi "Alennus %" joka laskee aina Välisummasta — tämä laskee siitä mitä
+// ON JO luvattu asiakkaalle (adjGross), koska asiakas voi tingata vielä lähetetystä hinnasta.
+// Ei omaa €-saraketta kannassa — € on aina laskettavissa prosentista + senhetkisestä YHT:sta,
+// sama periaate kuin monessa muussakin kentässä tässä sovelluksessa. HUOM: total_gross/
+// total_net/total_vat tallentuvat LOPULLISINA (lisäalennuksen jälkeen, ks. buildQuoteData),
+// joten adjGross-kenttä (stage-1 YHT) rekonstruoituu aina tuoreena sub/alennus%/pyöristys€:sta
+// recalcTotals():ssa — sitä EI koskaan ladata suoraan total_gross-arvosta kun lisäalennus>0,
+// koska ne eivät enää olisi sama luku.
+// =============================================
+
+function toggleExtraDiscount() {
+  document.getElementById('extraDiscountPanel').classList.toggle('show');
+  updateExtraDiscountToggleLabel();
+}
+
+function updateExtraDiscountToggleLabel() {
+  const btn = document.getElementById('extraDiscountToggleBtn');
+  if (!btn) return;
+  const pct = parseFloat(document.getElementById('extraDiscountPercent').value) || 0;
+  const isOpen = document.getElementById('extraDiscountPanel').classList.contains('show');
+  const suffix = pct > 0 ? ` (−${pct.toLocaleString('fi-FI',{maximumFractionDigits:1})}%)` : '';
+  btn.textContent = `➕ Lisäalennus${suffix} ${isOpen ? '▴' : '▾'}`;
+}
+
+// Sama kate%-kaava kuin Kate-modaalissa (computeKateBreakdown + effectiveRatio), tässä jaettuna
+// omaksi funktiokseen ja laajennettuna valinnaisella lisäalennuksella. withExtraDiscount=true
+// käyttää extraDiscountPercent-kentän senhetkistä arvoa, false laskee kateen ilman sitä
+// (= sama luku kuin Kate-modaali on aina näyttänyt, ei muutu tämän ominaisuuden myötä).
+function computeOverallKatePercent(withExtraDiscount) {
+  const data = computeKateBreakdown();
+  if (data.knownCost <= 0) return null;
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const discountPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+  const afterDiscount = sub * (1 - discountPercent / 100);
+  const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
+  const noTax = afterDiscount + adj;
+  const effectiveRatio = sub > 0 ? (noTax / sub) : 1;
+  let knownRevenueAfter = data.knownRevenue * effectiveRatio;
+  if (withExtraDiscount) {
+    const extraPct = parseFloat(document.getElementById('extraDiscountPercent').value) || 0;
+    knownRevenueAfter *= (1 - extraPct / 100);
+  }
+  return ((knownRevenueAfter - data.knownCost) / data.knownCost) * 100;
+}
+
+// Kate-% raja jonka alle jäätyä "Kate jälkeen" -luku värjäytyy punaiseksi lisäalennuspaneelissa.
+// Tuomon toive 2026-09: muistuttaa jos lisäalennus vie katteen liian pieneksi. Muutettavissa
+// tähän tarvittaessa myöhemmin jos Tuomo haluaa eri rajan.
+const EXTRA_DISCOUNT_KATE_WARN_THRESHOLD = 10;
+
+// Päivittää "Lopullinen hinta" -lukeman, lisäalennus€-kentän ja kate ennen/jälkeen -tiedon.
+// Kutsutaan aina kun lisäalennuskenttä muuttuu, tai kun YHT muuttuu rivien/alennuksen kautta
+// (recalcTotals()/onGrossInput() kutsuvat tätä lopussaan).
+function renderExtraDiscountPanel() {
+  const grossBase = parseFloat(document.getElementById('adjGross').value) || 0;
+  const extraPct = parseFloat(document.getElementById('extraDiscountPercent').value) || 0;
+  const finalGross = grossBase * (1 - extraPct / 100);
+  document.getElementById('finalGrossDisplay').textContent = fmt(finalGross) + ' €';
+  document.getElementById('extraDiscountAmount').value = Math.round((grossBase - finalGross) * 100) / 100;
+
+  const kateInfoEl = document.getElementById('extraDiscountKateInfo');
+  const kateBefore = computeOverallKatePercent(false);
+  if (kateBefore === null) {
+    kateInfoEl.textContent = '';
+  } else if (extraPct > 0) {
+    const kateAfter = computeOverallKatePercent(true);
+    const lowClass = kateAfter < EXTRA_DISCOUNT_KATE_WARN_THRESHOLD ? ' class="kate-low"' : '';
+    kateInfoEl.innerHTML = `Kate ennen: ${kateBefore.toLocaleString('fi-FI',{maximumFractionDigits:1})} % → Kate jälkeen: <span${lowClass}>${kateAfter.toLocaleString('fi-FI',{maximumFractionDigits:1})} %</span>`;
+  } else {
+    kateInfoEl.textContent = `Kate: ${kateBefore.toLocaleString('fi-FI',{maximumFractionDigits:1})} %`;
+  }
+  updateExtraDiscountToggleLabel();
+}
+
+function onExtraDiscountPercentInput() {
+  renderExtraDiscountPanel();
+  autoSave();
+}
+
+function onExtraDiscountAmountInput() {
+  const grossBase = parseFloat(document.getElementById('adjGross').value) || 0;
+  const amount = parseFloat(document.getElementById('extraDiscountAmount').value) || 0;
+  const pct = grossBase > 0 ? Math.round((amount / grossBase * 100) * 100) / 100 : 0;
+  document.getElementById('extraDiscountPercent').value = pct;
+  renderExtraDiscountPanel();
+  autoSave();
+}
+
+function onExtraDiscountDisplayChange() {
+  autoSave();
 }
 
 function openKateModal() {
@@ -2024,6 +2155,13 @@ function openKateModal() {
     <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border);">
       ${discountPercent > 0 ? `<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">Yllä olevat summat ovat ennen alennusta. Alennus ${discountPercent.toLocaleString('fi-FI',{maximumFractionDigits:1})} % (+ mahdollinen pyöristys) pienentää tuottoa kertoimella × ${effectiveRatio.toLocaleString('fi-FI',{minimumFractionDigits:3,maximumFractionDigits:3})} — tämä on jo huomioitu alla olevassa kokonaiskatteessa.</div>` : ''}
       <div style="font-size:14px;"><b>Koko tarjouksen kate alennuksen jälkeen: </b><span style="color:var(--accent);font-weight:600;">${katePct !== null ? katePct.toLocaleString('fi-FI', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' %' : '– (ei hinnastotuotteita)'}</span></div>
+      ${(() => {
+        const extraPct = parseFloat(document.getElementById('extraDiscountPercent').value) || 0;
+        if (extraPct <= 0 || katePct === null) return '';
+        const kateAfterExtra = computeOverallKatePercent(true);
+        const lowStyle = kateAfterExtra < EXTRA_DISCOUNT_KATE_WARN_THRESHOLD ? 'color:var(--danger);font-weight:700;' : 'color:var(--accent);font-weight:600;';
+        return `<div style="font-size:14px;margin-top:4px;"><b>...ja lisäalennuksen (−${extraPct.toLocaleString('fi-FI',{maximumFractionDigits:1})}%) jälkeen: </b><span style="${lowStyle}">${kateAfterExtra.toLocaleString('fi-FI',{minimumFractionDigits:1,maximumFractionDigits:1})} %</span></div>`;
+      })()}
       ${data.unknownRevenue > 1 ? `<div style="font-size:10px;color:var(--text-dim);margin-top:6px;">Huom: ${fmt(data.unknownRevenue)} € tarjouksesta on kokoonpanoja tai vapaita "Kohde"-rivejä joiden kate ei ole tiedossa — ei mukana kateprosentissa.</div>` : ''}
     </div>
   `;
@@ -2135,6 +2273,13 @@ function buildQuoteData(status) {
   const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
   const noTax = afterDiscount + adj;
   const vat = noTax * computeQuoteVatRate(sections) / 100;
+  const grossStage1 = parseFloat(document.getElementById('adjGross').value) || 0;
+  const extraDiscountPercent = parseFloat(document.getElementById('extraDiscountPercent').value) || 0;
+  // Lisäalennus pienentää lopullista verollista hintaa suoraan (se on mitä asiakas oikeasti
+  // maksaa) — veroton ja alv skaalataan samalla kertoimella, jotta net+alv=gross pysyy
+  // paikkansapitävänä tulosteella. total_gross/total_net/total_vat tallentuvat siis aina
+  // LOPULLISINA (lisäalennuksen jälkeisinä) lukuina, ei sinä mitä alunperin pyöristettiin.
+  const scale = 1 - extraDiscountPercent / 100;
   return {
     customer_id: document.getElementById('customerId').value || null,
     quote_number: document.getElementById('quoteNumber').value || null,
@@ -2145,13 +2290,15 @@ function buildQuoteData(status) {
     footer_text: document.getElementById('defaultText').value || null,
     discount_amount: adj,
     discount_percent: discountPercent,
+    extra_discount_percent: extraDiscountPercent,
+    extra_discount_display: document.getElementById('extraDiscountDisplay').value || 'percent',
     sections_json: JSON.stringify(sections),
     delivery_type: document.getElementById('deliveryType').value || null,
     delivery_week: document.getElementById('deliveryWeek').value.trim() || null,
     is_template: false,
-    total_net: Math.round(noTax * 100) / 100,
-    total_vat: Math.round(vat * 100) / 100,
-    total_gross: Math.round((parseFloat(document.getElementById('adjGross').value)||0) * 100) / 100,
+    total_net: Math.round(noTax * scale * 100) / 100,
+    total_vat: Math.round(vat * scale * 100) / 100,
+    total_gross: Math.round(grossStage1 * scale * 100) / 100,
   };
 }
 
@@ -2191,6 +2338,7 @@ async function saveAsTemplate() {
   data.quote_number = null;      // malleilla ei ole tarjousnumeroa (sama kuin Harjusauna/Täyspohja)
   data.discount_amount = 0;
   data.discount_percent = 0;     // alkuperäisen tarjouksen alennus ei saa "periytyä" malliin
+  data.extra_discount_percent = 0; // sama periaate lisäalennukselle
   data.internal_note = null;     // sisäinen huomio koskee tätä yksittäistä tarjousta, ei mallia
   data.is_template = true;
   data.status = 'DRAFT';
@@ -2282,6 +2430,9 @@ async function loadQuote(id) {
   document.getElementById('defaultText').value = q.footer_text || '';
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
+  document.getElementById('extraDiscountPercent').value = q.extra_discount_percent || 0;
+  document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'percent';
+  if (parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
   if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
   if (q.customer_id) {
     const cust = customers.find(c => c.id === q.customer_id);
@@ -2329,6 +2480,9 @@ async function copyQuoteFrom(id, keepPrices) {
   document.getElementById('defaultText').value = q.footer_text || '';
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
+  document.getElementById('extraDiscountPercent').value = q.extra_discount_percent || 0;
+  document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'percent';
+  if (parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
   if (q.sections_json) {
     try {
       sections = JSON.parse(q.sections_json);
