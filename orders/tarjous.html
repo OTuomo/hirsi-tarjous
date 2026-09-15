@@ -635,6 +635,7 @@
             <div class="ed-row">
               <label>Näytä tulosteella</label>
               <select id="extraDiscountDisplay" onchange="onExtraDiscountDisplayChange()">
+                <option value="hidden">Ei näy asiakkaalle</option>
                 <option value="percent">Prosentteina</option>
                 <option value="amount">Euroina</option>
               </select>
@@ -2291,7 +2292,7 @@ function buildQuoteData(status) {
     discount_amount: adj,
     discount_percent: discountPercent,
     extra_discount_percent: extraDiscountPercent,
-    extra_discount_display: document.getElementById('extraDiscountDisplay').value || 'percent',
+    extra_discount_display: document.getElementById('extraDiscountDisplay').value || 'hidden',
     sections_json: JSON.stringify(sections),
     delivery_type: document.getElementById('deliveryType').value || null,
     delivery_week: document.getElementById('deliveryWeek').value.trim() || null,
@@ -2431,7 +2432,7 @@ async function loadQuote(id) {
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
   document.getElementById('extraDiscountPercent').value = q.extra_discount_percent || 0;
-  document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'percent';
+  document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'hidden';
   if (parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
   if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
   if (q.customer_id) {
@@ -2481,7 +2482,7 @@ async function copyQuoteFrom(id, keepPrices) {
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
   document.getElementById('extraDiscountPercent').value = q.extra_discount_percent || 0;
-  document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'percent';
+  document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'hidden';
   if (parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
   if (q.sections_json) {
     try {
