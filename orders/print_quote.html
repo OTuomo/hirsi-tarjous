@@ -250,21 +250,42 @@ window.addEventListener('DOMContentLoaded', async () => {
   try { sections = JSON.parse(q.sections_json || '[]'); } catch(e) {}
 
   const discountPercent = parseFloat(q.discount_percent) || 0;
-  // HUOM: discountPercent vaikuttaa vain loppusummiin, ei näy omana rivinä tulosteella (päätetty 2026-07-xx,
-  // Tuomo ei ollut tavoitettavissa päättämään halutaanko "Alennus -X%" näkyä asiakkaalle). Jos halutaan
-  // näyttää jatkossa, lisää tähän esim. rivi doc-metaan tai summary-boxiin: `Alennus: -${discountPercent} %`.
-  // Ks. todo.txt.
+  // HUOM: discountPercent vaikuttaa vain loppusummiin, ei näy omana rivinä tulosteella —
+  // sama päätös kuin ennenkin, Alennus %-kenttä ei koskaan tulostu erikseen (eri asia kuin
+  // Lisäalennus alla, jolla ON oma näkyvyysvalinta).
   const adj = parseFloat(q.discount_amount) || 0;
   const sub = sections.reduce((a,s) => {
     if (!s.active) return a;
     return a + s.rows.reduce((b,r) => b + (parseFloat(r.qty)||0)*(parseFloat(r.price)||0), 0);
   }, 0);
   const afterDiscount = sub * (1 - discountPercent / 100);
-  const noTax = afterDiscount + adj;
+  const noTaxStage1 = afterDiscount + adj;
   const vatRate = computeQuoteVatRate(sections);
-  const vat = noTax * vatRate / 100;
-  // Käytetään tallennettua total_gross jos saatavilla (pyöristetty arvo), muuten lasketaan
-  const total = q.total_gross ? parseFloat(q.total_gross) : noTax + vat;
+  const vatStage1 = noTaxStage1 * vatRate / 100;
+  // total_gross tallennetaan tarjous.html:stä 2026-09 alkaen aina LOPULLISENA summana
+  // (lisäalennuksen jälkeen). Vanhemmilla tarjouksilla, joilla total_gross puuttuu, käytetään
+  // stage-1-laskelmaa fallbackina (näillä ei ole voinut olla lisäalennusta ylipäätään).
+  const total = q.total_gross ? parseFloat(q.total_gross) : (noTaxStage1 + vatStage1);
+  // Veroton ja alv JOHDETAAN lopullisesta summasta, ei stage-1-luvuista — näin ne pysyvät
+  // aina yhteensopivina YHT:n kanssa (noTax + vat === total tasan), riippumatta siitä onko
+  // lisäalennusta annettu vai ei.
+  const noTax = total / (1 + vatRate / 100);
+  const vat = total - noTax;
+
+  // LISÄALENNUS (2026-09) — toinen alennuskierros joka on jo tehty tarjous.html:ssä ja
+  // sisältyy total_gross-arvoon. Tässä puretaan se auki näyttöä varten, jos Tuomo on valinnut
+  // sen näkyväksi ('percent'/'amount'). 'hidden' (tai kenttä puuttuu, oletus) = tuloste näyttää
+  // täsmälleen samalta kuin ilman lisäalennusta, asiakas ei näe eroa.
+  const extraDiscountPercent = parseFloat(q.extra_discount_percent) || 0;
+  const extraDiscountDisplay = q.extra_discount_display || 'hidden';
+  const baseGross = extraDiscountPercent > 0 ? total / (1 - extraDiscountPercent / 100) : total;
+  const extraDiscountAmountEuro = baseGross - total;
+  const showExtraDiscount = extraDiscountPercent > 0 && (extraDiscountDisplay === 'percent' || extraDiscountDisplay === 'amount');
+  function extraDiscountLineText() {
+    return extraDiscountDisplay === 'percent'
+      ? `−${extraDiscountPercent.toLocaleString('fi-FI',{maximumFractionDigits:1})} %`
+      : `−${fmt(extraDiscountAmountEuro)} €`;
+  }
 
   // colspan: showPrices lisää 2, showQty lisää 2
   const colspanSec = 1 + (showQty ? 2 : 0) + (showPrices ? 2 : 0);
@@ -303,6 +324,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         <table>
           <tr><td class="lbl">Alv 0%:</td><td class="val">${fmt(noTax)} €</td></tr>
           <tr><td class="lbl">Alv ${fmtVatRate(vatRate)}%:</td><td class="val">${fmt(vat)} €</td></tr>
+          ${showExtraDiscount ? `
+          <tr><td class="lbl">Alkuperäinen hinta:</td><td class="val">${fmt(baseGross)} €</td></tr>
+          <tr><td class="lbl">Lisäalennus:</td><td class="val">${extraDiscountLineText()}</td></tr>
+          ` : ''}
           <tr class="total"><td class="lbl">YHT:</td><td class="val">${fmt(total)} €</td></tr>
         </table>
       </div>
@@ -349,6 +374,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         <table>
           <tr><td>Alv 0%:</td><td><b>${fmt(noTax)} €</b></td></tr>
           <tr><td>Alv:</td><td><b>${fmt(vat)} €</b></td></tr>
+          ${showExtraDiscount ? `
+          <tr><td>Alkuperäinen hinta:</td><td><b>${fmt(baseGross)} €</b></td></tr>
+          <tr><td>Lisäalennus:</td><td><b>${extraDiscountLineText()}</b></td></tr>
+          ` : ''}
         </table>
         <div class="total-line">YHT ${fmt(total)} €</div>
       </div>
