@@ -116,6 +116,17 @@
   .discount-badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; color: var(--success); background: rgba(61,186,110,0.14); border: 1px solid rgba(61,186,110,0.35); border-radius: 3px; padding: 1px 5px; white-space: nowrap; }
   .del-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 14px; padding: 2px 5px; border-radius: 3px; }
   .del-btn:hover { background: rgba(232,64,64,0.15); }
+  /* Piilotettu tuoterivi (2026-09) — "poista" ei enää tuhoa riviä pysyvästi, vaan piilottaa sen:
+     rivi jää talteen sections_json:iin (row.hidden=true), mutta himmennetään eikä lasketa mukaan
+     osio-/tarjoussummiin (ks. sectionSum()) eikä tulosteelle (print_quote.html). Kentät lukitaan
+     pointer-events:none:lla ettei piilotettua riviä vahingossa muokkaa — restore/poista-napit
+     jäävät silti toimiviksi koska ne eivät ole .row-hidden:in sisällä olevia input/select-elementtejä.
+     Aito, pysyvä poisto on edelleen mahdollinen mutta vain jo piilotetulle riville (roskakori-nappi). */
+  tr.row-hidden, .product-card.row-hidden { opacity: 0.42; }
+  tr.row-hidden input, tr.row-hidden select, .product-card.row-hidden input, .product-card.row-hidden select { pointer-events: none; }
+  .unhide-btn { background: none; border: none; color: var(--success); cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 3px; white-space: nowrap; }
+  .unhide-btn:hover { background: rgba(61,186,110,0.15); }
+  .row-hidden-tag { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 0.04em; margin-left: 4px; }
   .add-row-wrap { padding: 6px 12px 10px; }
 
   /* YHTEENVETO */
@@ -767,13 +778,14 @@ function renderSections() {
 
 function renderRowHTML(secId, row) {
   return `
-    <tr id="row-${secId}-${row.id}">
+    <tr id="row-${secId}-${row.id}" class="${row.hidden ? 'row-hidden' : ''}">
       <td>
         <input type="text" id="kohde-${secId}-${row.id}"
           value="${esc(row.nimikeTeksti||'')}"
           oninput="onRowInput(${secId},${row.id},'nimikeTeksti',this.value)"
           placeholder="Kohde / tuotenimi"
           style="min-width:130px;">
+        ${row.hidden ? '<span class="row-hidden-tag">piilotettu</span>' : ''}
       </td>
       <td>
         <div class="nimike-wrap">
@@ -807,19 +819,22 @@ function renderRowHTML(secId, row) {
       <td style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.3;" id="rowsum-${secId}-${row.id}">
         ${fmt(rowSum(row))} €<br><span style="font-size:10px;color:var(--text-dim);">${fmt(grossPrice(rowSum(row), row.vatPercent))} €</span>
       </td>
-      <td><button class="del-btn" onclick="removeRow(${secId},${row.id})">✕</button></td>
+      <td>${row.hidden
+        ? `<button class="unhide-btn" onclick="unhideRow(${secId},${row.id})" title="Palauta tarjoukselle">↺</button><button class="del-btn" onclick="removeRow(${secId},${row.id})" title="Poista rivi pysyvästi">🗑</button>`
+        : `<button class="del-btn" onclick="hideRow(${secId},${row.id})" title="Piilota tarjoukselta (voidaan palauttaa)">✕</button>`}</td>
     </tr>
   `;
 }
 
 function renderCardHTML(secId, row) {
   return `
-    <div class="product-card">
+    <div class="product-card${row.hidden ? ' row-hidden' : ''}">
       <div class="card-row">
         <label>Nimike</label>
         <input type="text" value="${esc(row.nimikeTeksti||'')}" style="flex:1;"
           oninput="onNimikeInput(${secId},${row.id},this.value)" placeholder="Hae...">
         ${row.isAssembly ? '<span class="assembly-tag">⚙</span>' : ''}
+        ${row.hidden ? '<span class="row-hidden-tag">piilotettu</span>' : ''}
       </div>
       <div class="card-row"><label>Kuvaus</label>
         <input type="text" value="${esc(row.desc||'')}" oninput="onRowInput(${secId},${row.id},'desc',this.value)" style="flex:1;"></div>
@@ -836,7 +851,9 @@ function renderCardHTML(secId, row) {
         <span id="pricebadgecard-${secId}-${row.id}" style="margin-left:4px;">${restoreButtonHTML(secId, row)}</span>
         <span id="pricevatcard-${secId}-${row.id}" style="font-size:10px;color:var(--text-dim);margin-left:4px;">${priceVatCardLineHTML(row)}</span>
         <label style="margin-left:8px;">= ${fmt(rowSum(row))} €</label>
-        <button class="del-btn" onclick="removeRow(${secId},${row.id})" style="margin-left:auto;">✕</button>
+        ${row.hidden
+          ? `<button class="unhide-btn" onclick="unhideRow(${secId},${row.id})" style="margin-left:auto;" title="Palauta tarjoukselle">↺ Palauta</button><button class="del-btn" onclick="removeRow(${secId},${row.id})" title="Poista rivi pysyvästi">🗑</button>`
+          : `<button class="del-btn" onclick="hideRow(${secId},${row.id})" style="margin-left:auto;" title="Piilota tarjoukselta (voidaan palauttaa)">✕</button>`}
       </div>
     </div>
   `;
@@ -978,7 +995,7 @@ function selectNimike(secId, rowId, productId) {
 function addRow(secId, opts={}) {
   const sec = sections.find(s => s.id === secId);
   if (!sec) return;
-  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null, isAssembly: false, katePercent: null, vatPercent: null });
+  sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null, isAssembly: false, katePercent: null, vatPercent: null, hidden: false });
   renderSections();
   // silent=true käytetään VAIN sivun alkulatauksessa (DOMContentLoaded), jotta pelkkä lomakkeen
   // avaaminen ei enää luo tyhjää ostosriviä Supabaseen ennen kuin käyttäjä on oikeasti tehnyt
@@ -986,9 +1003,35 @@ function addRow(secId, opts={}) {
   if (!opts.silent) autoSave();
 }
 
+// Piilotus (2026-09) korvasi suoran poiston oletustoimintona: "poista"-nappi (✕) ei enää tuhoa
+// riviä, vaan asettaa row.hidden=true — rivi jää talteen sections_json:iin, himmenee, eikä sen
+// hintaa lasketa enää osio-/tarjoussummiin (sectionSum) tai tulosteelle (print_quote.html).
+// Tuomon tarve: asiakas haluaa usein nähdä "paljonko halvempi ilman ovia" ja myöhemmin ottaa
+// tuotteen takaisin — aiemmin poisto oli lopullinen ja rivi piti lisätä käsin uudelleen.
+// removeRow() on edelleen olemassa aitoon, pysyvään poistoon, mutta sen nappi (🗑) näkyy
+// käyttöliittymässä vain jo piilotetulle riville (ks. renderRowHTML/renderCardHTML).
+function hideRow(secId, rowId) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  row.hidden = true;
+  renderSections();
+  autoSave();
+}
+
+function unhideRow(secId, rowId) {
+  const sec = sections.find(s => s.id === secId);
+  const row = sec && sec.rows.find(r => r.id === rowId);
+  if (!row) return;
+  row.hidden = false;
+  renderSections();
+  autoSave();
+}
+
 function removeRow(secId, rowId) {
   const sec = sections.find(s => s.id === secId);
   if (!sec) return;
+  if (!confirm('Poistetaanko rivi pysyvästi? Tätä ei voi enää perua.')) return;
   sec.rows = sec.rows.filter(r => r.id !== rowId);
   renderSections();
   autoSave();
@@ -1122,7 +1165,9 @@ function rowSum(row) { return (parseFloat(row.qty)||0) * (parseFloat(row.price)|
 
 function sectionSum(sec) {
   if (!sec.active) return 0;
-  return sec.rows.reduce((a,r) => a + rowSum(r), 0);
+  // Piilotetun rivin (row.hidden) summa näkyy edelleen sen omalla rivillä (rowsum-...) käyttäjän
+  // avuksi, mutta ei lasketa mukaan osio-/tarjoussummaan — sama periaate kuin print_quote.html:ssä.
+  return sec.rows.reduce((a,r) => a + (r.hidden ? 0 : rowSum(r)), 0);
 }
 
 function recalcTotals() {
