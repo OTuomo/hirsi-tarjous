@@ -310,6 +310,26 @@
     border-left-color: var(--invoice-overdue-fg);
   }
 
+  /* ── JATKUVA KUUKAUSISKROLLI ──────────────────────────────
+     Kuukaudet peräkkäin kuluvasta kuusta alaspäin. Navigointipalkki, tilauspaneeli ja
+     viikonpäiväotsikko jäävät kiinni ruudun yläreunaan; niiden korkeudet asetetaan
+     JS:llä CSS-muuttujiin (updateStickyOffsets). */
+  .legend { margin-bottom: 14px; }
+  .month-block { margin-bottom: 28px; }
+  .month-title { font-size: 20px; font-weight: 600; color: var(--text); padding: 4px 2px 8px; }
+  .month-block .cal-weekdays {
+    position: sticky; top: var(--wk-top, 53px); z-index: 20;
+    border: 1px solid var(--border); border-radius: 8px 8px 0 0;
+  }
+  .month-block .cal-wrap { border-top: none; border-radius: 0 0 8px 8px; }
+  #printArea { display: none; }
+  @media (min-width: 641px) {
+    .cal-nav {
+      position: sticky; top: var(--hdr-h, 53px); z-index: 95;
+      background: var(--bg); padding: 8px 0 10px; margin-bottom: 0;
+    }
+  }
+
   /* ── TILAUKSEN KOROSTUS + AIKAJANAPANEELI ─────────────────
      Klikkaus tilauksen tapahtumaan (toimitus, merkkipaalu, lasku) korostaa saman tilauksen
      kaikki tapahtumat ja himmentää muut. Paneeli listaa tilauksen päivät aikajärjestyksessä;
@@ -325,6 +345,9 @@
     box-shadow: var(--shadow);
     padding: 10px 14px;
     margin-bottom: 16px;
+    position: sticky;
+    top: var(--panel-top, 53px);
+    z-index: 90;
   }
   .order-panel[hidden] { display: none; }
   .op-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -419,6 +442,7 @@
   @media (max-width: 640px) {
     .page { padding: 16px; }
     .cal-wrap { display: none; }
+    .month-block .cal-weekdays { display: none; }
     .mobile-list { display: block; }
     .cal-title { font-size: 18px; min-width: 0; }
     .legend { display: none; }
@@ -461,13 +485,15 @@
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { size: A4 landscape; margin: 10mm; }
-    header, .cal-nav-left .btn, .mobile-list, #toast, .modal-backdrop, .order-panel { display: none !important; }
+    header, .cal-nav, .mobile-list, #toast, .modal-backdrop, .order-panel, #months, #monthsSentinel { display: none !important; }
+    /* Tulostetaan vain valintaikkunassa valittu kuukausi (#printArea) */
+    #printArea { display: block !important; }
+    .month-block { margin: 0; }
+    .month-title { text-align: center; font-size: 24px; padding: 0 0 6px; }
+    .month-block .cal-weekdays { display: grid !important; position: static; }
     /* Korostus/himmennys ei kuulu paperille */
     body.has-selection .event:not(.sel) { opacity: 1; }
     body.has-selection .event.sel { outline: none; }
-    .cal-nav { justify-content: center; margin-bottom: 8px; }
-    .cal-nav-left { justify-content: center; }
-    .cal-title { font-size: 24px; min-width: 0; }
     .legend { justify-content: center; }
     .page { padding: 0; max-width: none; }
     /* Pakotetaan ruudukko näkyviin vaikka tulostushetkellä selainikkuna olisi kapea
@@ -512,9 +538,11 @@
       <div class="cal-title" id="calTitle">—</div>
       <button class="btn" onclick="nextMonth()">›</button>
       <button class="btn" onclick="goToday()">Tänään</button>
-      <button class="btn" onclick="printMonth()" title="Tulostaa näkyvän kuukauden isolla ruudukolla, seinälle liimattavaksi">🖨 Tulosta kuukausi</button>
+      <button class="btn" onclick="printMonth()" title="Valitse kuukausi ja tulosta se isolla ruudukolla, seinälle liimattavaksi">🖨 Tulosta kuukausi</button>
     </div>
-    <div class="legend">
+  </div>
+
+  <div class="legend">
       <div class="legend-item">
         <div class="legend-dot" style="background:var(--ordered-bg);border-left:3px solid var(--ordered-fg);"></div>
         Tilattu
@@ -540,7 +568,6 @@
         Puunnouto
       </div>
     </div>
-  </div>
 
   <!-- TILAUKSEN AIKAJANA (näkyy kun tilauksen tapahtumaa klikataan) -->
   <div class="order-panel" id="orderPanel" hidden>
@@ -554,26 +581,12 @@
     <div class="op-items" id="opItems"></div>
   </div>
 
-  <!-- KALENTERI (desktop) -->
-  <div class="cal-wrap">
-    <div class="cal-weekdays">
-      <div class="cal-weekday">Ma</div>
-      <div class="cal-weekday">Ti</div>
-      <div class="cal-weekday">Ke</div>
-      <div class="cal-weekday">To</div>
-      <div class="cal-weekday">Pe</div>
-      <div class="cal-weekday weekend">La</div>
-      <div class="cal-weekday weekend">Su</div>
-    </div>
-    <div class="cal-grid" id="calGrid">
-      <!-- JS täyttää -->
-    </div>
-  </div>
+  <!-- KUUKAUDET: jatkuva skrolli kuluvasta kuusta alaspäin (JS täyttää) -->
+  <div id="months"></div>
+  <div id="monthsSentinel"></div>
 
-  <!-- MOBIILILISTA -->
-  <div class="mobile-list" id="mobileList">
-    <!-- JS täyttää -->
-  </div>
+  <!-- Tulostettava yksittäinen kuukausi (näkyy vain tulostuksessa) -->
+  <div id="printArea"></div>
 
 </div>
 
@@ -610,6 +623,21 @@
   </div>
 </div>
 
+<!-- TULOSTA KUUKAUSI: valinta -->
+<div class="modal-backdrop" id="printModal">
+  <div class="modal">
+    <h2>Tulosta kuukausi</h2>
+    <div class="form-group">
+      <label for="printMonthSelect">Kuukausi</label>
+      <select id="printMonthSelect"></select>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closePrintModal()">Peruuta</button>
+      <button class="btn btn-accent" onclick="doPrintMonth()">🖨 Tulosta</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -619,8 +647,15 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── Tila ───────────────────────────────────────────────
-let viewYear  = new Date().getFullYear();
-let viewMonth = new Date().getMonth(); // 0-11
+let viewYear  = new Date().getFullYear();   // ruudulla näkyvä kuukausi (päivittyy skrollatessa)
+let viewMonth = new Date().getMonth();      // 0-11
+let startYear  = new Date().getFullYear();  // ensimmäinen piirretty kuukausi (lista jatkuu siitä alaspäin)
+let startMonth = new Date().getMonth();
+let monthsRendered = 0;
+const MAX_MONTHS = 36;                      // kuinka monta kuukautta alkukuusta eteenpäin voi skrollata
+const WEEKDAYS_HTML = ['Ma','Ti','Ke','To','Pe','La','Su']
+  .map((n, i) => '<div class="cal-weekday' + (i >= 5 ? ' weekend' : '') + '">' + n + '</div>').join('');
+let wkTop = 53; // viikonpäiväotsikon kiinnityskohta (px), ks. updateStickyOffsets
 let quotes    = [];
 let todos     = [];
 let invoices  = []; // laskutuserät joilla on due_date
@@ -733,46 +768,86 @@ function getWeekNum(date) {
 
 // ── Renderöi kalenteri ─────────────────────────────────
 function renderCalendar() {
-  document.getElementById('calTitle').textContent = MONTHS_FI[viewMonth] + ' ' + viewYear;
+  document.getElementById('months').innerHTML = '';
+  monthsRendered = 0;
+  appendMonths(1);
+  fillIfNeeded();
+  updateStickyOffsets();
+  updateVisibleMonth();
+  applySelection();
+}
 
+// Lisää n kuukautta listan loppuun (alkukuusta laskien)
+function appendMonths(n) {
+  const wrap = document.getElementById('months');
+  for (let i = 0; i < n && monthsRendered < MAX_MONTHS; i++) {
+    const d = new Date(startYear, startMonth + monthsRendered, 1);
+    wrap.appendChild(buildMonthBlock(d.getFullYear(), d.getMonth()));
+    monthsRendered++;
+  }
+  markSelection();
+}
+
+// Piirtää kuukausia lisää kunnes lista yltää hyvän matkaa ruudun alareunan yli
+function fillIfNeeded() {
+  const sentinel = document.getElementById('monthsSentinel');
+  while (monthsRendered < MAX_MONTHS && sentinel.getBoundingClientRect().top < window.innerHeight + 800) {
+    appendMonths(1);
+  }
+}
+
+// Yksi kuukausi: otsikko, viikonpäivärivi, ruudukko (desktop) ja viikkolista (mobiili)
+function buildMonthBlock(year, month) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Kuukauden ensimmäinen ja viimeinen päivä
-  const firstDay = new Date(viewYear, viewMonth, 1);
-  const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+  const blk = document.createElement('section');
+  blk.className = 'month-block';
+  blk.dataset.y = year;
+  blk.dataset.m = month;
+
+  const title = document.createElement('div');
+  title.className = 'month-title';
+  title.textContent = MONTHS_FI[month] + ' ' + year;
+  blk.appendChild(title);
+
+  const wd = document.createElement('div');
+  wd.className = 'cal-weekdays';
+  wd.innerHTML = WEEKDAYS_HTML;
+  blk.appendChild(wd);
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
 
   // Maanantai = 0, ..., sunnuntai = 6
   let startDow = firstDay.getDay() - 1;
   if (startDow < 0) startDow = 6;
 
-  const grid = document.getElementById('calGrid');
-  grid.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'cal-wrap';
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid';
 
   // Edellisen kuun täytepäivät
   for (let i = 0; i < startDow; i++) {
-    const d = new Date(viewYear, viewMonth, -(startDow - 1 - i));
-    grid.appendChild(buildDayCell(d, true, today));
+    grid.appendChild(buildDayCell(new Date(year, month, -(startDow - 1 - i)), true, today));
   }
-
   // Tämän kuukauden päivät
   for (let d = 1; d <= lastDay.getDate(); d++) {
-    const date = new Date(viewYear, viewMonth, d);
-    grid.appendChild(buildDayCell(date, false, today));
+    grid.appendChild(buildDayCell(new Date(year, month, d), false, today));
   }
-
   // Seuraavan kuun täytepäivät
-  const totalCells = startDow + lastDay.getDate();
-  const remainder  = totalCells % 7;
+  const remainder = (startDow + lastDay.getDate()) % 7;
   if (remainder > 0) {
     for (let i = 1; i <= 7 - remainder; i++) {
-      const d = new Date(viewYear, viewMonth + 1, i);
-      grid.appendChild(buildDayCell(d, true, today));
+      grid.appendChild(buildDayCell(new Date(year, month + 1, i), true, today));
     }
   }
+  wrap.appendChild(grid);
+  blk.appendChild(wrap);
 
-  renderMobileList();
-  applySelection();
+  blk.appendChild(buildMobileList(year, month));
+  return blk;
 }
 
 function buildDayCell(date, otherMonth, today) {
@@ -796,6 +871,10 @@ function buildDayCell(date, otherMonth, today) {
   numDiv.innerHTML = date.getDate()
     + (isMonday ? '<span class="week-num">vko ' + getWeekNum(date) + '</span>' : '');
   cell.appendChild(numDiv);
+
+  // Täytepäivät (viereisen kuun päivät) jätetään tyhjiksi: kuukaudet ovat nyt peräkkäin, ja
+  // päivä näkyy tapahtumineen omassa kuukausilohkossaan. Näin sama tapahtuma ei tuplaannu.
+  if (otherMonth) return cell;
 
   // Toimitukset tällä viikolla — näytetään maanantailla
   if (isMonday || date.getDate() === 1) {
@@ -884,16 +963,18 @@ function buildDayCell(date, otherMonth, today) {
 }
 
 // ── Mobiililista ───────────────────────────────────────
-function renderMobileList() {
-  const list = document.getElementById('mobileList');
-  list.innerHTML = '';
+function buildMobileList(year, month) {
+  const list = document.createElement('div');
+  list.className = 'mobile-list';
 
-  // Kerää kaikki viikot tässä kuukaudessa
+  // Kerää kuukauden viikot. Viikko kuuluu sille kuukaudelle, jossa sen torstai on (kuten ISO-viikon
+  // numerointi), jotta kuukauden rajalle osuva viikko ei tule listaan kahdesti peräkkäin.
   const weeks = new Map();
-  const firstDay = new Date(viewYear, viewMonth, 1);
-  const lastDay  = new Date(viewYear, viewMonth + 1, 0);
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
 
   for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+    if (d.getDay() !== 4) continue;
     const wk = getWeekNumber(new Date(d));
     if (!weeks.has(wk)) weeks.set(wk, []);
   }
@@ -934,7 +1015,7 @@ function renderMobileList() {
 
   if (weeks.size === 0) {
     list.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">Ei tapahtumia</div>';
-    return;
+    return list;
   }
 
   weeks.forEach((events, wk) => {
@@ -992,24 +1073,80 @@ function renderMobileList() {
     }
     list.appendChild(block);
   });
+  return list;
 }
 
 // ── Navigointi ─────────────────────────────────────────
-function prevMonth() {
-  viewMonth--;
-  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
-  renderCalendar();
-}
-function nextMonth() {
-  viewMonth++;
-  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
-  renderCalendar();
-}
+function prevMonth() { goToMonth(viewYear, viewMonth - 1); }
+function nextMonth() { goToMonth(viewYear, viewMonth + 1); }
 function goToday() {
-  viewYear  = new Date().getFullYear();
-  viewMonth = new Date().getMonth();
+  const t = new Date();
+  startYear = t.getFullYear();
+  startMonth = t.getMonth();
   renderCalendar();
+  window.scrollTo(0, 0);
+  updateVisibleMonth();
 }
+
+// Skrollaa annetun kuukauden kohdalle. Jos kuukausi on ennen listan alkua tai liian kaukana,
+// lista rakennetaan uudelleen alkamaan siitä kuusta.
+function goToMonth(y, m) {
+  const d = new Date(y, m, 1);
+  y = d.getFullYear(); m = d.getMonth();
+  let idx = (y - startYear) * 12 + (m - startMonth);
+  let smooth = true;
+  if (idx < 0 || idx >= MAX_MONTHS) {
+    startYear = y; startMonth = m; idx = 0; smooth = false;
+    renderCalendar();
+  }
+  while (monthsRendered <= idx) appendMonths(1);
+  const blk = document.getElementById('months').children[idx];
+  const top = blk.getBoundingClientRect().top + window.scrollY - wkTop;
+  window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+}
+
+// Päivittää yläpalkin otsikon sen kuukauden mukaan, joka on kiinnitettyjen palkkien alla
+function updateVisibleMonth() {
+  const blocks = document.getElementById('months').children;
+  if (!blocks.length) return;
+  const line = wkTop + 60;
+  let cur = blocks[0];
+  for (const b of blocks) {
+    if (b.getBoundingClientRect().top <= line) cur = b; else break;
+  }
+  const y = +cur.dataset.y, m = +cur.dataset.m;
+  document.getElementById('calTitle').textContent = MONTHS_FI[m] + ' ' + y;
+  if (y !== viewYear || m !== viewMonth) {
+    viewYear = y; viewMonth = m;
+    if (selectedQuoteId !== null) renderOrderPanel(); // "here"-merkintä
+  }
+}
+
+// Kiinteiden palkkien korkeudet CSS-muuttujiin, jotta sisäkkäiset sticky-elementit pinoutuvat oikein
+function updateStickyOffsets() {
+  const hdr = document.querySelector('header').offsetHeight;
+  const nav = document.querySelector('.cal-nav');
+  const navH = getComputedStyle(nav).position === 'sticky' ? nav.offsetHeight : 0;
+  const panel = document.getElementById('orderPanel');
+  const panelH = panel.hidden ? 0 : panel.offsetHeight;
+  const root = document.documentElement.style;
+  root.setProperty('--hdr-h', hdr + 'px');
+  root.setProperty('--panel-top', (hdr + navH) + 'px');
+  root.setProperty('--wk-top', (hdr + navH + panelH) + 'px');
+  wkTop = hdr + navH + panelH;
+}
+
+let scrollTick = false;
+window.addEventListener('scroll', () => {
+  if (scrollTick) return;
+  scrollTick = true;
+  requestAnimationFrame(() => {
+    scrollTick = false;
+    fillIfNeeded();
+    updateVisibleMonth();
+  });
+}, { passive: true });
+window.addEventListener('resize', () => { updateStickyOffsets(); updateVisibleMonth(); });
 
 // ── Tilauksen korostus + aikajanapaneeli ───────────────
 // Tapahtuman klikkaus (toimitus / merkkipaalu / lasku) valitsee tilauksen sen sijaan että avaisi
@@ -1022,7 +1159,9 @@ document.addEventListener('click', e => {
   selectQuote(ev.dataset.quoteId);
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && selectedQuoteId && !document.getElementById('todoModal').classList.contains('open')) clearSelection();
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('printModal').classList.contains('open')) { closePrintModal(); return; }
+  if (selectedQuoteId && !document.getElementById('todoModal').classList.contains('open')) clearSelection();
 });
 
 function selectQuote(id) {
@@ -1036,12 +1175,16 @@ function clearSelection() {
 
 // Merkitsee DOMiin korostetut tapahtumat ja päivittää paneelin. Kutsutaan myös aina
 // renderCalendar():n lopussa, koska ruudukko rakennetaan silloin uusiksi.
-function applySelection() {
+function markSelection() {
   document.body.classList.toggle('has-selection', selectedQuoteId !== null);
-  document.querySelectorAll('.event[data-quote-id]').forEach(el => {
+  document.querySelectorAll('#months .event[data-quote-id]').forEach(el => {
     el.classList.toggle('sel', selectedQuoteId !== null && el.dataset.quoteId === selectedQuoteId);
   });
+}
+function applySelection() {
+  markSelection();
   renderOrderPanel();
+  updateStickyOffsets();
 }
 
 // ISO-viikkoavain "YYYY-WW" -> viikon maanantai (paikallinen Date)
@@ -1130,17 +1273,43 @@ function renderOrderPanel() {
     const w = document.createElement('span'); w.className = 'op-when'; w.textContent = it.when;
     b.append(l, w);
     b.title = 'Hyppää kuukauteen ' + MONTHS_FI[it.date.getMonth()].toLowerCase() + ' ' + it.date.getFullYear();
-    b.onclick = () => { viewYear = it.date.getFullYear(); viewMonth = it.date.getMonth(); renderCalendar(); };
+    b.onclick = () => goToMonth(it.date.getFullYear(), it.date.getMonth());
     box.appendChild(b);
   });
 }
 
-// Tulostaa näkyvän kuukauden isolla ruudukolla (ks. @media print -sääntö yllä). Itse
-// selaimen tulostustoiminto riittää — @page-sääntö pakottaa A4-vaakasuunnan ja kaikki
-// muu (navigointi, header, mobiililista) piilotetaan pelkällä CSS:llä.
+// Tulosta kuukausi: valintaikkuna (oletuksena ruudulla näkyvä kuukausi), sitten yksi kuukausi
+// isolla ruudukolla A4-vaakaan seinälle liimattavaksi. Tulostettava kuukausi piirretään erilliseen
+// #printArea-alueeseen, ja tulostus-CSS piilottaa muun (ks. @media print yllä).
 function printMonth() {
+  const sel = document.getElementById('printMonthSelect');
+  sel.innerHTML = '';
+  for (let i = -6; i <= 18; i++) {
+    const d = new Date(viewYear, viewMonth + i, 1);
+    const o = document.createElement('option');
+    o.value = d.getFullYear() + '-' + d.getMonth();
+    o.textContent = MONTHS_FI[d.getMonth()] + ' ' + d.getFullYear();
+    if (i === 0) o.selected = true;
+    sel.appendChild(o);
+  }
+  document.getElementById('printModal').classList.add('open');
+  sel.focus();
+}
+function closePrintModal() {
+  document.getElementById('printModal').classList.remove('open');
+}
+function doPrintMonth() {
+  const [y, m] = document.getElementById('printMonthSelect').value.split('-').map(Number);
+  closePrintModal();
+  const area = document.getElementById('printArea');
+  area.innerHTML = '';
+  area.appendChild(buildMonthBlock(y, m));
+  window.addEventListener('afterprint', () => { area.innerHTML = ''; }, { once: true });
   window.print();
 }
+document.getElementById('printModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('printModal')) closePrintModal();
+});
 
 // ── Todo modal ─────────────────────────────────────────
 function openTodoModal(t) {
