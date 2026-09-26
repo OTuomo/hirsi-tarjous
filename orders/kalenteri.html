@@ -403,17 +403,27 @@
     font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
   }
   .hv-chip {
-    flex-shrink: 0; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 4px; overflow: hidden; white-space: nowrap;
     border: none; font-family: inherit; font-size: 11px; font-weight: 500; padding: 2px 6px; border-radius: 3px; cursor: pointer;
   }
-  .hv-chip-ordered { background: var(--ordered-bg); color: var(--ordered-fg); border-left: 3px solid var(--ordered-fg); }
-  .hv-chip-completed { background: var(--completed-bg); color: var(--completed-fg); border-left: 3px solid var(--completed-fg); }
+  .hv-bar.multi .hv-chip { flex: 1 1 0; }
+  .hv-emo { flex-shrink: 0; font-size: 11px; }
+  .hv-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .hv-sub { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 400; opacity: .85; }
   .hv-chip.sel { outline: 2px solid var(--text); font-weight: 700; }
   .hv-chip.dim { opacity: .38; }
-  .hv-tag {
-    flex-shrink: 0; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 700; white-space: nowrap;
-    background: var(--milestone-bg); color: var(--milestone-fg); outline: 2px solid var(--text);
-  }
+  /* Tapahtumatyyppien värit */
+  .k-ordered   { background: var(--ordered-bg);   color: var(--ordered-fg);   border-left: 3px solid var(--ordered-fg); }
+  .k-completed { background: var(--completed-bg); color: var(--completed-fg); border-left: 3px solid var(--completed-fg); }
+  .k-ms-piirustukset { background: #e0e7ff; color: #4338ca; border-left: 3px solid #4338ca; }
+  .k-ms-ikkuna_ovi   { background: #cffafe; color: #0e7490; border-left: 3px solid #0e7490; }
+  .k-ms-puuosat      { background: #f1e2cc; color: #7c4a1d; border-left: 3px solid #7c4a1d; }
+  .k-ms-tuotanto     { background: #fce7f3; color: #be185d; border-left: 3px solid #be185d; }
+  .k-inv       { background: var(--invoice-bg); color: var(--invoice-fg); border-left: 3px solid var(--invoice-fg); }
+  .k-inv-over  { background: var(--invoice-overdue-bg); color: var(--invoice-overdue-fg); border-left: 3px solid var(--invoice-overdue-fg); }
+  .k-forest    { background: #ecfccb; color: #3f6212; border-left: 3px solid #3f6212; }
+  .k-todo      { background: var(--todo-bg); color: var(--todo-fg); border-left: 3px solid var(--todo-fg); }
+  .hv-sq.k-ordered, .hv-sq.k-completed, .hv-sq[class*="k-"] { width: 8px; height: 8px; border: none; border-radius: 2px; background: currentColor; }
   .hv-ms { margin-left: auto; display: flex; gap: 2px; flex-shrink: 0; }
 
   /* Tulostettava puolivuosi (#printArea): tiiviimpi, aina 3 saraketta */
@@ -1466,6 +1476,7 @@ function effectiveMode() {
 function applyMode() {
   const half = effectiveMode() === 'half';
   document.getElementById('halfView').hidden = !half;
+  const lg = document.querySelector('.legend'); if (lg) lg.style.display = half ? 'none' : '';
   document.getElementById('months').hidden = half;
   document.getElementById('monthsSentinel').hidden = half;
   document.getElementById('modeMonth').setAttribute('aria-pressed', String(!half));
@@ -1544,13 +1555,52 @@ function mk(tag, cls, text) {
 // Viikkoavain -> { del: [toimitukset], ms: [keskeneräiset merkkipaalut] }
 function halfWeekData() {
   const map = new Map();
-  const get = k => { if (!map.has(k)) map.set(k, { del: [], ms: [] }); return map.get(k); };
-  quotes.forEach(q => get(normalizeWeekKey(q.delivery_week)).del.push({
-    id: String(q.id), name: q.customers?.name || q.quote_number || '—', status: q.status
-  }));
-  milestones.forEach(m => get(normalizeWeekKey(m.target_week)).ms.push({
-    id: String(m.quote_id), type: m.milestone_type
-  }));
+  const get = k => { if (!map.has(k)) map.set(k, { del: [], ms: [], all: [] }); return map.get(k); };
+  const localStr = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const todayStr = localStr(new Date());
+  const weekOfDate = str => getWeekNumber(new Date(str.slice(0, 10) + 'T12:00:00'));
+  const add = (wk, it) => { const e = get(wk); e.all.push(it); if (it.kind === 'del') e.del.push(it); if (it.kind === 'ms') e.ms.push(it); };
+
+  quotes.forEach(q => {
+    const name = q.customers?.name || q.quote_number || '—';
+    add(normalizeWeekKey(q.delivery_week), {
+      kind: 'del', cls: q.status === 'COMPLETED' ? 'k-completed' : 'k-ordered', id: String(q.id),
+      emoji: '🚚', name, sub: 'Toimitus', name_only: name, status: q.status
+    });
+  });
+  milestones.forEach(m => {
+    const cfg = MILESTONE_TYPES_CAL[m.milestone_type] || { emoji: '📌', label: m.milestone_type };
+    const name = m.quotes?.customers?.name || m.quotes?.quote_number || '—';
+    add(normalizeWeekKey(m.target_week), {
+      kind: 'ms', cls: 'k-ms-' + m.milestone_type, id: String(m.quote_id),
+      emoji: cfg.emoji, name, sub: cfg.label
+    });
+  });
+  invoices.forEach(i => {
+    if (!i.due_date) return;
+    const name = i.quotes?.customers?.name || i.quotes?.quote_number || '—';
+    const amt = i.amount ? Math.round(i.amount).toLocaleString('fi-FI') + ' €' : '';
+    const over = i.due_date < todayStr;
+    add(weekOfDate(i.due_date), {
+      kind: 'inv', cls: over ? 'k-inv-over' : 'k-inv', id: i.quote_id != null ? String(i.quote_id) : null,
+      emoji: '💰', name, sub: [i.name || 'Lasku', amt].filter(Boolean).join(' · ') + (over ? ' · ERÄÄNTYNYT' : '')
+    });
+  });
+  forestSpots.forEach(i => {
+    if (!i.pickup_date) return;
+    const spot = i.forest_spots || {};
+    const vol = i.maara_m3 ? ' ' + i.maara_m3 + ' m³' : '';
+    add(weekOfDate(i.pickup_date), {
+      kind: 'forest', cls: 'k-forest', id: null,
+      emoji: '🌲', name: '#' + (spot.kauppa_numero || '?') + ' ' + i.puulaji, sub: (i.maara_m3 ? i.maara_m3 + ' m³' : 'Puunnouto')
+    });
+  });
+  todos.forEach(t => {
+    if (t.is_done) return;
+    const wk = t.due_date ? weekOfDate(t.due_date) : normalizeWeekKey(t.due_week);
+    if (!wk) return;
+    add(wk, { kind: 'todo', cls: 'k-todo', id: null, emoji: '✅', name: t.title, sub: 'Tehtävä', todo: t });
+  });
   return map;
 }
 
@@ -1576,7 +1626,7 @@ function buildHalfView(forPrint) {
       if (d.getDay() !== 4) continue;
       const key = getWeekNumber(d);
       const monday = new Date(y, m, day - 3);
-      const info = data.get(key) || { del: [], ms: [] };
+      const info = data.get(key) || { del: [], ms: [], all: [] };
       const c = info.del.length;
       weeks.push({ key, monday, info });
       total += c;
@@ -1612,23 +1662,21 @@ function buildHalfView(forPrint) {
     bar.appendChild(seg);
   }
   const leg = mk('div', 'hv-legend');
-  leg.appendChild(mk('span', 'hv-legend-title', 'Toimituksia viikossa'));
+  leg.appendChild(mk('span', 'hv-legend-title', 'Taustaväri = toimituksia viikossa'));
   ['0 (vapaa)', '1', '2', '3', '4+'].forEach((lab, i) => {
     const it = mk('span', 'hv-legend-item');
     it.appendChild(mk('span', 'hv-swatch lv' + i));
     it.appendChild(document.createTextNode(lab));
     leg.appendChild(it);
   });
-  [['hv-sw hv-sw-ordered', 'Tilattu'], ['hv-sw hv-sw-completed', 'Valmis']].forEach(pair => {
+  [['k-ordered', '🚚 Toimitus'], ['k-completed', '🚚 Valmis'], ['k-ms-piirustukset', '🖼️ Piirustukset'],
+   ['k-ms-ikkuna_ovi', '🪟 Ikkuna/ovi'], ['k-ms-puuosat', '🪵 Puuosat'], ['k-ms-tuotanto', '🏭 Tuotanto'],
+   ['k-inv', '💰 Lasku'], ['k-inv-over', '💰 Erääntynyt'], ['k-forest', '🌲 Puunnouto'], ['k-todo', '✅ Tehtävä']].forEach(pair => {
     const it = mk('span', 'hv-legend-item');
-    it.appendChild(mk('span', pair[0]));
+    it.appendChild(mk('span', 'hv-sw ' + pair[0]));
     it.appendChild(document.createTextNode(pair[1]));
     leg.appendChild(it);
   });
-  const msLeg = mk('span', 'hv-legend-item');
-  msLeg.appendChild(mk('span', 'hv-sq'));
-  msLeg.appendChild(document.createTextNode('Merkkipaalu (yksi ruutu per kpl)'));
-  leg.appendChild(msLeg);
   bar.appendChild(leg);
   wrap.appendChild(bar);
 
@@ -1686,6 +1734,7 @@ function buildHalfView(forPrint) {
 
 function buildHalfRow(w, mo, nowKey, sel) {
   const cnt = w.info.del.length;
+  const all = w.info.all;
   const row = mk('div', 'hv-row');
 
   const wkNum = parseInt(w.key.split('-')[1], 10);
@@ -1697,43 +1746,48 @@ function buildHalfRow(w, mo, nowKey, sel) {
   lab.onclick = () => openMonthFromHalf(mo.y, mo.m);
   row.appendChild(lab);
 
-  const hasSel = sel !== null && (w.info.del.some(x => x.id === sel) || w.info.ms.some(x => x.id === sel));
+  const hasSel = sel !== null && all.some(x => x.id === sel);
   const bar = mk('div', 'hv-bar lv' + Math.min(cnt, 4));
-  if (cnt > 0) bar.title = w.info.del.map(x => x.name).join(', ');
+  if (all.length > 0) bar.title = all.map(x => x.emoji + ' ' + x.name + ' · ' + x.sub).join('\n');
   if (sel !== null) {
     if (hasSel) bar.classList.add('has-sel');
-    else if (!showNames) bar.classList.add('dim'); // Määrät-tilassa himmennetään koko palkki, Nimet-tilassa vain nimilaput
+    else if (!showNames) bar.classList.add('dim');
   }
   if (w.key === nowKey) bar.appendChild(mk('span', 'hv-now', 'nyt'));
 
-  const tags = sel !== null ? w.info.ms.filter(x => x.id === sel) : [];
   if (showNames) {
     // Valittu tilaus ensin, jotta se ei jää "+N"-laskurin taakse
-    const del = w.info.del.slice().sort((a, b) => (b.id === sel) - (a.id === sel));
-    const shown = cnt <= 2 ? del : del.slice(0, 2);
+    const items = all.slice().sort((a, b) => (b.id === sel && sel !== null) - (a.id === sel && sel !== null));
+    const MAXC = 2;
+    const shown = items.slice(0, items.length > MAXC ? MAXC : items.length);
+    // Yksi asia viikossa: koko nimi + tarkoitus. Useita: jaetaan tila tasan ja pidetään vain nimi.
+    const multi = shown.length > 1 || items.length > MAXC;
+    bar.classList.add(multi ? 'multi' : 'single');
     shown.forEach(x => {
-      const c = mk('button', 'hv-chip hv-chip-' + (x.status === 'COMPLETED' ? 'completed' : 'ordered'), x.name);
+      const c = mk('button', 'hv-chip ' + x.cls);
       c.type = 'button';
-      c.dataset.quoteId = x.id;
-      c.title = x.name;
+      if (x.id !== null) c.dataset.quoteId = x.id;
+      else if (x.todo) c.onclick = () => openTodoModal(x.todo);
+      else c.style.cursor = 'default';
+      c.title = x.emoji + ' ' + x.name + ' · ' + x.sub;
+      c.appendChild(mk('span', 'hv-emo', x.emoji));
+      c.appendChild(mk('span', 'hv-name', x.name));
+      if (!multi) c.appendChild(mk('span', 'hv-sub', '· ' + x.sub));
       if (sel !== null) c.classList.add(x.id === sel ? 'sel' : 'dim');
       bar.appendChild(c);
     });
-    if (cnt > 2) bar.appendChild(mk('span', 'hv-more', '+' + (cnt - 2)));
-  } else if (cnt > 0) {
-    bar.appendChild(mk('span', 'hv-count', String(cnt)));
+    if (items.length > MAXC) bar.appendChild(mk('span', 'hv-more', '+' + (items.length - MAXC)));
+  } else {
+    if (cnt > 0) bar.appendChild(mk('span', 'hv-count', String(cnt)));
+    const others = all.filter(x => x.kind !== 'del');
+    if (others.length > 0) {
+      const ms = mk('div', 'hv-ms');
+      ms.title = others.map(x => x.emoji + ' ' + x.name + ' · ' + x.sub).join('\n');
+      others.slice(0, 8).forEach(x => ms.appendChild(mk('span', 'hv-sq ' + x.cls)));
+      bar.appendChild(ms);
+    }
   }
-  if (cnt === 0 && tags.length === 0) bar.appendChild(mk('span', 'hv-free', 'vapaa'));
-  tags.forEach(t => {
-    const cfg = MILESTONE_TYPES_CAL[t.type] || { label: t.type };
-    bar.appendChild(mk('span', 'hv-tag', cfg.label));
-  });
-  if (w.info.ms.length > 0) {
-    const ms = mk('div', 'hv-ms');
-    ms.title = w.info.ms.length + ' merkkipaalua';
-    for (let i = 0; i < Math.min(w.info.ms.length, 6); i++) ms.appendChild(mk('span', 'hv-sq'));
-    bar.appendChild(ms);
-  }
+  if (all.length === 0) bar.appendChild(mk('span', 'hv-free', 'vapaa'));
   row.appendChild(bar);
   return row;
 }
