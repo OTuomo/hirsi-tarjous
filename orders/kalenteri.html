@@ -330,6 +330,101 @@
     }
   }
 
+  /* ── PUOLIVUOSINÄKYMÄ ─────────────────────────────────────
+     Kuusi kuukautta rinnakkain, viikot riveinä; rivin väri = toimitusten määrä (lv0–lv4).
+     Kytkin Nimet | Määrät valitsee näytetäänkö asiakkaiden nimet vai pelkät lukumäärät. */
+  .seg { display: inline-flex; border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; }
+  .seg button {
+    height: 36px; padding: 0 16px; background: var(--panel); border: none; color: var(--text-mid);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--text); }
+  .seg button:not([aria-pressed="true"]):hover { background: var(--bg2); }
+  .mode-toggle { margin-right: 6px; }
+
+  .hv-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 22px; margin-bottom: 12px; }
+  .hv-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--text-mid); }
+  .hv-legend-title { font-weight: 600; color: var(--text); }
+  .hv-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .hv-swatch { width: 30px; height: 16px; border-radius: 3px; box-sizing: border-box; }
+  .hv-sw { width: 22px; height: 14px; border-radius: 2px; box-sizing: border-box; }
+  .hv-sw-ordered { background: var(--ordered-bg); border-left: 3px solid var(--ordered-fg); }
+  .hv-sw-completed { background: var(--completed-bg); border-left: 3px solid var(--completed-fg); }
+  .hv-sq { width: 6px; height: 6px; border-radius: 1px; background: var(--milestone-fg); display: inline-block; }
+
+  .lv0 { background: #ffffff; border: 1px dashed var(--border2); }
+  .lv1 { background: #fdf0d8; border: 1px solid #e8d5b0; }
+  .lv2 { background: #f9d08a; border: 1px solid #e6b45a; }
+  .lv3 { background: #f0a03c; border: 1px solid #d68a20; }
+  .lv4 { background: #d97706; border: 1px solid #b45309; }
+
+  .hv-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow);
+    padding: 12px 14px 14px; scroll-margin-top: calc(var(--wk-top, 53px) + 8px);
+  }
+  .hv-chartcard { margin-bottom: 16px; padding: 12px 16px 10px; }
+  .hv-chart-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  .hv-chart-title { font-size: 13px; font-weight: 600; }
+  .hv-chart-note { font-size: 12px; color: var(--text-mid); }
+  .hv-chart-sum { margin-left: auto; font-size: 12px; color: var(--text-mid); }
+  .hv-chart-sum b { color: var(--text); }
+  .hv-chart-cols { display: flex; gap: 12px; }
+  .hv-cgroup { flex-basis: 0; min-width: 0; }
+  .hv-cbars { display: flex; align-items: flex-end; gap: 3px; border-bottom: 1px solid var(--border2); }
+  .hv-cbar { flex: 1; border-radius: 2px 2px 0 0; border: none !important; }
+  .hv-cbar.lv0 { background: var(--border2); }
+  .hv-cbar.now { outline: 2px solid var(--text); }
+  .hv-clabel { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mid); margin-top: 4px; }
+
+  .hv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  @media (max-width: 1200px) { .hv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .hv-month-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+  .hv-month-title { font-size: 16px; font-weight: 600; }
+  .hv-month-total { font-size: 12px; color: var(--text-mid); }
+  .hv-rows { display: flex; flex-direction: column; gap: 4px; }
+  .hv-row { display: flex; align-items: center; gap: 8px; height: 30px; }
+  .hv-week {
+    width: 124px; flex-shrink: 0; background: none; border: none; padding: 0; text-align: left; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mid); white-space: nowrap;
+  }
+  .hv-week b { color: var(--text); }
+  .hv-week:hover { color: var(--accent-dim); text-decoration: underline; }
+  .hv-bar {
+    flex-grow: 1; min-width: 0; height: 30px; box-sizing: border-box; border-radius: 4px; padding: 0 6px;
+    display: flex; align-items: center; gap: 4px; overflow: hidden;
+  }
+  .hv-bar.dim { opacity: .5; }
+  .hv-bar.has-sel { outline: 2px solid var(--text); outline-offset: 1px; }
+  .hv-count { font-size: 14px; font-weight: 700; color: var(--text); }
+  .hv-free { font-size: 11px; font-style: italic; color: var(--text-mid); }
+  .hv-more { flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--text); padding: 0 2px; }
+  .hv-now {
+    flex-shrink: 0; padding: 1px 6px; border-radius: 3px; background: var(--accent); color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+  }
+  .hv-chip {
+    flex-shrink: 0; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    border: none; font-family: inherit; font-size: 11px; font-weight: 500; padding: 2px 6px; border-radius: 3px; cursor: pointer;
+  }
+  .hv-chip-ordered { background: var(--ordered-bg); color: var(--ordered-fg); border-left: 3px solid var(--ordered-fg); }
+  .hv-chip-completed { background: var(--completed-bg); color: var(--completed-fg); border-left: 3px solid var(--completed-fg); }
+  .hv-chip.sel { outline: 2px solid var(--text); font-weight: 700; }
+  .hv-chip.dim { opacity: .38; }
+  .hv-tag {
+    flex-shrink: 0; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 700; white-space: nowrap;
+    background: var(--milestone-bg); color: var(--milestone-fg); outline: 2px solid var(--text);
+  }
+  .hv-ms { margin-left: auto; display: flex; gap: 2px; flex-shrink: 0; }
+
+  /* Tulostettava puolivuosi (#printArea): tiiviimpi, aina 3 saraketta */
+  .hv-print .hv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .hv-print .hv-card { padding: 8px 10px 8px; box-shadow: none; }
+  .hv-print .hv-chartcard { margin-bottom: 8px; }
+  .hv-print .hv-toolbar { margin-bottom: 8px; justify-content: center; }
+  .hv-print .hv-month-head { margin-bottom: 6px; }
+  .hv-print .hv-row, .hv-print .hv-bar { height: 25px; }
+  .hv-print .hv-chip, .hv-print .hv-week { cursor: auto; }
+
   /* ── TILAUKSEN KOROSTUS + AIKAJANAPANEELI ─────────────────
      Klikkaus tilauksen tapahtumaan (toimitus, merkkipaalu, lasku) korostaa saman tilauksen
      kaikki tapahtumat ja himmentää muut. Paneeli listaa tilauksen päivät aikajärjestyksessä;
@@ -443,6 +538,8 @@
     .page { padding: 16px; }
     .cal-wrap { display: none; }
     .month-block .cal-weekdays { display: none; }
+    .mode-toggle { display: none; }
+    #halfView { display: none !important; }
     .mobile-list { display: block; }
     .cal-title { font-size: 18px; min-width: 0; }
     .legend { display: none; }
@@ -485,7 +582,7 @@
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { size: A4 landscape; margin: 10mm; }
-    header, .cal-nav, .mobile-list, #toast, .modal-backdrop, .order-panel, #months, #monthsSentinel { display: none !important; }
+    header, .cal-nav, .mobile-list, #toast, .modal-backdrop, .order-panel, #months, #monthsSentinel, #halfView { display: none !important; }
     /* Tulostetaan vain valintaikkunassa valittu kuukausi (#printArea) */
     #printArea { display: block !important; }
     .month-block { margin: 0; }
@@ -534,11 +631,15 @@
   <!-- NAVIGAATIO -->
   <div class="cal-nav">
     <div class="cal-nav-left">
+      <div class="seg mode-toggle" role="group" aria-label="Näkymä">
+        <button type="button" id="modeMonth" aria-pressed="true" onclick="setMode('month')">Kuukausi</button>
+        <button type="button" id="modeHalf" aria-pressed="false" onclick="setMode('half')">Puolivuosi</button>
+      </div>
       <button class="btn" onclick="prevMonth()">‹</button>
       <div class="cal-title" id="calTitle">—</div>
       <button class="btn" onclick="nextMonth()">›</button>
       <button class="btn" onclick="goToday()">Tänään</button>
-      <button class="btn" onclick="printMonth()" title="Valitse kuukausi ja tulosta se isolla ruudukolla, seinälle liimattavaksi">🖨 Tulosta kuukausi</button>
+      <button class="btn" id="printBtn" onclick="printMonth()" title="Valitse kuukausi ja tulosta se isolla ruudukolla, seinälle liimattavaksi">🖨 Tulosta kuukausi</button>
     </div>
   </div>
 
@@ -582,6 +683,9 @@
   </div>
 
   <!-- KUUKAUDET: jatkuva skrolli kuluvasta kuusta alaspäin (JS täyttää) -->
+  <!-- PUOLIVUOSINÄKYMÄ (vain yli 640 px leveällä ruudulla, JS täyttää) -->
+  <div id="halfView" hidden></div>
+
   <div id="months"></div>
   <div id="monthsSentinel"></div>
 
@@ -656,6 +760,10 @@ const MAX_MONTHS = 36;                      // kuinka monta kuukautta alkukuusta
 const WEEKDAYS_HTML = ['Ma','Ti','Ke','To','Pe','La','Su']
   .map((n, i) => '<div class="cal-weekday' + (i >= 5 ? ' weekend' : '') + '">' + n + '</div>').join('');
 let wkTop = 53; // viikonpäiväotsikon kiinnityskohta (px), ks. updateStickyOffsets
+let viewMode = 'month';                     // 'month' (jatkuva skrolli) | 'half' (puolivuosinäkymä)
+let showNames = true;                       // puolivuosinäkymä: true = asiakkaiden nimet, false = pelkät lukumäärät
+let halfYear  = new Date().getFullYear();   // puolivuoden ensimmäinen kuukausi
+let halfMonth = new Date().getMonth();
 let quotes    = [];
 let todos     = [];
 let invoices  = []; // laskutuserät joilla on due_date
@@ -768,6 +876,12 @@ function getWeekNum(date) {
 
 // ── Renderöi kalenteri ─────────────────────────────────
 function renderCalendar() {
+  if (effectiveMode() === 'half') {
+    renderHalfYear();
+    renderOrderPanel();
+    updateStickyOffsets();
+    return;
+  }
   document.getElementById('months').innerHTML = '';
   monthsRendered = 0;
   appendMonths(1);
@@ -790,6 +904,7 @@ function appendMonths(n) {
 
 // Piirtää kuukausia lisää kunnes lista yltää hyvän matkaa ruudun alareunan yli
 function fillIfNeeded() {
+  if (effectiveMode() === 'half') return;
   const sentinel = document.getElementById('monthsSentinel');
   while (monthsRendered < MAX_MONTHS && sentinel.getBoundingClientRect().top < window.innerHeight + 800) {
     appendMonths(1);
@@ -1077,10 +1192,23 @@ function buildMobileList(year, month) {
 }
 
 // ── Navigointi ─────────────────────────────────────────
-function prevMonth() { goToMonth(viewYear, viewMonth - 1); }
-function nextMonth() { goToMonth(viewYear, viewMonth + 1); }
+function prevMonth() {
+  if (effectiveMode() === 'half') { shiftHalf(-6); return; }
+  goToMonth(viewYear, viewMonth - 1);
+}
+function nextMonth() {
+  if (effectiveMode() === 'half') { shiftHalf(6); return; }
+  goToMonth(viewYear, viewMonth + 1);
+}
 function goToday() {
   const t = new Date();
+  if (effectiveMode() === 'half') {
+    halfYear = t.getFullYear();
+    halfMonth = t.getMonth();
+    renderHalfYear();
+    window.scrollTo(0, 0);
+    return;
+  }
   startYear = t.getFullYear();
   startMonth = t.getMonth();
   renderCalendar();
@@ -1090,11 +1218,19 @@ function goToday() {
 
 // Skrollaa annetun kuukauden kohdalle. Jos kuukausi on ennen listan alkua tai liian kaukana,
 // lista rakennetaan uudelleen alkamaan siitä kuusta.
-function goToMonth(y, m) {
+function goToMonth(y, m, instant) {
   const d = new Date(y, m, 1);
   y = d.getFullYear(); m = d.getMonth();
+  if (effectiveMode() === 'half') {
+    // Puolivuosinäkymä: jos kuukausi on jo ikkunassa, vieritä sen kortti näkyviin; muuten siirrä ikkuna
+    const off = (y - halfYear) * 12 + (m - halfMonth);
+    if (off < 0 || off > 5) { halfYear = y; halfMonth = m; renderHalfYear(); }
+    const card = document.querySelector('#halfView .hv-card[data-ym="' + y + '-' + m + '"]');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
   let idx = (y - startYear) * 12 + (m - startMonth);
-  let smooth = true;
+  let smooth = !instant;
   if (idx < 0 || idx >= MAX_MONTHS) {
     startYear = y; startMonth = m; idx = 0; smooth = false;
     renderCalendar();
@@ -1107,6 +1243,7 @@ function goToMonth(y, m) {
 
 // Päivittää yläpalkin otsikon sen kuukauden mukaan, joka on kiinnitettyjen palkkien alla
 function updateVisibleMonth() {
+  if (effectiveMode() === 'half') return;
   const blocks = document.getElementById('months').children;
   if (!blocks.length) return;
   const line = wkTop + 60;
@@ -1146,15 +1283,22 @@ window.addEventListener('scroll', () => {
     updateVisibleMonth();
   });
 }, { passive: true });
-window.addEventListener('resize', () => { updateStickyOffsets(); updateVisibleMonth(); });
+window.addEventListener('resize', () => {
+  applyMode();
+  if (effectiveMode() === 'half') renderHalfYear();
+  else if (!document.getElementById('months').children.length) renderCalendar();
+  updateStickyOffsets();
+  updateVisibleMonth();
+});
 
 // ── Tilauksen korostus + aikajanapaneeli ───────────────
 // Tapahtuman klikkaus (toimitus / merkkipaalu / lasku) valitsee tilauksen sen sijaan että avaisi
 // tarjouksen uuteen välilehteen. Tarjouksen saa auki paneelin napista, tai Ctrl/Cmd/Shift-klikillä.
 document.addEventListener('click', e => {
-  const ev = e.target.closest('.event[data-quote-id]');
+  const ev = e.target.closest('[data-quote-id]');
   if (!ev) return;
-  if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return; // normaali linkin avaus
+  // Linkkinä toimivat tapahtumat: Ctrl/Cmd/Shift-klikkaus avaa tarjouksen normaalisti
+  if (ev.tagName === 'A' && (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0)) return;
   e.preventDefault();
   selectQuote(ev.dataset.quoteId);
 });
@@ -1185,6 +1329,7 @@ function applySelection() {
   markSelection();
   renderOrderPanel();
   updateStickyOffsets();
+  if (effectiveMode() === 'half') renderHalfYear(); // korostus näkyy myös puolivuosinäkymässä
 }
 
 // ISO-viikkoavain "YYYY-WW" -> viikon maanantai (paikallinen Date)
@@ -1268,7 +1413,7 @@ function renderOrderPanel() {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'op-item' + (it.late ? ' late' : '')
-      + ((it.date.getFullYear() === viewYear && it.date.getMonth() === viewMonth) ? ' here' : '');
+      + (isMonthShown(it.date) ? ' here' : '');
     const l = document.createElement('span'); l.className = 'op-label'; l.textContent = it.label;
     const w = document.createElement('span'); w.className = 'op-when'; w.textContent = it.when;
     b.append(l, w);
@@ -1282,6 +1427,7 @@ function renderOrderPanel() {
 // isolla ruudukolla A4-vaakaan seinälle liimattavaksi. Tulostettava kuukausi piirretään erilliseen
 // #printArea-alueeseen, ja tulostus-CSS piilottaa muun (ks. @media print yllä).
 function printMonth() {
+  if (effectiveMode() === 'half') { printHalf(); return; }
   const sel = document.getElementById('printMonthSelect');
   sel.innerHTML = '';
   for (let i = -6; i <= 18; i++) {
@@ -1310,6 +1456,287 @@ function doPrintMonth() {
 document.getElementById('printModal').addEventListener('click', e => {
   if (e.target === document.getElementById('printModal')) closePrintModal();
 });
+
+// ── Puolivuosinäkymä ───────────────────────────────────
+// Puhelimella (≤640 px) näkymä on aina kuukausinäkymä.
+function effectiveMode() {
+  return (viewMode === 'half' && window.innerWidth > 640) ? 'half' : 'month';
+}
+
+function applyMode() {
+  const half = effectiveMode() === 'half';
+  document.getElementById('halfView').hidden = !half;
+  document.getElementById('months').hidden = half;
+  document.getElementById('monthsSentinel').hidden = half;
+  document.getElementById('modeMonth').setAttribute('aria-pressed', String(!half));
+  document.getElementById('modeHalf').setAttribute('aria-pressed', String(half));
+  const pb = document.getElementById('printBtn');
+  pb.textContent = half ? '🖨 Tulosta puolivuosi' : '🖨 Tulosta kuukausi';
+  pb.title = half
+    ? 'Tulostaa näkyvän puolivuoden yhdelle A4-sivulle (nimet tai määrät sen mukaan mikä on valittuna)'
+    : 'Valitse kuukausi ja tulosta se isolla ruudukolla, seinälle liimattavaksi';
+}
+
+function setMode(mode) {
+  if (mode === viewMode) return;
+  viewMode = mode;
+  if (mode === 'half') {
+    halfYear = viewYear;
+    halfMonth = viewMonth;
+    applyMode();
+    renderHalfYear();
+    renderOrderPanel();
+    updateStickyOffsets();
+    window.scrollTo(0, 0);
+  } else {
+    applyMode();
+    if (!document.getElementById('months').children.length) renderCalendar();
+    updateStickyOffsets();
+    goToMonth(halfYear, halfMonth, true);
+  }
+}
+
+// Viikkorivin klikkaus: avaa kuukausinäkymän kyseiseen kuukauteen
+function openMonthFromHalf(y, m) {
+  viewMode = 'month';
+  applyMode();
+  if (!document.getElementById('months').children.length) renderCalendar();
+  updateStickyOffsets();
+  goToMonth(y, m, true);
+}
+
+function shiftHalf(n) {
+  const d = new Date(halfYear, halfMonth + n, 1);
+  halfYear = d.getFullYear();
+  halfMonth = d.getMonth();
+  renderHalfYear();
+}
+
+function isMonthShown(date) {
+  if (effectiveMode() === 'half') {
+    const off = (date.getFullYear() - halfYear) * 12 + (date.getMonth() - halfMonth);
+    return off >= 0 && off <= 5;
+  }
+  return date.getFullYear() === viewYear && date.getMonth() === viewMonth;
+}
+
+function renderHalfYear() {
+  const host = document.getElementById('halfView');
+  host.innerHTML = '';
+  host.appendChild(buildHalfView(false));
+}
+
+function printHalf() {
+  const area = document.getElementById('printArea');
+  area.innerHTML = '';
+  area.appendChild(buildHalfView(true));
+  window.addEventListener('afterprint', () => { area.innerHTML = ''; }, { once: true });
+  window.print();
+}
+
+function mk(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+// Viikkoavain -> { del: [toimitukset], ms: [keskeneräiset merkkipaalut] }
+function halfWeekData() {
+  const map = new Map();
+  const get = k => { if (!map.has(k)) map.set(k, { del: [], ms: [] }); return map.get(k); };
+  quotes.forEach(q => get(normalizeWeekKey(q.delivery_week)).del.push({
+    id: String(q.id), name: q.customers?.name || q.quote_number || '—', status: q.status
+  }));
+  milestones.forEach(m => get(normalizeWeekKey(m.target_week)).ms.push({
+    id: String(m.quote_id), type: m.milestone_type
+  }));
+  return map;
+}
+
+// Puolivuosi: 6 kuukautta halfYear/halfMonth-kuukaudesta alkaen. Viikko kuuluu sille kuukaudelle,
+// jossa sen torstai on (sama sääntö kuin mobiililistassa), joten yksikään viikko ei toistu.
+function buildHalfView(forPrint) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nowKey = getWeekNumber(today);
+  const data = halfWeekData();
+  const sel = selectedQuoteId;
+
+  const months = [];
+  let free = 0, busyKey = null, busyCount = 0, totalWeeks = 0;
+  for (let i = 0; i < 6; i++) {
+    const d0 = new Date(halfYear, halfMonth + i, 1);
+    const y = d0.getFullYear(), m = d0.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
+    const weeks = [];
+    let total = 0;
+    for (let day = 1; day <= last; day++) {
+      const d = new Date(y, m, day);
+      if (d.getDay() !== 4) continue;
+      const key = getWeekNumber(d);
+      const monday = new Date(y, m, day - 3);
+      const info = data.get(key) || { del: [], ms: [] };
+      const c = info.del.length;
+      weeks.push({ key, monday, info });
+      total += c;
+      totalWeeks++;
+      if (c === 0) free++;
+      if (c > busyCount) { busyCount = c; busyKey = key; }
+    }
+    months.push({ y, m, weeks, total });
+  }
+  const first = months[0], lastM = months[5];
+  const rangeTitle = MONTHS_FI[first.m] + ' ' + first.y + ' – ' + MONTHS_FI[lastM.m] + ' ' + lastM.y;
+
+  const wrap = mk('div', 'hv-wrap' + (forPrint ? ' hv-print' : ''));
+  if (forPrint) {
+    wrap.appendChild(mk('div', 'month-title', rangeTitle));
+  } else {
+    document.getElementById('calTitle').textContent = rangeTitle;
+  }
+
+  // Työkalurivi: Nimet | Määrät + selite
+  const bar = mk('div', 'hv-toolbar');
+  if (!forPrint) {
+    const seg = mk('div', 'seg');
+    seg.setAttribute('role', 'group');
+    seg.setAttribute('aria-label', 'Näytä asiakkaiden nimet tai lukumäärät');
+    [['Nimet', true], ['Määrät', false]].forEach(pair => {
+      const b = mk('button', '', pair[0]);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(showNames === pair[1]));
+      b.onclick = () => { showNames = pair[1]; renderHalfYear(); };
+      seg.appendChild(b);
+    });
+    bar.appendChild(seg);
+  }
+  const leg = mk('div', 'hv-legend');
+  leg.appendChild(mk('span', 'hv-legend-title', 'Toimituksia viikossa'));
+  ['0 (vapaa)', '1', '2', '3', '4+'].forEach((lab, i) => {
+    const it = mk('span', 'hv-legend-item');
+    it.appendChild(mk('span', 'hv-swatch lv' + i));
+    it.appendChild(document.createTextNode(lab));
+    leg.appendChild(it);
+  });
+  [['hv-sw hv-sw-ordered', 'Tilattu'], ['hv-sw hv-sw-completed', 'Valmis']].forEach(pair => {
+    const it = mk('span', 'hv-legend-item');
+    it.appendChild(mk('span', pair[0]));
+    it.appendChild(document.createTextNode(pair[1]));
+    leg.appendChild(it);
+  });
+  const msLeg = mk('span', 'hv-legend-item');
+  msLeg.appendChild(mk('span', 'hv-sq'));
+  msLeg.appendChild(document.createTextNode('Merkkipaalu (yksi ruutu per kpl)'));
+  leg.appendChild(msLeg);
+  bar.appendChild(leg);
+  wrap.appendChild(bar);
+
+  // Kuormitus viikoittain -kaavio
+  const chart = mk('div', 'hv-card hv-chartcard');
+  const head = mk('div', 'hv-chart-head');
+  head.appendChild(mk('span', 'hv-chart-title', 'Kuormitus viikoittain'));
+  head.appendChild(mk('span', 'hv-chart-note', 'toimitusta / viikko · ' + totalWeeks + ' viikkoa'));
+  const sum = mk('span', 'hv-chart-sum');
+  sum.appendChild(mk('b', '', free + ' vapaata viikkoa'));
+  if (busyKey && busyCount > 0) {
+    sum.appendChild(document.createTextNode(' · ruuhkaisin vko ' + parseInt(busyKey.split('-')[1], 10) + ' (' + busyCount + ' toimitusta)'));
+  }
+  head.appendChild(sum);
+  chart.appendChild(head);
+  const maxH = forPrint ? 52 : 88;
+  const scale = Math.max(4, busyCount);
+  const cols = mk('div', 'hv-chart-cols');
+  months.forEach(mo => {
+    const g = mk('div', 'hv-cgroup');
+    g.style.flexGrow = String(mo.weeks.length);
+    const bars = mk('div', 'hv-cbars');
+    bars.style.height = maxH + 'px';
+    mo.weeks.forEach(w => {
+      const c = w.info.del.length;
+      const b = mk('div', 'hv-cbar lv' + Math.min(c, 4) + (w.key === nowKey ? ' now' : ''));
+      b.style.height = (c === 0 ? 3 : Math.max(6, Math.round(c / scale * maxH))) + 'px';
+      b.title = 'vko ' + parseInt(w.key.split('-')[1], 10) + ': ' + c + ' toimitusta';
+      bars.appendChild(b);
+    });
+    g.appendChild(bars);
+    g.appendChild(mk('div', 'hv-clabel', MONTHS_FI[mo.m]));
+    cols.appendChild(g);
+  });
+  chart.appendChild(cols);
+  wrap.appendChild(chart);
+
+  // Kuukausikortit
+  const grid = mk('div', 'hv-grid');
+  months.forEach(mo => {
+    const card = mk('div', 'hv-card');
+    card.dataset.ym = mo.y + '-' + mo.m;
+    const mh = mk('div', 'hv-month-head');
+    mh.appendChild(mk('span', 'hv-month-title', MONTHS_FI[mo.m] + ' ' + mo.y));
+    mh.appendChild(mk('span', 'hv-month-total', mo.total === 1 ? '1 toimitus' : mo.total + ' toimitusta'));
+    card.appendChild(mh);
+    const rows = mk('div', 'hv-rows');
+    mo.weeks.forEach(w => rows.appendChild(buildHalfRow(w, mo, nowKey, sel)));
+    card.appendChild(rows);
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function buildHalfRow(w, mo, nowKey, sel) {
+  const cnt = w.info.del.length;
+  const row = mk('div', 'hv-row');
+
+  const wkNum = parseInt(w.key.split('-')[1], 10);
+  const lab = mk('button', 'hv-week');
+  lab.type = 'button';
+  lab.title = 'Avaa viikko ' + wkNum + ' kuukausinäkymässä';
+  lab.appendChild(mk('b', '', 'vko ' + wkNum));
+  lab.appendChild(document.createTextNode(' ' + fmtWeekRange(w.monday)));
+  lab.onclick = () => openMonthFromHalf(mo.y, mo.m);
+  row.appendChild(lab);
+
+  const hasSel = sel !== null && (w.info.del.some(x => x.id === sel) || w.info.ms.some(x => x.id === sel));
+  const bar = mk('div', 'hv-bar lv' + Math.min(cnt, 4));
+  if (cnt > 0) bar.title = w.info.del.map(x => x.name).join(', ');
+  if (sel !== null) {
+    if (hasSel) bar.classList.add('has-sel');
+    else if (!showNames) bar.classList.add('dim'); // Määrät-tilassa himmennetään koko palkki, Nimet-tilassa vain nimilaput
+  }
+  if (w.key === nowKey) bar.appendChild(mk('span', 'hv-now', 'nyt'));
+
+  const tags = sel !== null ? w.info.ms.filter(x => x.id === sel) : [];
+  if (showNames) {
+    // Valittu tilaus ensin, jotta se ei jää "+N"-laskurin taakse
+    const del = w.info.del.slice().sort((a, b) => (b.id === sel) - (a.id === sel));
+    const shown = cnt <= 2 ? del : del.slice(0, 2);
+    shown.forEach(x => {
+      const c = mk('button', 'hv-chip hv-chip-' + (x.status === 'COMPLETED' ? 'completed' : 'ordered'), x.name);
+      c.type = 'button';
+      c.dataset.quoteId = x.id;
+      c.title = x.name;
+      if (sel !== null) c.classList.add(x.id === sel ? 'sel' : 'dim');
+      bar.appendChild(c);
+    });
+    if (cnt > 2) bar.appendChild(mk('span', 'hv-more', '+' + (cnt - 2)));
+  } else if (cnt > 0) {
+    bar.appendChild(mk('span', 'hv-count', String(cnt)));
+  }
+  if (cnt === 0 && tags.length === 0) bar.appendChild(mk('span', 'hv-free', 'vapaa'));
+  tags.forEach(t => {
+    const cfg = MILESTONE_TYPES_CAL[t.type] || { label: t.type };
+    bar.appendChild(mk('span', 'hv-tag', cfg.label));
+  });
+  if (w.info.ms.length > 0) {
+    const ms = mk('div', 'hv-ms');
+    ms.title = w.info.ms.length + ' merkkipaalua';
+    for (let i = 0; i < Math.min(w.info.ms.length, 6); i++) ms.appendChild(mk('span', 'hv-sq'));
+    bar.appendChild(ms);
+  }
+  row.appendChild(bar);
+  return row;
+}
 
 // ── Todo modal ─────────────────────────────────────────
 function openTodoModal(t) {
