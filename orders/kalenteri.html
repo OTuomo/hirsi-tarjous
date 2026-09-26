@@ -310,6 +310,42 @@
     border-left-color: var(--invoice-overdue-fg);
   }
 
+  /* ── TILAUKSEN KOROSTUS + AIKAJANAPANEELI ─────────────────
+     Klikkaus tilauksen tapahtumaan (toimitus, merkkipaalu, lasku) korostaa saman tilauksen
+     kaikki tapahtumat ja himmentää muut. Paneeli listaa tilauksen päivät aikajärjestyksessä;
+     rivin klikkaus hyppää siihen kuukauteen. */
+  .event[data-quote-id] { cursor: pointer; }
+  body.has-selection .event:not(.sel) { opacity: .25; }
+  body.has-selection .event.sel { outline: 2px solid var(--accent); outline-offset: 1px; opacity: 1; }
+  .order-panel {
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-left-width: 4px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+  .order-panel[hidden] { display: none; }
+  .op-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .op-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .op-title small { font-family: 'IBM Plex Mono', monospace; font-weight: 400; font-size: 11px; color: var(--text-dim); margin-left: 6px; }
+  .op-head .op-spacer { margin-left: auto; display: flex; gap: 8px; }
+  .op-items { display: flex; flex-wrap: wrap; gap: 6px; }
+  .op-item {
+    display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px;
+    padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border2);
+    background: var(--bg2); color: var(--text); font-family: inherit; font-size: 12px;
+    cursor: pointer; text-align: left; transition: all .15s;
+  }
+  .op-item:hover { border-color: var(--accent); background: var(--accent-bg); }
+  .op-item .op-label { font-weight: 600; }
+  .op-item .op-when { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mid); }
+  .op-item.late { background: var(--invoice-overdue-bg); border-color: var(--invoice-overdue-fg); }
+  .op-item.late .op-label, .op-item.late .op-when { color: var(--invoice-overdue-fg); }
+  .op-item.here { box-shadow: inset 0 -3px 0 var(--accent); }
+  .op-empty { color: var(--text-dim); font-size: 12px; }
+
   /* ── LISÄÄ POISSAOLO MODAL ────────────────────────────── */
   .modal-backdrop {
     display: none;
@@ -425,7 +461,10 @@
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { size: A4 landscape; margin: 10mm; }
-    header, .cal-nav-left .btn, .mobile-list, #toast, .modal-backdrop { display: none !important; }
+    header, .cal-nav-left .btn, .mobile-list, #toast, .modal-backdrop, .order-panel { display: none !important; }
+    /* Korostus/himmennys ei kuulu paperille */
+    body.has-selection .event:not(.sel) { opacity: 1; }
+    body.has-selection .event.sel { outline: none; }
     .cal-nav { justify-content: center; margin-bottom: 8px; }
     .cal-nav-left { justify-content: center; }
     .cal-title { font-size: 24px; min-width: 0; }
@@ -503,6 +542,18 @@
     </div>
   </div>
 
+  <!-- TILAUKSEN AIKAJANA (näkyy kun tilauksen tapahtumaa klikataan) -->
+  <div class="order-panel" id="orderPanel" hidden>
+    <div class="op-head">
+      <div class="op-title" id="opTitle"></div>
+      <div class="op-spacer">
+        <a class="btn" id="opOpen" href="#" target="_blank" rel="noopener">Avaa tarjous →</a>
+        <button class="btn" onclick="clearSelection()" title="Poista korostus (Esc)">✕ Sulje</button>
+      </div>
+    </div>
+    <div class="op-items" id="opItems"></div>
+  </div>
+
   <!-- KALENTERI (desktop) -->
   <div class="cal-wrap">
     <div class="cal-weekdays">
@@ -575,6 +626,7 @@ let todos     = [];
 let invoices  = []; // laskutuserät joilla on due_date
 let forestSpots = []; // puukasat joilla on pickup_date
 let milestones = []; // order_milestones-rivit joilla on target_week, ei vielä valmiit
+let selectedQuoteId = null; // korostettu tilaus (quote id merkkijonona) tai null
 
 const MILESTONE_TYPES_CAL = {
   piirustukset: { emoji: '🖼️', label: 'Piirustukset' },
@@ -720,6 +772,7 @@ function renderCalendar() {
   }
 
   renderMobileList();
+  applySelection();
 }
 
 function buildDayCell(date, otherMonth, today) {
@@ -729,7 +782,8 @@ function buildDayCell(date, otherMonth, today) {
   const isToday   = date.getTime() === today.getTime();
   const weekKey   = getWeekNumber(date);
   const isMonday  = (date.getDay() === 1);
-  const dateStr   = date.toISOString().slice(0, 10);
+  // Paikallinen päivämäärä — toISOString() siirsi suomalaisen keskiyön UTC:hen ja päivä heitti yhdellä
+  const dateStr   = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
 
   cell.className = 'cal-day'
     + (otherMonth ? ' other-month' : '')
@@ -750,6 +804,7 @@ function buildDayCell(date, otherMonth, today) {
       const ev = document.createElement('a');
       ev.className = 'event event-' + (q.status === 'COMPLETED' ? 'completed' : 'ordered');
       ev.href = 'tarjous.html?id=' + q.id;
+      ev.dataset.quoteId = String(q.id);
       ev.target = '_blank';
       ev.rel = 'noopener';
       ev.textContent = (q.customers?.name || q.quote_number || '—');
@@ -767,6 +822,7 @@ function buildDayCell(date, otherMonth, today) {
       const ev = document.createElement('a');
       ev.className = 'event event-milestone' + (isLate ? ' late' : '');
       ev.href = 'tarjous.html?id=' + m.quote_id;
+      ev.dataset.quoteId = String(m.quote_id);
       ev.target = '_blank';
       ev.rel = 'noopener';
       const customerName = m.quotes?.customers?.name || m.quotes?.quote_number || '—';
@@ -783,6 +839,7 @@ function buildDayCell(date, otherMonth, today) {
     const ev = document.createElement('a');
     ev.className = 'event event-invoice' + (isOverdue ? ' overdue' : '');
     ev.href = 'laskutus.html';
+    if (inv.quote_id != null) ev.dataset.quoteId = String(inv.quote_id);
     ev.target = '_blank';
     ev.rel = 'noopener';
     const customerName = inv.quotes?.customers?.name || inv.quotes?.quote_number || '—';
@@ -896,6 +953,7 @@ function renderMobileList() {
           const a = document.createElement('a');
           a.className = 'event event-' + ev.type;
           a.href = 'tarjous.html?id=' + ev.q.id;
+          a.dataset.quoteId = String(ev.q.id);
           a.target = '_blank';
           a.rel = 'noopener';
           a.textContent = ev.q.customers?.name || ev.q.quote_number || '—';
@@ -922,6 +980,7 @@ function renderMobileList() {
           const a = document.createElement('a');
           a.className = 'event event-milestone' + (ev.isLate ? ' late' : '');
           a.href = 'tarjous.html?id=' + ev.m.quote_id;
+          a.dataset.quoteId = String(ev.m.quote_id);
           a.target = '_blank';
           a.rel = 'noopener';
           const customerName = ev.m.quotes?.customers?.name || ev.m.quotes?.quote_number || '—';
@@ -950,6 +1009,130 @@ function goToday() {
   viewYear  = new Date().getFullYear();
   viewMonth = new Date().getMonth();
   renderCalendar();
+}
+
+// ── Tilauksen korostus + aikajanapaneeli ───────────────
+// Tapahtuman klikkaus (toimitus / merkkipaalu / lasku) valitsee tilauksen sen sijaan että avaisi
+// tarjouksen uuteen välilehteen. Tarjouksen saa auki paneelin napista, tai Ctrl/Cmd/Shift-klikillä.
+document.addEventListener('click', e => {
+  const ev = e.target.closest('.event[data-quote-id]');
+  if (!ev) return;
+  if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return; // normaali linkin avaus
+  e.preventDefault();
+  selectQuote(ev.dataset.quoteId);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && selectedQuoteId && !document.getElementById('todoModal').classList.contains('open')) clearSelection();
+});
+
+function selectQuote(id) {
+  selectedQuoteId = (String(selectedQuoteId) === String(id)) ? null : String(id);
+  applySelection();
+}
+function clearSelection() {
+  selectedQuoteId = null;
+  applySelection();
+}
+
+// Merkitsee DOMiin korostetut tapahtumat ja päivittää paneelin. Kutsutaan myös aina
+// renderCalendar():n lopussa, koska ruudukko rakennetaan silloin uusiksi.
+function applySelection() {
+  document.body.classList.toggle('has-selection', selectedQuoteId !== null);
+  document.querySelectorAll('.event[data-quote-id]').forEach(el => {
+    el.classList.toggle('sel', selectedQuoteId !== null && el.dataset.quoteId === selectedQuoteId);
+  });
+  renderOrderPanel();
+}
+
+// ISO-viikkoavain "YYYY-WW" -> viikon maanantai (paikallinen Date)
+function weekKeyToMonday(key) {
+  const [y, w] = normalizeWeekKey(key).split('-').map(n => parseInt(n, 10));
+  const jan4 = new Date(y, 0, 4);
+  const monday = new Date(y, 0, 4 - ((jan4.getDay() || 7) - 1));
+  monday.setDate(monday.getDate() + (w - 1) * 7);
+  return monday;
+}
+function fmtDM(d) { return d.getDate() + '.' + (d.getMonth() + 1) + '.'; }
+function fmtWeekRange(monday) {
+  const fri = new Date(monday); fri.setDate(fri.getDate() + 4);
+  return monday.getMonth() === fri.getMonth()
+    ? monday.getDate() + '.–' + fri.getDate() + '.' + (fri.getMonth() + 1) + '.'
+    : fmtDM(monday) + '–' + fmtDM(fri);
+}
+function parseDateStr(s) { // "YYYY-MM-DD" -> paikallinen Date (ei UTC-siirtymää)
+  const [y, m, d] = s.split('-').map(n => parseInt(n, 10));
+  return new Date(y, m - 1, d);
+}
+
+// Kerää valitun tilauksen kaikki päivät (toimitus, keskeneräiset merkkipaalut, avoimet laskut)
+function collectOrderItems(id) {
+  const items = [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayWk = getWeekNumber(today);
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+  const q = quotes.find(x => String(x.id) === id);
+  if (q) {
+    const mon = weekKeyToMonday(q.delivery_week);
+    items.push({ date: mon, label: '🚚 Toimitus', when: 'vko ' + parseInt(normalizeWeekKey(q.delivery_week).split('-')[1], 10) + ' · ' + fmtWeekRange(mon), late: false });
+  }
+  milestones.filter(m => String(m.quote_id) === id).forEach(m => {
+    const cfg = MILESTONE_TYPES_CAL[m.milestone_type] || { emoji: '📌', label: m.milestone_type };
+    const wk = normalizeWeekKey(m.target_week);
+    const mon = weekKeyToMonday(wk);
+    items.push({ date: mon, label: cfg.emoji + ' ' + cfg.label, when: 'vko ' + parseInt(wk.split('-')[1], 10) + ' · ' + fmtWeekRange(mon), late: wk < todayWk });
+  });
+  invoices.filter(i => String(i.quote_id) === id).forEach(i => {
+    const d = parseDateStr(i.due_date);
+    const amt = i.amount ? ' · ' + Math.round(i.amount).toLocaleString('fi-FI') + ' €' : '';
+    items.push({ date: d, label: '💰 ' + (i.name || 'Lasku') + amt, when: fmtDM(d) + d.getFullYear(), late: i.due_date < todayStr });
+  });
+  items.sort((a, b) => a.date - b.date);
+  return items;
+}
+
+function renderOrderPanel() {
+  const panel = document.getElementById('orderPanel');
+  if (selectedQuoteId === null) { panel.hidden = true; return; }
+  panel.hidden = false;
+
+  // Otsikkotiedot mistä tahansa tapahtumalähteestä
+  const src = quotes.find(x => String(x.id) === selectedQuoteId)
+    || milestones.find(x => String(x.quote_id) === selectedQuoteId)
+    || invoices.find(x => String(x.quote_id) === selectedQuoteId);
+  const number = src ? (src.quote_number || src.quotes?.quote_number || '') : '';
+  const customer = (src && (src.customers?.name || src.quotes?.customers?.name)) || '';
+
+  const title = document.getElementById('opTitle');
+  title.textContent = customer || number || 'Tilaus';
+  if (customer && number) {
+    const s = document.createElement('small');
+    s.textContent = number;
+    title.appendChild(s);
+  }
+  document.getElementById('opOpen').href = 'tarjous.html?id=' + encodeURIComponent(selectedQuoteId);
+
+  const box = document.getElementById('opItems');
+  box.innerHTML = '';
+  const items = collectOrderItems(selectedQuoteId);
+  if (items.length === 0) {
+    const e = document.createElement('div');
+    e.className = 'op-empty';
+    e.textContent = 'Ei aikatauluttettuja päiviä.';
+    box.appendChild(e);
+  }
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'op-item' + (it.late ? ' late' : '')
+      + ((it.date.getFullYear() === viewYear && it.date.getMonth() === viewMonth) ? ' here' : '');
+    const l = document.createElement('span'); l.className = 'op-label'; l.textContent = it.label;
+    const w = document.createElement('span'); w.className = 'op-when'; w.textContent = it.when;
+    b.append(l, w);
+    b.title = 'Hyppää kuukauteen ' + MONTHS_FI[it.date.getMonth()].toLowerCase() + ' ' + it.date.getFullYear();
+    b.onclick = () => { viewYear = it.date.getFullYear(); viewMonth = it.date.getMonth(); renderCalendar(); };
+    box.appendChild(b);
+  });
 }
 
 // Tulostaa näkyvän kuukauden isolla ruudukolla (ks. @media print -sääntö yllä). Itse
