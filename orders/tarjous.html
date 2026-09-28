@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-09-28 18:25 -->
+<!-- Claude-versio: 2026-09-28 19:05 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -712,6 +712,13 @@
       <input type="checkbox" id="showPrices" checked style="width:auto;cursor:pointer;">
       <label for="showPrices" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä rivihinnat tulosteessa</label>
     </div>
+    <!-- Mallin nimi tulosteessa (2026-09-28, kohta 5) — näkyy vain jos tarjous on tehty mallista
+         (currentSourceTemplateName). Valinta TALLENTUU tarjoukselle (print_template_name-sarake),
+         ei nollaudu joka tulostuksella toisin kuin rivihintavalinta — Tuomon vastaus 2026-09-28. -->
+    <div style="display:none;align-items:center;gap:6px;margin-left:4px;" id="printTplNameWrap">
+      <input type="checkbox" id="printTplName" style="width:auto;cursor:pointer;" onchange="autoSave()">
+      <label for="printTplName" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä mallin nimi tulosteessa (<span id="printTplNameLabel"></span>)</label>
+    </div>
     <div class="spacer"></div>
     <button class="btn btn-ghost" onclick="printQuote()">🖨 Tulosta tarjous</button>
     <button class="btn btn-ghost" onclick="copyQuote()">⧉ Kopioi tarjous</button>
@@ -786,6 +793,21 @@ let currentStatus = 'DRAFT';
 let currentStatusChangedAt = null;
 let sectionIdCounter = 0;
 let rowIdCounter = 0;
+// Mallin nimi tulostetta varten (2026-09-28, kohta 5) — asetetaan kun tarjous ladataan/kopioidaan
+// mallista, ks. loadQuote()/copyQuoteFrom()/applyTemplate() ja updateSourceTemplateUI().
+let currentSourceTemplateName = null;
+
+function updateSourceTemplateUI(checked) {
+  const wrap = document.getElementById('printTplNameWrap');
+  if (currentSourceTemplateName) {
+    wrap.style.display = 'flex';
+    document.getElementById('printTplNameLabel').textContent = currentSourceTemplateName;
+    document.getElementById('printTplName').checked = !!checked;
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('printTplName').checked = false;
+  }
+}
 
 // =============================================
 // INIT
@@ -932,7 +954,11 @@ async function applyTemplate(templateId) {
     sel.value = '';
     return;
   }
-  const data = await sbGet('quotes', `?id=eq.${templateId}&select=sections_json`);
+  // 2026-09-28 (kohta 1/5): kysytään myös säilytetäänkö mallin tallennetut hinnat ja pyöristys,
+  // vai haetaanko tuoreet hinnat hinnastosta — sama valinta kuin tarjoukset.html:n
+  // "Kopioi uudeksi tarjoukseksi" -napissa (copyQuoteFrom).
+  const keepPrices = confirm('Ladataanko malli tallennetuilla hinnoilla?\n\nOK = Säilytä mallin hinnat (ja pyöristys)\nPeruuta = Hae uudet hinnat hinnastosta');
+  const data = await sbGet('quotes', `?id=eq.${templateId}&select=*`);
   const q = Array.isArray(data) ? data[0] : null;
   sel.value = ''; // nollataan heti — sama malli pitää voida valita uudelleen, eikä valikon pidä jäädä "jumiin" valintaan
   if (!q || !q.sections_json) return;
@@ -943,22 +969,32 @@ async function applyTemplate(templateId) {
       s.id = ++sectionIdCounter;
       s.rows.forEach(r => {
         r.id = ++rowIdCounter;
-        // Hinnat päivitetään aina tuoreimpaan hinnastoon kopioinnin yhteydessä (ei käytetä mallin
-        // sisällä mahdollisesti vanhentuneita hintoja) — sama periaate kuin copyQuoteFrom(keepPrices=false)
-        const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
-        if (prod) {
-          r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
-          r.price = r.basePrice || '';
-          r.priceManual = false;
-          r.isAssembly = prod.pricing_model === 'assembly';
-          r.katePercent = (!r.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
-          r.vatPercent = prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
+        if (!keepPrices) {
+          // Hinnat päivitetään tuoreimpaan hinnastoon (ei käytetä mallin mahdollisesti
+          // vanhentuneita hintoja) — sama periaate kuin copyQuoteFrom(keepPrices=false)
+          const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
+          if (prod) {
+            r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
+            r.price = r.basePrice || '';
+            r.priceManual = false;
+            r.isAssembly = prod.pricing_model === 'assembly';
+            r.katePercent = (!r.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
+            r.vatPercent = prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
+          } else if (r.vatPercent === undefined || r.vatPercent === null) {
+            r.vatPercent = 25.5;
+          }
         } else if (r.vatPercent === undefined || r.vatPercent === null) {
-          r.vatPercent = 25.5;
+          const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
+          r.vatPercent = prod && prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
         }
       });
     });
     sections = templateSections;
+    // Mallin pyöristys/hinta tuodaan mukaan VAIN kun hinnat säilytetään — muuten se olisi
+    // ristiriidassa juuri haettujen uusien hintojen kanssa.
+    document.getElementById('adjAmount').value = keepPrices ? (q.discount_amount || 0) : 0;
+    currentSourceTemplateName = q.template_name || null;
+    updateSourceTemplateUI(false);
     renderSections();
     recalcTotals();
     autoSave(); // oikea käyttäjän toiminto, tallennetaan normaalisti
@@ -2395,6 +2431,8 @@ function buildQuoteData(status) {
     delivery_type: document.getElementById('deliveryType').value || null,
     delivery_week: document.getElementById('deliveryWeek').value.trim() || null,
     is_template: false,
+    source_template_name: currentSourceTemplateName,
+    print_template_name: currentSourceTemplateName ? document.getElementById('printTplName').checked : false,
     total_net: Math.round(noTax * scale * 100) / 100,
     total_vat: Math.round(vat * scale * 100) / 100,
     total_gross: Math.round(grossStage1 * scale * 100) / 100,
@@ -2572,6 +2610,8 @@ async function loadQuote(id) {
   document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'hidden';
   if (parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
   if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
+  currentSourceTemplateName = q.source_template_name || null;
+  updateSourceTemplateUI(!!q.print_template_name);
   if (q.customer_id) {
     const cust = customers.find(c => c.id === q.customer_id);
     if (cust) setCustomer(cust.id, cust.name);
@@ -2617,11 +2657,19 @@ async function copyQuoteFrom(id, keepPrices) {
   if (q.internal_note) document.getElementById('internalNotePanel').classList.add('show');
   document.getElementById('defaultText').value = q.footer_text || '';
   syncTextTemplateSelect();
-  document.getElementById('adjAmount').value = q.discount_amount || 0;
+  // Pyöristys/alennus-€ säilytetään VAIN kun hinnat säilytetään sellaisenaan (keepPrices) —
+  // uusien hinnastohintojen päälle vanha pyöristys antaisi väärän summan, koska hinnat ovat
+  // voineet muuttua oleellisestikin (2026-09-28, Tuomon vastaus kohtaan "pyöristys nollaus").
+  document.getElementById('adjAmount').value = keepPrices ? (q.discount_amount || 0) : 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
   document.getElementById('extraDiscountPercent').value = q.extra_discount_percent || 0;
   document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'hidden';
   if (parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
+  // Mallin nimi periytyy kopioon VAIN kun kopioidaan suoraan mallista (is_template=true) —
+  // tavallisesta tarjouksesta kopioitaessa ei, vaikka sekin olisi joskus tehty mallista
+  // (2026-09-28, Tuomon vastaus kohtaan 19: "Ei peri").
+  currentSourceTemplateName = q.is_template ? (q.template_name || null) : null;
+  updateSourceTemplateUI(false); // uusi kopio ei ole vielä tulostettu — oletuksena pois päältä
   if (q.sections_json) {
     try {
       sections = JSON.parse(q.sections_json);
@@ -2712,7 +2760,8 @@ function checkStaleStatus() {
 function printQuote() {
   if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
   const showPrices = document.getElementById('showPrices').checked ? '1' : '0';
-  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}`, '_blank');
+  const showTpl = (currentSourceTemplateName && document.getElementById('printTplName').checked) ? '1' : '0';
+  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}&tpl=${showTpl}`, '_blank');
 }
 
 // printSupply() poistettu 2026-07 — tarvikelista tehdään aina pakkauslista.html:n kautta (ks. openPackingPage),
