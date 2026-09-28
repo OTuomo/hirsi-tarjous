@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Claude-versio: 2026-09-28 20:30 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -813,12 +814,14 @@ async function init() {
 
 async function loadData() {
   try {
-    // Hae tilatut ja valmiit tarjoukset joilla on toimitusviikko
+    // Hae tilatut ja valmiit tarjoukset joilla on toimitusviikko. deleted_at-suodatus
+    // (2026-09-28, kohta 3) — poistetut tarjoukset eivät saa näkyä kalenterissa.
     const { data: qData } = await db
       .from('quotes')
       .select('id, quote_number, delivery_week, status, customers(name)')
       .in('status', ['ORDERED', 'COMPLETED'])
-      .not('delivery_week', 'is', null);
+      .not('delivery_week', 'is', null)
+      .is('deleted_at', null);
     quotes = qData || [];
 
     // Hae todot joilla on due_week — omat + jaetut
@@ -829,13 +832,15 @@ async function loadData() {
       .not('due_week', 'is', null)
       .or(`is_shared.eq.true,user_id.eq.${userId}`);
     todos = tData || [];
-    // Hae laskutuserät joilla on eräpäivä (lähetetty, ei maksettu)
+    // Hae laskutuserät joilla on eräpäivä (lähetetty, ei maksettu). deleted_at on liittyvässä
+    // quotes-rivissä (nested join), joten PostgREST/supabase-js ei voi suodattaa sitä suoraan
+    // .eq()/.is()-kutsulla pääriviin — suodatetaan siis JS:ssä haun jälkeen (2026-09-28, kohta 3).
     const { data: iData } = await db
       .from('invoice_items')
-      .select('id, name, amount, due_date, status, quote_id, quotes(quote_number, customers(name))')
+      .select('id, name, amount, due_date, status, quote_id, quotes(quote_number, customers(name), deleted_at)')
       .eq('status', 'lahetetty')
       .not('due_date', 'is', null);
-    invoices = iData || [];
+    invoices = (iData || []).filter(i => !i.quotes || !i.quotes.deleted_at);
     // Hae puukasat joilla on sovittu noutopäivä
     // Haetaan puukasat ja niiden puulajit joilla on noutopäivä
     const { data: fData } = await db
@@ -849,10 +854,11 @@ async function loadData() {
     // laskut jäävät pois yllä olevasta invoice_items-hausta.
     const { data: mData } = await db
       .from('order_milestones')
-      .select('id, milestone_type, target_week, quote_id, quotes(quote_number, customers(name))')
+      .select('id, milestone_type, target_week, quote_id, quotes(quote_number, customers(name), deleted_at)')
       .eq('is_done', false)
       .not('target_week', 'is', null);
-    milestones = mData || [];
+    // Sama JS-suodatus kuin invoice_items yllä — deleted_at on nested quotes-relaatiossa.
+    milestones = (mData || []).filter(m => !m.quotes || !m.quotes.deleted_at);
   } catch(e) {
     console.error('loadData:', e);
   }
