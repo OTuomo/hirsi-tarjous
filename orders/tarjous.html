@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-09-28 19:05 -->
+<!-- Claude-versio: 2026-09-28 20:15 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -164,6 +164,12 @@
   .status-badge.archived { background: #2a2a2a; color: #666; }
   .stale-banner { display: none; align-items: center; gap: 10px; background: #3d2e1e; border: 1px solid var(--warn); color: var(--warn); font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
   .stale-banner.show { display: flex; }
+  /* MALLITILA (2026-09-28, kohta 2) — näkyy vain kun avattu tarjous on mallipohja (is_template=true).
+     Sama violetti sävy kuin status-badge.model, jotta yhdistyy visuaalisesti samaan käsitteeseen. */
+  .template-mode-banner { display: none; align-items: center; gap: 14px; flex-wrap: wrap; background: #2a1e3d; border: 1px solid #c084fc; color: #c084fc; font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
+  .template-mode-banner .tpl-name-field { display: flex; align-items: center; gap: 8px; }
+  .template-mode-banner .tpl-name-field input { width: 220px; padding: 5px 8px; font-size: 13px; background: var(--input-bg); border: 1px solid #c084fc; color: var(--text); border-radius: 4px; }
+  .template-mode-banner .tpl-unsaved { color: var(--warn); font-weight: 600; display: none; }
   /* Sisäinen huomio (2026-08) — ei koskaan tulostu, näkyy vain tässä sovelluksessa. Sama
      amber-varoitusväri kuin stale-bannerissa, jotta erottuu selvästi "tämä ei mene asiakkaalle". */
   .internal-note-panel { display: none; background: #3d2e1e; border: 1px solid var(--warn); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
@@ -306,9 +312,9 @@
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
     <button class="btn btn-secondary" id="noteToggleBtn" onclick="toggleInternalNote()" style="padding:6px 14px;font-size:12px;" title="Sisäinen huomio — näkyy vain tässä sovelluksessa, ei koskaan tulosteessa">🔒 Sisäinen huomio</button>
-    <button class="btn btn-secondary" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
-    <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna</button>
-    <button class="btn btn-secondary" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä tarjous jatkuu ennallaan">📑 Tallenna malliksi</button>
+    <button class="btn btn-secondary" id="btnPakkauslista" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
+    <button class="btn btn-secondary" id="saveDraftBtn" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna</button>
+    <button class="btn btn-secondary" id="btnSaveAsTemplate" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä tarjous jatkuu ennallaan">📑 Tallenna malliksi</button>
     <select id="statusSelect" onchange="changeStatus(this.value)"
       style="font-size:12px;padding:6px 10px;width:auto;font-family:'IBM Plex Mono',monospace;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:4px;">
       <option value="DRAFT">Luonnos</option>
@@ -461,7 +467,17 @@
 
 <div class="page">
 
+  <div id="deletedBanner" style="display:none;align-items:center;gap:10px;background:#3d1e1e;border:1px solid #e05252;color:#e05252;font-size:13px;padding:10px 16px;border-radius:6px;margin-bottom:16px;font-family:'IBM Plex Sans',sans-serif;">🗑 Tämä tarjous on poistettu — ei enää näy tarjoukset.html-listalla, avautuu vain tällä suoralla linkillä.</div>
   <div class="stale-banner" id="staleBanner">⏰ <span id="staleBannerText"></span></div>
+  <div class="template-mode-banner" id="templateModeBanner">
+    <strong>📑 MALLITILA</strong>
+    <span class="tpl-name-field">
+      <label for="tplEditName">Mallin nimi</label>
+      <input type="text" id="tplEditName" oninput="onTplEditNameInput()" placeholder="esim. Harjusauna 70x145">
+    </span>
+    <span>Muokkaat mallipohjaa — ei asiakkaan tarjousta.</span>
+    <span class="tpl-unsaved" id="tplUnsavedNotice">● Tallentamattomia muutoksia — muista painaa "💾 Tallenna malli"</span>
+  </div>
   <div class="internal-note-panel" id="internalNotePanel">
     <label>🔒 Sisäinen huomio — ei näy tulosteessa, vain täällä</label>
     <textarea id="internalNote" oninput="onInternalNoteInput()" placeholder="Esim. asiakkaan erikoistoive tai muu muistettava yksityiskohta..." rows="3"></textarea>
@@ -472,7 +488,7 @@
     <div class="panel-header">Perustiedot</div>
     <div class="panel-body">
       <div class="basics-grid">
-        <div class="field">
+        <div class="field" id="fieldCustomer">
           <label>Asiakas *</label>
           <div class="customer-row">
             <div class="customer-search-wrap">
@@ -521,7 +537,7 @@
           <label>Kohde / viite</label>
           <input type="text" id="quoteRef" placeholder="Esim. kohteen nimi tai viite" oninput="autoSave()">
         </div>
-        <div class="field field-quotenum">
+        <div class="field field-quotenum" id="fieldQuoteNumber">
           <label>Tarjousnumero</label>
           <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
         </div>
@@ -532,7 +548,7 @@
            sisällä, se tekisi siitä muita kenttiä korkeamman ja työntäisi Kohde/viite- ja
            Tarjousnumero-kentät alaspäin (huomattu 2026-09, korjattu). leveys:180px pitää sen
            silti visuaalisesti Toimitusviikon alapuolella. -->
-      <div style="width:180px;">
+      <div style="width:180px;" id="milestoneToggleWrap">
         <button type="button" class="milestone-toggle-link" id="milestoneToggleBtn" onclick="toggleMilestonesPanel()">📌 Merkkipaalut ▾</button>
       </div>
 
@@ -643,16 +659,21 @@
   <div class="summary-panel">
     <table class="summary-table">
       <tr><td class="label">Välisumma</td><td class="value" id="sumSubtotal">0,00 €</td></tr>
-      <tr>
+      <tr id="rowDiscountPercent">
         <td class="label">Alennus %</td>
         <td class="value">
           <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
             <input class="adj" type="number" id="discountPercent" value="0" step="0.1" min="0" max="100" oninput="onDiscountPercentInput()">
-            <button type="button" onclick="openKateModal()" title="Näytä koko tarjouksen kateprosentti" style="padding:3px 7px;font-size:10px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;white-space:nowrap;">📊 Kate</button>
           </div>
         </td>
       </tr>
-      <tr>
+      <tr id="rowKateBtn">
+        <td class="label"></td>
+        <td class="value">
+          <button type="button" onclick="openKateModal()" title="Näytä koko tarjouksen kateprosentti" style="padding:3px 7px;font-size:10px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;white-space:nowrap;">📊 Kate</button>
+        </td>
+      </tr>
+      <tr id="rowAdjAmount">
         <td class="label">Pyöristys / alennus<br><span style="font-size:10px;font-weight:400;">(veroton)</span></td>
         <td class="value"><input class="adj" type="number" id="adjAmount" value="0" step="0.01" oninput="onAdjInput()"></td>
       </tr>
@@ -660,9 +681,17 @@
       <tr><td class="label">ALV 25,5%</td><td class="value" id="sumVat">0,00 €</td></tr>
       <tr class="big">
         <td class="label">YHT (verollinen)</td>
-        <td class="value"><input class="adj" type="number" id="adjGross" value="0" step="0.01" oninput="onGrossInput()" style="font-size:15px;font-weight:600;color:var(--accent);width:110px;"></td>
+        <td class="value">
+          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+            <input class="adj" type="number" id="adjGross" value="0" step="0.01" oninput="onGrossInput()" style="font-size:15px;font-weight:600;color:var(--accent);width:110px;">
+          </div>
+          <div id="tplGrossRoundBtns" style="display:none;gap:6px;justify-content:flex-end;margin-top:6px;">
+            <button type="button" class="btn btn-ghost btn-xs" onclick="tplGrossRound(10)">Pyöristä 10 €</button>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="tplGrossRound(100)">Pyöristä 100 €</button>
+          </div>
+        </td>
       </tr>
-      <tr>
+      <tr id="rowExtraDiscount">
         <td colspan="2">
           <button type="button" class="extra-discount-toggle" id="extraDiscountToggleBtn" onclick="toggleExtraDiscount()">➕ Lisäalennus ▾</button>
           <div class="extra-discount-panel" id="extraDiscountPanel">
@@ -720,8 +749,8 @@
       <label for="printTplName" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä mallin nimi tulosteessa (<span id="printTplNameLabel"></span>)</label>
     </div>
     <div class="spacer"></div>
-    <button class="btn btn-ghost" onclick="printQuote()">🖨 Tulosta tarjous</button>
-    <button class="btn btn-ghost" onclick="copyQuote()">⧉ Kopioi tarjous</button>
+    <button class="btn btn-ghost" id="btnPrintQuote" onclick="printQuote()">🖨 Tulosta tarjous</button>
+    <button class="btn btn-ghost" id="btnCopyQuote" onclick="copyQuote()">⧉ Kopioi tarjous</button>
   </div>
 
 </div>
@@ -807,6 +836,62 @@ function updateSourceTemplateUI(checked) {
     wrap.style.display = 'none';
     document.getElementById('printTplName').checked = false;
   }
+}
+
+// =============================================
+// MALLITILA (2026-09-28, kohta 2) — kun avattu tarjous ON mallipohja (is_template=true),
+// piilotetaan kentät jotka eivät koske mallia (asiakas, tarjousnumero, status, merkkipaalut,
+// tulostus, pakkauslista, alennus%, lisäalennus) ja kytketään autosave pois päältä. Muutokset
+// tallennetaan vain painamalla "💾 Tallenna malli" -nappia (sama nappi/funktio kuin
+// tavallisella tarjouksella, saveDraft() — ks. sen alusta). Kate-nappi ja YHT-kenttä (+
+// pyöristysnapit) jäävät näkyviin, koska niillä mallin kokonaishintaa muokataan.
+let isTemplateMode = false;
+let hasUnsavedTemplateChanges = false;
+
+function enterTemplateMode(name) {
+  isTemplateMode = true;
+  document.getElementById('fieldCustomer').style.display = 'none';
+  document.getElementById('fieldQuoteNumber').style.display = 'none';
+  document.getElementById('statusSelect').style.display = 'none';
+  document.getElementById('statusBadge').style.display = 'none';
+  document.getElementById('milestoneToggleWrap').style.display = 'none';
+  document.getElementById('milestonesPanel').classList.remove('show');
+  document.getElementById('btnPakkauslista').style.display = 'none';
+  document.getElementById('btnPrintQuote').style.display = 'none';
+  document.getElementById('rowDiscountPercent').style.display = 'none';
+  document.getElementById('rowExtraDiscount').style.display = 'none';
+  document.getElementById('extraDiscountPanel').classList.remove('show');
+  document.getElementById('tplGrossRoundBtns').style.display = 'flex';
+  document.getElementById('saveDraftBtn').textContent = '💾 Tallenna malli';
+  document.getElementById('templateModeBanner').style.display = 'flex';
+  document.getElementById('tplEditName').value = name || '';
+}
+
+// Mallin nimen muokkaus ei tallennu heti (ei autosavea mallitilassa) — vain merkitään
+// tallentamattomaksi, sama periaate kuin muillakin mallitilan kentillä.
+function onTplEditNameInput() {
+  markTemplateUnsaved();
+}
+
+function markTemplateUnsaved() {
+  if (!isTemplateMode) return;
+  hasUnsavedTemplateChanges = true;
+  document.getElementById('tplUnsavedNotice').style.display = 'inline';
+}
+
+function clearTemplateUnsaved() {
+  hasUnsavedTemplateChanges = false;
+  document.getElementById('tplUnsavedNotice').style.display = 'none';
+}
+
+// Pyöristys LÄHIMPÄÄN annettuun väliin (sama periaate kuin tplSaveRound / Tuomon vastaus
+// 2026-09-28), mutta kohdistuu suoraan YHT-kenttään (adjGross) ja käyttää olemassa olevaa
+// onGrossInput()-laskentaa, joka jo päivittää adjAmount:in ja summarivit.
+function tplGrossRound(step) {
+  const el = document.getElementById('adjGross');
+  const val = parseFloat(el.value) || 0;
+  el.value = Math.round(val / step) * step;
+  onGrossInput();
 }
 
 // =============================================
@@ -930,7 +1015,7 @@ function syncTextTemplateSelect() {
 // =============================================
 async function loadRowTemplates() {
   try {
-    const data = await sbGet('quotes', '?is_template=eq.true&select=id,template_name,quote_number&order=template_name.asc');
+    const data = await sbGet('quotes', '?is_template=eq.true&deleted_at=is.null&select=id,template_name,quote_number&order=template_name.asc');
     if (!Array.isArray(data)) return;
     rowTemplates = data;
     const sel = document.getElementById('rowTemplateSelect');
@@ -2430,7 +2515,11 @@ function buildQuoteData(status) {
     sections_json: JSON.stringify(sections),
     delivery_type: document.getElementById('deliveryType').value || null,
     delivery_week: document.getElementById('deliveryWeek').value.trim() || null,
-    is_template: false,
+    // Mallitilassa (2026-09-28, kohta 2) is_template pysyy true:na ja nimi luetaan mallitilan
+    // omasta nimikentästä — muuten tavallisen tarjouksen tallennus asettaa aina false:n
+    // (tallenna-malliksi-toiminto ohittaa nämä erikseen, ks. confirmSaveAsTemplate()).
+    is_template: isTemplateMode,
+    template_name: isTemplateMode ? (document.getElementById('tplEditName').value.trim() || null) : undefined,
     source_template_name: currentSourceTemplateName,
     print_template_name: currentSourceTemplateName ? document.getElementById('printTplName').checked : false,
     total_net: Math.round(noTax * scale * 100) / 100,
@@ -2453,6 +2542,7 @@ async function saveDraft() {
     }
     el.className = 'saving ok'; el.textContent = '✓ Tallennettu';
     setTimeout(() => { if (el.textContent === '✓ Tallennettu') el.textContent = ''; }, 2500);
+    if (isTemplateMode) clearTemplateUnsaved();
   } catch(e) {
     el.className = 'saving err'; el.textContent = 'Virhe tallennuksessa';
   }
@@ -2542,6 +2632,9 @@ async function confirmSaveAsTemplate() {
 let _autoSaveTimer = null;
 
 function autoSave() {
+  // Mallitilassa (2026-09-28, kohta 2) EI autosavea — malli tallentuu vain "💾 Tallenna malli"
+  // -napista, jotta keskeneräiset kokeilut mallin parissa eivät tallennu vahingossa.
+  if (isTemplateMode) { markTemplateUnsaved(); return; }
   const el = document.getElementById('saveStatus');
   // Jos ei vielä ID:tä, tallenna heti (uusi tarjous)
   if (!currentQuoteId) {
@@ -2612,6 +2705,10 @@ async function loadQuote(id) {
   if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
   currentSourceTemplateName = q.source_template_name || null;
   updateSourceTemplateUI(!!q.print_template_name);
+  if (q.is_template) enterTemplateMode(q.template_name); // kohta 2 (2026-09-28) — piilottaa mallille kuulumattomat kentät
+  // Kohta 3 (2026-09-28): poistettu tarjous ei näy listoilla, mutta suora ?id=-linkki avaa
+  // sen silti — vain varoitusbanneri, ei estoa (Tuomon vastaus "bannerilla avautuva").
+  document.getElementById('deletedBanner').style.display = q.deleted_at ? 'flex' : 'none';
   if (q.customer_id) {
     const cust = customers.find(c => c.id === q.customer_id);
     if (cust) setCustomer(cust.id, cust.name);
