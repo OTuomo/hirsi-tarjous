@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Claude-versio: 2026-09-28 19:05 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -299,6 +300,34 @@
   </div>
 </div>
 
+<!-- MALLIKSI TALLENNUS -MODAALI (2026-09-28) — sama kuin tarjous.html:ssä, ks. sen kommentit -->
+<div class="modal-overlay" id="tplSaveModal">
+  <div class="modal" style="width:420px;">
+    <h2>📑 Tallenna malliksi</h2>
+    <div class="field">
+      <label>Nimi *</label>
+      <input type="text" id="tplSaveName" placeholder="esim. Harjusauna 70x145">
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <label>Hinta (verollinen) *</label>
+      <input type="number" id="tplSavePrice" step="0.01" style="font-weight:600;color:var(--accent);">
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-ghost btn-xs" onclick="tplSaveRound(10)">Pyöristä 10 €:oon</button>
+      <button type="button" class="btn btn-ghost btn-xs" onclick="tplSaveRound(100)">Pyöristä 100 €:oon</button>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+      <label style="white-space:nowrap;">Oma väli:</label>
+      <input type="number" id="tplSaveRoundStep" value="10" step="1" min="1" style="width:80px;">
+      <button type="button" class="btn btn-ghost btn-xs" onclick="tplSaveRoundCustom()">Pyöristä</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeTplSaveModal()">Peruuta</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmSaveAsTemplate()">Tallenna malliksi</button>
+    </div>
+  </div>
+</div>
+
 <div class="page">
   <div class="internal-note-panel" id="internalNotePanel">
     <label>🔒 Sisäinen huomio — ei näy tulosteessa, vain täällä</label>
@@ -340,6 +369,10 @@
       <div class="field" style="margin-top:10px;display:flex;align-items:center;gap:8px;">
         <input type="checkbox" id="requiresInvoice" onchange="onRequiresInvoiceChange()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;">
         <label for="requiresInvoice" style="margin:0;cursor:pointer;font-weight:400;" title="Rastita jos ostos ei ole maksettu heti kassaan, vaan Sanna laskuttaa asiakasta erikseen. Ei vaikuta tilaan (pysyy Valmiina), mutta näkyy laskutus.html:ssä ja muuttaa tulosteen kuitista tilausvahvistukseksi.">Laskutetaan erikseen (ei maksettu heti kassaan)</label>
+      </div>
+      <div class="field" style="margin-top:6px;display:none;align-items:center;gap:8px;" id="printTplNameWrap">
+        <input type="checkbox" id="printTplName" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;" onchange="autoSave()">
+        <label for="printTplName" style="margin:0;cursor:pointer;font-weight:400;">Näytä mallin nimi tulosteessa (<span id="printTplNameLabel"></span>)</label>
       </div>
     </div>
   </div>
@@ -474,6 +507,19 @@ let sections = [];
 let currentQuoteId = null;
 let sectionIdCounter = 0;
 let rowIdCounter = 0;
+let currentSourceTemplateName = null;
+
+function updateSourceTemplateUI(checked) {
+  const wrap = document.getElementById('printTplNameWrap');
+  if (currentSourceTemplateName) {
+    wrap.style.display = 'flex';
+    document.getElementById('printTplNameLabel').textContent = currentSourceTemplateName;
+    document.getElementById('printTplName').checked = !!checked;
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('printTplName').checked = false;
+  }
+}
 
 // =============================================
 // INIT
@@ -561,7 +607,10 @@ async function applyTemplate(templateId) {
     sel.value = '';
     return;
   }
-  const data = await sbGet('quotes', `?id=eq.${templateId}&select=sections_json`);
+  // 2026-09-28 (kohta 1/5): kysytään myös säilytetäänkö mallin tallennetut hinnat ja pyöristys,
+  // vai haetaanko tuoreet hinnat hinnastosta — sama valinta kuin tarjous.html:ssä.
+  const keepPrices = confirm('Ladataanko malli tallennetuilla hinnoilla?\n\nOK = Säilytä mallin hinnat (ja pyöristys)\nPeruuta = Hae uudet hinnat hinnastosta');
+  const data = await sbGet('quotes', `?id=eq.${templateId}&select=*`);
   const q = Array.isArray(data) ? data[0] : null;
   sel.value = ''; // nollataan heti — sama malli pitää voida valita uudelleen
   if (!q || !q.sections_json) return;
@@ -572,21 +621,32 @@ async function applyTemplate(templateId) {
       s.id = ++sectionIdCounter;
       s.rows.forEach(r => {
         r.id = ++rowIdCounter;
-        // Hinnat päivitetään aina tuoreimpaan hinnastoon kopioinnin yhteydessä
-        const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
-        if (prod) {
-          r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
-          r.price = r.basePrice || '';
-          r.priceManual = false;
-          r.isAssembly = prod.pricing_model === 'assembly';
-          r.katePercent = (!r.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
-          r.vatPercent = prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
+        if (!keepPrices) {
+          // Hinnat päivitetään tuoreimpaan hinnastoon (ei käytetä mallin mahdollisesti
+          // vanhentuneita hintoja) — sama periaate kuin tarjous.html:ssä.
+          const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
+          if (prod) {
+            r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
+            r.price = r.basePrice || '';
+            r.priceManual = false;
+            r.isAssembly = prod.pricing_model === 'assembly';
+            r.katePercent = (!r.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
+            r.vatPercent = prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
+          } else if (r.vatPercent === undefined || r.vatPercent === null) {
+            r.vatPercent = 25.5;
+          }
         } else if (r.vatPercent === undefined || r.vatPercent === null) {
-          r.vatPercent = 25.5;
+          const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
+          r.vatPercent = prod && prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
         }
       });
     });
     sections = templateSections;
+    // Mallin pyöristys/hinta tuodaan mukaan VAIN kun hinnat säilytetään — muuten se olisi
+    // ristiriidassa juuri haettujen uusien hintojen kanssa.
+    document.getElementById('adjAmount').value = keepPrices ? (q.discount_amount || 0) : 0;
+    currentSourceTemplateName = q.template_name || null;
+    updateSourceTemplateUI(false);
     renderSections();
     recalcTotals();
     autoSave(); // oikea käyttäjän toiminto, tallennetaan normaalisti
@@ -1520,6 +1580,8 @@ function buildQuoteData(status) {
     extra_discount_display: document.getElementById('extraDiscountDisplay').value || 'hidden',
     sections_json: JSON.stringify(sections),
     is_template: false,
+    source_template_name: currentSourceTemplateName,
+    print_template_name: currentSourceTemplateName ? document.getElementById('printTplName').checked : false,
     total_net: Math.round(noTax * scale * 100) / 100,
     total_vat: Math.round(vat * scale * 100) / 100,
     total_gross: Math.round(grossStage1 * scale * 100) / 100,
@@ -1550,33 +1612,70 @@ async function saveDraft() {
 // JS-moduuleja). Ottaa lomakkeen tämänhetkisen sisällön ja tallentaa sen UUTENA erillisenä
 // mallirivinä — nykyistä ostosta (currentQuoteId) ei kosketa. requires_invoice/status nollataan
 // koska ne kuvaavat vain oikeaa kassamyyntiä, eivät koske mallia.
-async function saveAsTemplate() {
-  const name = prompt('Anna mallille nimi (näkyy Mallipohjat-välilehdellä):');
-  if (name === null) return; // käyttäjä perui — ei tallenneta mitään
-  const trimmed = name.trim();
-  if (!trimmed) { alert('Mallille pitää antaa nimi.'); return; }
+function saveAsTemplate() {
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const vatRate = computeQuoteVatRate(sections);
+  const currentGross = Math.round(sub * (1 + vatRate / 100) * 100) / 100;
+  document.getElementById('tplSaveName').value = '';
+  document.getElementById('tplSavePrice').value = currentGross;
+  document.getElementById('tplSaveRoundStep').value = 10;
+  document.getElementById('tplSaveModal').classList.add('open');
+  document.getElementById('tplSaveName').focus();
+}
+
+function closeTplSaveModal() {
+  document.getElementById('tplSaveModal').classList.remove('open');
+}
+document.getElementById('tplSaveModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('tplSaveModal')) closeTplSaveModal();
+});
+
+// Pyöristys LÄHIMPÄÄN annettuun väliin, ei alaspäin (Tuomon vastaus 2026-09-28)
+function tplSaveRound(step) {
+  const el = document.getElementById('tplSavePrice');
+  const val = parseFloat(el.value) || 0;
+  el.value = Math.round(val / step) * step;
+  document.getElementById('tplSaveRoundStep').value = step;
+}
+
+function tplSaveRoundCustom() {
+  const step = parseFloat(document.getElementById('tplSaveRoundStep').value) || 0;
+  if (!(step > 0)) { alert('Anna kelvollinen pyöristysväli.'); return; }
+  tplSaveRound(step);
+}
+
+async function confirmSaveAsTemplate() {
+  const name = document.getElementById('tplSaveName').value.trim();
+  if (!name) { alert('Mallille pitää antaa nimi.'); return; }
+  const targetGross = parseFloat(document.getElementById('tplSavePrice').value);
+  if (!(targetGross > 0)) { alert('Anna kelvollinen hinta.'); return; }
 
   const data = buildQuoteData();
   data.customer_id = null;
   data.quote_number = null;
-  data.discount_amount = 0;
+  data.source_template_name = null;
+  data.print_template_name = false;
   data.discount_percent = 0;
   data.extra_discount_percent = 0; // sama periaate lisäalennukselle kuin alennus%:lle
   data.internal_note = null; // sisäinen huomio koskee tätä yksittäistä ostosta, ei mallia
   data.is_template = true;
   data.status = 'DRAFT';
   data.requires_invoice = false; // ei koske mallia, vain oikeaa myymälämyyntiä
-  data.template_name = trimmed;
-  // Loppusummat lasketaan tässä UUDELLEEN ilman alennusta, samasta syystä kuin tarjous.html:ssä.
+  data.template_name = name;
+
+  // Loppusummat JOHDETAAN Tuomon antamasta pyöreästä hinnasta, sama periaate kuin tarjous.html:ssä.
   const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
-  const vat = sub * computeQuoteVatRate(sections) / 100;
-  data.total_net = Math.round(sub * 100) / 100;
-  data.total_vat = Math.round(vat * 100) / 100;
-  data.total_gross = Math.round((sub + vat) * 100) / 100;
+  const vatRate = computeQuoteVatRate(sections);
+  const targetNet = targetGross / (1 + vatRate / 100);
+  data.discount_amount = Math.round((targetNet - sub) * 10000) / 10000;
+  data.total_net = Math.round(targetNet * 100) / 100;
+  data.total_vat = Math.round((targetGross - targetNet) * 100) / 100;
+  data.total_gross = Math.round(targetGross * 100) / 100;
 
   try {
     await sbPost('quotes', data);
-    alert('Tallennettu malliksi: "' + trimmed + '" — löytyy nyt Mallipohjat-välilehdeltä. Tämä ostos jatkuu ennallaan.');
+    closeTplSaveModal();
+    alert('Tallennettu malliksi: "' + name + '" — löytyy nyt Mallipohjat-välilehdeltä. Tämä ostos jatkuu ennallaan.');
     loadRowTemplates();
   } catch(e) {
     alert('Mallin tallennus epäonnistui.');
@@ -1638,6 +1737,8 @@ async function loadQuote(id) {
   document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'hidden';
   if (parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
   document.getElementById('requiresInvoice').checked = !!q.requires_invoice;
+  currentSourceTemplateName = q.source_template_name || null;
+  updateSourceTemplateUI(!!q.print_template_name);
   updatePrintButtonLabel();
   if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
   if (q.customer_id) {
@@ -1713,7 +1814,8 @@ function openPackingPage() {
 function printQuote() {
   if (!currentQuoteId) { alert('Tallenna ostos ensin.'); return; }
   const showPrices = '1';
-  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}`, '_blank');
+  const showTpl = (currentSourceTemplateName && document.getElementById('printTplName').checked) ? '1' : '0';
+  window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}&tpl=${showTpl}`, '_blank');
 }
 
 // =============================================
