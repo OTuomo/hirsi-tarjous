@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-09-28 18:14 -->
+<!-- Claude-versio: 2026-09-28 18:25 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -425,6 +425,36 @@
     <div id="kateModalBody" style="font-size:12px;"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" onclick="closeKateModal()">Sulje</button>
+    </div>
+  </div>
+</div>
+
+<!-- MALLIKSI TALLENNUS -MODAALI (2026-09-28) — korvaa vanhan prompt()-nimikyselyn. Tuomo saa
+     tässä valita mallille "sopivan" pyöreän hinnan (esim. 19895,89 -> 19890) sen sijaan että
+     malliin tallentuisi tuotteiden tarkka laskennallinen summa. Ks. CLAUDE.md "Mallin hinta". -->
+<div class="modal-overlay" id="tplSaveModal">
+  <div class="modal" style="width:420px;">
+    <h2>📑 Tallenna malliksi</h2>
+    <div class="field">
+      <label>Nimi *</label>
+      <input type="text" id="tplSaveName" placeholder="esim. Harjusauna 70x145">
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <label>Hinta (verollinen) *</label>
+      <input type="number" id="tplSavePrice" step="0.01" style="font-weight:600;color:var(--accent);">
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-ghost btn-xs" onclick="tplSaveRound(10)">Pyöristä 10 €:oon</button>
+      <button type="button" class="btn btn-ghost btn-xs" onclick="tplSaveRound(100)">Pyöristä 100 €:oon</button>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+      <label style="white-space:nowrap;">Oma väli:</label>
+      <input type="number" id="tplSaveRoundStep" value="10" step="1" min="1" style="width:80px;">
+      <button type="button" class="btn btn-ghost btn-xs" onclick="tplSaveRoundCustom()">Pyöristä</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeTplSaveModal()">Peruuta</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmSaveAsTemplate()">Tallenna malliksi</button>
     </div>
   </div>
 </div>
@@ -2396,34 +2426,72 @@ async function saveDraft() {
 // tarjoukseen (currentQuoteId) ei koskuta millään tavalla — käyttäjä jatkaa sen täyttämistä
 // normaalisti painikkeen painamisen jälkeen. Korvaa aiemman, rikkinäisen "Malli"-statusvalinnan
 // (se asetti vain status='MODEL' muttei koskaan is_template-lippua) — poistettu statusSelectistä.
-async function saveAsTemplate() {
-  const name = prompt('Anna mallille nimi (näkyy Mallipohjat-välilehdellä):');
-  if (name === null) return; // käyttäjä perui — ei tallenneta mitään
-  const trimmed = name.trim();
-  if (!trimmed) { alert('Mallille pitää antaa nimi.'); return; }
+function saveAsTemplate() {
+  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
+  const vatRate = computeQuoteVatRate(sections);
+  const currentGross = Math.round(sub * (1 + vatRate / 100) * 100) / 100;
+  document.getElementById('tplSaveName').value = '';
+  document.getElementById('tplSavePrice').value = currentGross;
+  document.getElementById('tplSaveRoundStep').value = 10;
+  document.getElementById('tplSaveModal').classList.add('open');
+  document.getElementById('tplSaveName').focus();
+}
+
+function closeTplSaveModal() {
+  document.getElementById('tplSaveModal').classList.remove('open');
+}
+
+// Pyöristys LÄHIMPÄÄN annettuun väliin, ei alaspäin (Tuomon vastaus 2026-09-28)
+function tplSaveRound(step) {
+  const el = document.getElementById('tplSavePrice');
+  const val = parseFloat(el.value) || 0;
+  el.value = Math.round(val / step) * step;
+  document.getElementById('tplSaveRoundStep').value = step;
+}
+
+function tplSaveRoundCustom() {
+  const step = parseFloat(document.getElementById('tplSaveRoundStep').value) || 0;
+  if (!(step > 0)) { alert('Anna kelvollinen pyöristysväli.'); return; }
+  tplSaveRound(step);
+}
+
+async function confirmSaveAsTemplate() {
+  const name = document.getElementById('tplSaveName').value.trim();
+  if (!name) { alert('Mallille pitää antaa nimi.'); return; }
+  const targetGross = parseFloat(document.getElementById('tplSavePrice').value);
+  if (!(targetGross > 0)) { alert('Anna kelvollinen hinta.'); return; }
 
   const data = buildQuoteData(currentStatus);
   data.customer_id = null;       // malli on geneerinen, ei sidottu tiettyyn asiakkaaseen
   data.quote_number = null;      // malleilla ei ole tarjousnumeroa (sama kuin Harjusauna/Täyspohja)
-  data.discount_amount = 0;
   data.discount_percent = 0;     // alkuperäisen tarjouksen alennus ei saa "periytyä" malliin
   data.extra_discount_percent = 0; // sama periaate lisäalennukselle
   data.internal_note = null;     // sisäinen huomio koskee tätä yksittäistä tarjousta, ei mallia
+  data.footer_text = null;       // 2026-09-28 (kohta 4): vakioteksti EI enää periydy malliin —
+                                  // käyttäjä valitsee pohjan itse kun malli otetaan käyttöön
+  data.source_template_name = null; // malli itse ei ole tehty mistään toisesta mallista
+  data.print_template_name = false;
   data.is_template = true;
   data.status = 'DRAFT';
-  data.template_name = trimmed;
-  // Loppusummat lasketaan tässä UUDELLEEN ilman alennusta (buildQuoteData laski ne yllä
-  // vielä alkuperäisen alennuksen kanssa) — muuten Mallipohjat-välilehden kortilla näkyvä
-  // hinta olisi ristiriidassa sen kanssa että discount_percent nollattiin juuri yllä.
+  data.template_name = name;
+
+  // Loppusummat JOHDETAAN Tuomon antamasta pyöreästä hinnasta (targetGross), ei tuotteiden
+  // tarkasta laskennallisesta summasta — sama "johda lopullisesta" -periaate kuin
+  // print_quote.html:n lisäalennuslaskennassa. discount_amount tallennetaan 4 desimaalilla
+  // ettei sentin pyöristys (ks. CLAUDE.md "sentin pyöristysvirhe") saa YHT:tä eroamaan
+  // annetusta pyöreästä hinnasta.
   const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
-  const vat = sub * computeQuoteVatRate(sections) / 100;
-  data.total_net = Math.round(sub * 100) / 100;
-  data.total_vat = Math.round(vat * 100) / 100;
-  data.total_gross = Math.round((sub + vat) * 100) / 100;
+  const vatRate = computeQuoteVatRate(sections);
+  const targetNet = targetGross / (1 + vatRate / 100);
+  data.discount_amount = Math.round((targetNet - sub) * 10000) / 10000;
+  data.total_net = Math.round(targetNet * 100) / 100;
+  data.total_vat = Math.round((targetGross - targetNet) * 100) / 100;
+  data.total_gross = Math.round(targetGross * 100) / 100;
 
   try {
     await sbPost('quotes', data);
-    alert('Tallennettu malliksi: "' + trimmed + '" — löytyy nyt Mallipohjat-välilehdeltä. Tämä tarjous jatkuu ennallaan.');
+    closeTplSaveModal();
+    alert('Tallennettu malliksi: "' + name + '" — löytyy nyt Mallipohjat-välilehdeltä. Tämä tarjous jatkuu ennallaan.');
     loadRowTemplates(); // päivittää "Lataa malli"-pudotusvalikon heti, ilman sivun päivitystä
   } catch(e) {
     alert('Mallin tallennus epäonnistui.');
