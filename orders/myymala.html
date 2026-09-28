@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-09-28 19:05 -->
+<!-- Claude-versio: 2026-09-28 20:15 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -165,6 +165,11 @@
   .status-badge.archived { background: #2a2a2a; color: #666; }
   .stale-banner { display: none; align-items: center; gap: 10px; background: #3d2e1e; border: 1px solid var(--warn); color: var(--warn); font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
   .stale-banner.show { display: flex; }
+  /* MALLITILA (2026-09-28, kohta 2) — sama toteutus kuin tarjous.html:ssä. */
+  .template-mode-banner { display: none; align-items: center; gap: 14px; flex-wrap: wrap; background: #2a1e3d; border: 1px solid #c084fc; color: #c084fc; font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
+  .template-mode-banner .tpl-name-field { display: flex; align-items: center; gap: 8px; }
+  .template-mode-banner .tpl-name-field input { width: 220px; padding: 5px 8px; font-size: 13px; background: var(--input-bg); border: 1px solid #c084fc; color: var(--text); border-radius: 4px; }
+  .template-mode-banner .tpl-unsaved { color: var(--warn); font-weight: 600; display: none; }
   /* Sisäinen huomio (2026-08) — ei koskaan tulostu, näkyy vain tässä sovelluksessa. Sama
      amber-varoitusväri kuin stale-bannerissa (tarjous.html), jotta erottuu selvästi "tämä ei
      mene asiakkaalle" — eri asia kuin yllä oleva "Huomiot"-kenttä joka TULOSTUU kuittiin. */
@@ -230,9 +235,9 @@
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
     <button class="btn btn-secondary" id="noteToggleBtn" onclick="toggleInternalNote()" style="padding:6px 14px;font-size:12px;" title="Sisäinen huomio — näkyy vain tässä sovelluksessa, ei koskaan tulosteessa">🔒 Sisäinen huomio</button>
-    <button class="btn btn-secondary" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
-    <button class="btn btn-secondary" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna ostos</button>
-    <button class="btn btn-secondary" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä ostos jatkuu ennallaan">📑 Tallenna malliksi</button>
+    <button class="btn btn-secondary" id="btnPakkauslista" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
+    <button class="btn btn-secondary" id="saveDraftBtn" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna ostos</button>
+    <button class="btn btn-secondary" id="btnSaveAsTemplate" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä ostos jatkuu ennallaan">📑 Tallenna malliksi</button>
   </div>
 </header>
 
@@ -329,6 +334,16 @@
 </div>
 
 <div class="page">
+  <div id="deletedBanner" style="display:none;align-items:center;gap:10px;background:#3d1e1e;border:1px solid #e05252;color:#e05252;font-size:13px;padding:10px 16px;border-radius:6px;margin-bottom:16px;font-family:'IBM Plex Sans',sans-serif;">🗑 Tämä ostos/malli on poistettu — ei enää näy tarjoukset.html-listalla, avautuu vain tällä suoralla linkillä.</div>
+  <div class="template-mode-banner" id="templateModeBanner">
+    <strong>📑 MALLITILA</strong>
+    <span class="tpl-name-field">
+      <label for="tplEditName">Mallin nimi</label>
+      <input type="text" id="tplEditName" oninput="onTplEditNameInput()" placeholder="esim. Kovapaleteri">
+    </span>
+    <span>Muokkaat mallipohjaa — ei asiakkaan ostosta.</span>
+    <span class="tpl-unsaved" id="tplUnsavedNotice">● Tallentamattomia muutoksia — muista painaa "💾 Tallenna malli"</span>
+  </div>
   <div class="internal-note-panel" id="internalNotePanel">
     <label>🔒 Sisäinen huomio — ei näy tulosteessa, vain täällä</label>
     <textarea id="internalNote" oninput="onInternalNoteInput()" placeholder="Esim. asiakkaan erikoistoive tai muu muistettava yksityiskohta..." rows="3"></textarea>
@@ -339,7 +354,7 @@
     <div class="panel-header">Perustiedot</div>
     <div class="panel-body">
       <div class="basics-grid">
-        <div class="field">
+        <div class="field" id="fieldCustomer">
           <label>Asiakas</label>
           <div class="customer-row">
             <div class="customer-search-wrap">
@@ -357,7 +372,7 @@
           <label>Päivämäärä</label>
           <input type="date" id="quoteDate" onchange="autoSave()">
         </div>
-        <div class="field field-quotenum">
+        <div class="field field-quotenum" id="fieldQuoteNumber">
           <label>Kuittinumero</label>
           <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
         </div>
@@ -366,7 +381,7 @@
         <label>Huomiot</label>
         <input type="text" id="quoteRef" placeholder="Vapaa huomio ostosta" oninput="autoSave()">
       </div>
-      <div class="field" style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+      <div class="field" style="margin-top:10px;display:flex;align-items:center;gap:8px;" id="rowRequiresInvoice">
         <input type="checkbox" id="requiresInvoice" onchange="onRequiresInvoiceChange()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;">
         <label for="requiresInvoice" style="margin:0;cursor:pointer;font-weight:400;" title="Rastita jos ostos ei ole maksettu heti kassaan, vaan Sanna laskuttaa asiakasta erikseen. Ei vaikuta tilaan (pysyy Valmiina), mutta näkyy laskutus.html:ssä ja muuttaa tulosteen kuitista tilausvahvistukseksi.">Laskutetaan erikseen (ei maksettu heti kassaan)</label>
       </div>
@@ -397,13 +412,18 @@
   <div class="summary-panel">
     <table class="summary-table">
       <tr><td class="label">Välisumma</td><td class="value" id="sumSubtotal">0,00 €</td></tr>
-      <tr>
+      <tr id="rowDiscountPercent">
         <td class="label">Alennus %</td>
         <td class="value">
           <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
             <input class="adj" type="number" id="discountPercent" value="0" step="0.1" min="0" max="100" oninput="onDiscountPercentInput()">
-            <button type="button" onclick="openKateModal()" title="Näytä koko kaupan kateprosentti" style="padding:3px 7px;font-size:10px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;white-space:nowrap;">📊 Kate</button>
           </div>
+        </td>
+      </tr>
+      <tr id="rowKateBtn">
+        <td class="label"></td>
+        <td class="value">
+          <button type="button" onclick="openKateModal()" title="Näytä koko kaupan kateprosentti" style="padding:3px 7px;font-size:10px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;white-space:nowrap;">📊 Kate</button>
         </td>
       </tr>
       <tr>
@@ -414,9 +434,17 @@
       <tr><td class="label">ALV 25,5%</td><td class="value" id="sumVat">0,00 €</td></tr>
       <tr class="big">
         <td class="label">YHT (verollinen)</td>
-        <td class="value"><input class="adj" type="number" id="adjGross" value="0" step="0.01" oninput="onGrossInput()" style="font-size:15px;font-weight:600;color:var(--accent);width:110px;"></td>
+        <td class="value">
+          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+            <input class="adj" type="number" id="adjGross" value="0" step="0.01" oninput="onGrossInput()" style="font-size:15px;font-weight:600;color:var(--accent);width:110px;">
+          </div>
+          <div id="tplGrossRoundBtns" style="display:none;gap:6px;justify-content:flex-end;margin-top:6px;">
+            <button type="button" class="btn btn-ghost btn-xs" onclick="tplGrossRound(10)">Pyöristä 10 €</button>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="tplGrossRound(100)">Pyöristä 100 €</button>
+          </div>
+        </td>
       </tr>
-      <tr>
+      <tr id="rowExtraDiscount">
         <td colspan="2">
           <button type="button" class="extra-discount-toggle" id="extraDiscountToggleBtn" onclick="toggleExtraDiscount()">➕ Lisäalennus ▾</button>
           <div class="extra-discount-panel" id="extraDiscountPanel">
@@ -522,6 +550,52 @@ function updateSourceTemplateUI(checked) {
 }
 
 // =============================================
+// MALLITILA (2026-09-28, kohta 2) — sama periaate kuin tarjous.html:ssä: kun avattu rivi ON
+// mallipohja (is_template=true), piilotetaan kentät jotka eivät koske mallia (asiakas,
+// kuittinumero, laskutetaan erikseen -rasti, alennus%, lisäalennus, pakkauslista, tulostus)
+// ja kytketään autosave pois päältä. Tallennus vain "💾 Tallenna malli" -napista.
+let isTemplateMode = false;
+let hasUnsavedTemplateChanges = false;
+
+function enterTemplateMode(name) {
+  isTemplateMode = true;
+  document.getElementById('fieldCustomer').style.display = 'none';
+  document.getElementById('fieldQuoteNumber').style.display = 'none';
+  document.getElementById('rowRequiresInvoice').style.display = 'none';
+  document.getElementById('btnPakkauslista').style.display = 'none';
+  document.getElementById('printQuoteBtn').style.display = 'none';
+  document.getElementById('rowDiscountPercent').style.display = 'none';
+  document.getElementById('rowExtraDiscount').style.display = 'none';
+  document.getElementById('extraDiscountPanel').classList.remove('show');
+  document.getElementById('tplGrossRoundBtns').style.display = 'flex';
+  document.getElementById('saveDraftBtn').textContent = '💾 Tallenna malli';
+  document.getElementById('templateModeBanner').style.display = 'flex';
+  document.getElementById('tplEditName').value = name || '';
+}
+
+function onTplEditNameInput() {
+  markTemplateUnsaved();
+}
+
+function markTemplateUnsaved() {
+  if (!isTemplateMode) return;
+  hasUnsavedTemplateChanges = true;
+  document.getElementById('tplUnsavedNotice').style.display = 'inline';
+}
+
+function clearTemplateUnsaved() {
+  hasUnsavedTemplateChanges = false;
+  document.getElementById('tplUnsavedNotice').style.display = 'none';
+}
+
+function tplGrossRound(step) {
+  const el = document.getElementById('adjGross');
+  const val = parseFloat(el.value) || 0;
+  el.value = Math.round(val / step) * step;
+  onGrossInput();
+}
+
+// =============================================
 // INIT
 // =============================================
 window.addEventListener('DOMContentLoaded', async () => {
@@ -583,7 +657,7 @@ async function fetchNextQuoteNumber() {
 // =============================================
 async function loadRowTemplates() {
   try {
-    const data = await sbGet('quotes', '?is_template=eq.true&select=id,template_name,quote_number&order=template_name.asc');
+    const data = await sbGet('quotes', '?is_template=eq.true&deleted_at=is.null&select=id,template_name,quote_number&order=template_name.asc');
     if (!Array.isArray(data)) return;
     rowTemplates = data;
     const sel = document.getElementById('rowTemplateSelect');
@@ -1568,10 +1642,11 @@ function buildQuoteData(status) {
   return {
     customer_id: document.getElementById('customerId').value || null,
     quote_number: document.getElementById('quoteNumber').value || null,
-    status: 'COMPLETED', // myymäläostos katsotaan aina "valmiiksi/toimitetuksi" heti — ei tilavirtaa.
-                          // Huom: tämä EI tarkoita että se on maksettu, ks. requires_invoice alla.
+    // Mallitilassa (2026-09-28, kohta 2) status pysyy DRAFT:na (sama käytäntö kuin
+    // confirmSaveAsTemplate():ssa) — vain oikea kassamyynti on aina COMPLETED.
+    status: isTemplateMode ? 'DRAFT' : 'COMPLETED', // Huom: tämä EI tarkoita että se on maksettu, ks. requires_invoice alla.
     sale_type: 'myymala',
-    requires_invoice: document.getElementById('requiresInvoice').checked, // true = ei maksettu heti kassaan, Sanna laskuttaa erikseen
+    requires_invoice: isTemplateMode ? false : document.getElementById('requiresInvoice').checked, // true = ei maksettu heti kassaan, Sanna laskuttaa erikseen; ei koske mallia
     notes: document.getElementById('quoteRef').value || null,
     internal_note: document.getElementById('internalNote').value.trim() || null,
     discount_amount: adj,
@@ -1579,7 +1654,8 @@ function buildQuoteData(status) {
     extra_discount_percent: extraDiscountPercent,
     extra_discount_display: document.getElementById('extraDiscountDisplay').value || 'hidden',
     sections_json: JSON.stringify(sections),
-    is_template: false,
+    is_template: isTemplateMode,
+    template_name: isTemplateMode ? (document.getElementById('tplEditName').value.trim() || null) : undefined,
     source_template_name: currentSourceTemplateName,
     print_template_name: currentSourceTemplateName ? document.getElementById('printTplName').checked : false,
     total_net: Math.round(noTax * scale * 100) / 100,
@@ -1602,6 +1678,7 @@ async function saveDraft() {
     }
     el.className = 'saving ok'; el.textContent = '✓ Tallennettu';
     setTimeout(() => { if (el.textContent === '✓ Tallennettu') el.textContent = ''; }, 2500);
+    if (isTemplateMode) clearTemplateUnsaved();
   } catch(e) {
     el.className = 'saving err'; el.textContent = 'Virhe tallennuksessa';
   }
@@ -1704,6 +1781,9 @@ function onInternalNoteInput() {
 let _autoSaveTimer = null;
 
 function autoSave() {
+  // Mallitilassa (2026-09-28, kohta 2) EI autosavea — malli tallentuu vain "💾 Tallenna malli"
+  // -napista.
+  if (isTemplateMode) { markTemplateUnsaved(); return; }
   const el = document.getElementById('saveStatus');
   // Jos ei vielä ID:tä, tallenna heti (uusi tarjous)
   if (!currentQuoteId) {
@@ -1741,6 +1821,8 @@ async function loadQuote(id) {
   updateSourceTemplateUI(!!q.print_template_name);
   updatePrintButtonLabel();
   if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
+  if (q.is_template) enterTemplateMode(q.template_name); // kohta 2 (2026-09-28) — piilottaa mallille kuulumattomat kentät
+  document.getElementById('deletedBanner').style.display = q.deleted_at ? 'flex' : 'none'; // kohta 3
   if (q.customer_id) {
     const cust = customers.find(c => c.id === q.customer_id);
     if (cust) setCustomer(cust.id, cust.name);
