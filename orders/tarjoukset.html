@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Claude-versio: 2026-09-28 19:20 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -548,7 +549,11 @@ async function renameTemplate(id) {
 }
 
 function copyTemplate(id) {
-  window.location.href = 'tarjous.html?copy=' + id + '&keepPrices=1';
+  // 2026-09-28 (kohta 1/5): kysytään säilytetäänkö mallin tallennetut hinnat ja pyöristys,
+  // vai haetaanko tuoreet hinnat hinnastosta — sama valinta kuin tarjous.html:n/myymala.html:n
+  // "Lataa malli" -toiminnossa.
+  const keepPrices = confirm('Kopioidaanko malli tallennetuilla hinnoilla?\n\nOK = Säilytä mallin hinnat (ja pyöristys)\nPeruuta = Hae uudet hinnat hinnastosta');
+  window.location.href = 'tarjous.html?copy=' + id + '&keepPrices=' + (keepPrices ? '1' : '0');
 }
 
 function esc(s) {
