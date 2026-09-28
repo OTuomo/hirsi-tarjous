@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-09-28 19:20 -->
+<!-- Claude-versio: 2026-09-28 20:15 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -470,7 +470,7 @@ async function loadQuotes() {
   const { data: { session } } = await window._supabaseClient.auth.getSession();
   const token = session ? session.access_token : SUPABASE_KEY;
   const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/quotes?select=id,quote_number,created_at,valid_until,status,total_gross,delivery_type,delivery_week,is_template,template_name,customers(name)&order=created_at.desc`,
+    `${SUPABASE_URL}/rest/v1/quotes?deleted_at=is.null&select=id,quote_number,created_at,valid_until,status,total_gross,delivery_type,delivery_week,is_template,template_name,sale_type,customers(name)&order=created_at.desc`,
     { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` }, cache: 'no-store' }
   );
   const data = await r.json();
@@ -518,7 +518,11 @@ function renderTemplates() {
       + '</div>'
       + '<div class="tpl-card-meta"><span>Toimitus: ' + esc(toim) + '</span>' + asiakas + '</div>'
       + '<div class="tpl-card-price">' + hinta + '</div>'
-      + '<button class="tpl-card-btn" onclick="copyTemplate(\'' + t.id + '\')">+ Kopioi uudeksi tarjoukseksi</button>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;">'
+      + '<button class="tpl-card-btn" style="margin-top:0;flex:1;" onclick="editTemplate(\'' + t.id + '\')" title="Avaa malli muokattavaksi (mallitila)">✎ Muokkaa</button>'
+      + '<button class="tpl-card-btn" style="margin-top:0;flex:1;" onclick="copyTemplate(\'' + t.id + '\')">+ Kopioi uudeksi tarjoukseksi</button>'
+      + '<button class="tpl-card-btn" style="margin-top:0;background:transparent;color:#e05252;border:1px solid #e05252;" onclick="deleteQuote(\'' + t.id + '\')" title="Poista malli">🗑</button>'
+      + '</div>'
       + '</div>';
   }).join('');
 }
@@ -546,6 +550,18 @@ async function renameTemplate(id) {
   }
   t.template_name = trimmed;
   renderTemplates();
+}
+
+// 2026-09-28 (kohta 2): avaa mallin suoraan tarjous.html:ään muokattavaksi (mallitila) —
+// eri asia kuin copyTemplate(), joka luo UUDEN tarjouksen mallin pohjalta. Tässä muokataan
+// itse mallipohjaa (tarjous.html tunnistaa is_template=true:n ja piilottaa asiaankuulumattomat
+// kentät automaattisesti, ks. tarjous.html:n enterTemplateMode()).
+function editTemplate(id) {
+  // Myymälästä tallennetut mallit (sale_type='myymala') muokataan myymala.html:ssä, koska
+  // sen kentät (esim. "Laskutetaan erikseen") eroavat tarjous.html:stä — muut mallit tarjous.html:ssä.
+  const t = allQuotes.find(x => x.id === id);
+  const dest = (t && t.sale_type === 'myymala') ? 'myymala.html' : 'tarjous.html';
+  window.location.href = dest + '?id=' + id;
 }
 
 function copyTemplate(id) {
@@ -688,6 +704,7 @@ function renderTable(rows) {
       </td>
       <td onclick="event.stopPropagation()" style="white-space:nowrap;display:flex;gap:6px;align-items:center;">
         <button class="copy-btn" onclick="kopioi('${q.id}')">⧉ Kopioi</button>
+        ${q.status === 'ARCHIVED' ? `<button class="copy-btn" style="color:#e05252;border-color:#e05252;" onclick="deleteQuote('${q.id}')" title="Poista arkistoitu tarjous">🗑</button>` : ''}
         <span class="dim">›</span>
       </td>
     </tr>`;
@@ -758,6 +775,37 @@ async function setStatus(id, status, isTemplate) {
   applyFilters();
   document.querySelectorAll('.status-menu').forEach(m => m.classList.remove('open'));
   if (isTemplate) alert('Merkitty malliksi: "' + body.template_name + '" — näkyy nyt Mallipohjat-välilehdellä.');
+}
+
+// =============================================
+// POISTO (2026-09-28, kohta 3) — PEHMEÄ POISTO (deleted_at-sarake), ei koskaan oikeaa
+// SQL DELETE:ä. Supabasen ilmaistasolla ei ole point-in-time-palautusta, ja tarjouksiin
+// viittaa order_milestones/invoice_items, joten kovapoisto olisi riski. Poistettu tarjous
+// vain katoaa listoilta (deleted_at is null -suodatus) — suora ?id=-linkki näyttää silti
+// varoitusbannerin, ei estä avaamista (ks. tarjous.html/myymala.html loadQuote()).
+// Tavallinen tarjous: poisto sallittu VAIN Arkisto-tilasta (Tuomon vastaus 2026-09-28, "vain
+// arkistosta poisto"). Malli: poisto sallittu aina (Tuomon vastaus "Voi poistaa").
+async function deleteQuote(id) {
+  const q = allQuotes.find(x => x.id === id);
+  const label = q ? (q.is_template ? (q.template_name || 'malli') : (q.quote_number || 'tarjous')) : 'tämä rivi';
+  if (!confirm('Poistetaanko "' + label + '"?\n\nSe katoaa listoilta, muttei häviä kannasta pysyvästi.')) return;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/quotes?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json', Prefer: 'return=representation'
+    },
+    body: JSON.stringify({ deleted_at: new Date().toISOString() })
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    alert('Poisto epäonnistui.\n' + errText);
+    return;
+  }
+  allQuotes = allQuotes.filter(x => x.id !== id);
+  updateCounts();
+  applyFilters();
+  if (currentTab === 'templates') renderTemplates();
 }
 
 function toggleMenu(id, e) {
