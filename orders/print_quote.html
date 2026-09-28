@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Claude-versio: 2026-09-28 19:35 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -232,6 +233,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const id = params.get('id');
   const showPrices = params.get('prices') !== '0';
   const showQty = showPrices && params.get('qty') !== '0';
+  const showTpl = params.get('tpl') === '1'; // mallin nimi tulosteessa (2026-09-28, kohta 5)
   if (!id) { document.getElementById('root').textContent = 'Tarjousnumero puuttuu URL:sta.'; return; }
 
   const [quoteArr, custArr] = await Promise.all([
@@ -388,6 +390,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     </div>
 
     ${q.notes ? `<div style="font-size:10pt;font-weight:600;margin-bottom:2mm;text-align:left;">${q.notes}</div>` : ''}
+    ${(!isReceipt && !isMyymalaInvoice && showTpl && q.source_template_name) ? `<div style="font-size:10pt;font-weight:600;margin-bottom:2mm;text-align:left;">Malli: ${q.source_template_name}</div>` : ''}
     <div class="intro-text">${isReceipt ? 'Kiitos ostoksestasi!' : isMyymalaInvoice ? 'Toimitus/palvelu on suoritettu. Lasku lähetetään erikseen.' : 'Kiitämme tarjouspyynnöstänne. Tarjoamme tuotteitamme teille seuraavasti:'}</div>
 
     <table class="product-table">
