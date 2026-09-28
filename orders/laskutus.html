@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Claude-versio: 2026-09-28 20:30 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -371,6 +372,7 @@ async function loadData() {
     .select('id, quote_number, total_gross, status, sale_type, requires_invoice, customers(name)')
     .in('status', ['ORDERED', 'COMPLETED'])
     .or('sale_type.neq.myymala,requires_invoice.eq.true')
+    .is('deleted_at', null) // 2026-09-28 (kohta 3) — poistetut tarjoukset pois laskutusnäkymästä
     .order('created_at', { ascending: false });
 
   if (qErr) { showToast('Virhe projektien latauksessa', 'error'); return; }
