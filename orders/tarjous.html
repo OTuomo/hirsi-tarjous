@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Claude-versio: 2026-09-28 18:14 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -834,6 +835,7 @@ async function loadTextTemplates() {
 }
 
 function applyTextTemplate(val) {
+  const sel = document.getElementById('textTemplateSelect');
   if (val === '__none__') {
     document.getElementById('defaultText').value = '';
     return;
@@ -841,9 +843,30 @@ function applyTextTemplate(val) {
   if (!val) return;
   const t = textTemplates.find(x => String(x.id) === String(val));
   if (t) {
-    if (document.getElementById('defaultText').value && !confirm('Korvataanko nykyinen teksti valitulla pohjalla?')) return;
+    if (document.getElementById('defaultText').value && !confirm('Korvataanko nykyinen teksti valitulla pohjalla?')) {
+      // Peruutettu — valikko oli jo ehtinyt vaihtua uuteen pohjaan vaikka teksti ei muuttunut.
+      // Palautetaan valikko vastaamaan nykyistä tekstiä ettei se jää virheellisesti "jumiin"
+      // valitulle pohjalle (2026-09-28, ks. CLAUDE.md "Vakiotekstien valikon synkronointi").
+      syncTextTemplateSelect();
+      return;
+    }
     document.getElementById('defaultText').value = t.content;
   }
+  sel.value = val;
+}
+
+// Vakiotekstien valikon synkronointi (2026-09-28) — pitää "Pohja:"-valikon vastaamassa
+// defaultText-kentän TODELLISTA sisältöä sen sijaan että valikko jäisi näyttämään mitä
+// tahansa se sattui näyttämään edellisestä tarjouksesta/mallista. Kutsutaan aina kun
+// defaultText asetetaan ohjelmallisesti (loadQuote, copyQuoteFrom) ja applyTextTemplate():n
+// peruutuksen jälkeen. Jos teksti täsmää johonkin tallennettuun pohjaan sanatarkasti,
+// valikko näyttää sen nimeä; muuten valikko palaa oletukseen "— valitse pohja —".
+function syncTextTemplateSelect() {
+  const sel = document.getElementById('textTemplateSelect');
+  const text = document.getElementById('defaultText').value || '';
+  if (!text) { sel.value = ''; return; }
+  const match = textTemplates.find(t => t.content === text);
+  sel.value = match ? match.id : '';
 }
 
 // =============================================
@@ -2474,6 +2497,7 @@ async function loadQuote(id) {
   document.getElementById('noteToggleBtn').classList.toggle('has-note', !!q.internal_note);
   if (q.internal_note) document.getElementById('internalNotePanel').classList.add('show');
   document.getElementById('defaultText').value = q.footer_text || '';
+  syncTextTemplateSelect();
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
   document.getElementById('extraDiscountPercent').value = q.extra_discount_percent || 0;
@@ -2524,6 +2548,7 @@ async function copyQuoteFrom(id, keepPrices) {
   document.getElementById('noteToggleBtn').classList.toggle('has-note', !!q.internal_note);
   if (q.internal_note) document.getElementById('internalNotePanel').classList.add('show');
   document.getElementById('defaultText').value = q.footer_text || '';
+  syncTextTemplateSelect();
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
   document.getElementById('extraDiscountPercent').value = q.extra_discount_percent || 0;
