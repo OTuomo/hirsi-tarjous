@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-10-01 18:00 -->
+<!-- Claude-versio: 2026-10-01 18:11 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -541,6 +541,9 @@
   .todo-modal-badge.low    { background: #f1f5f9; color: #64748b; }
   .todo-modal-badge.shared { background: var(--todo-bg); color: var(--todo-fg); }
   .todo-modal-badge.done   { background: #dcfce7; color: #15803d; }
+  /* Katseluikkunassa on nyt kolme nappia — rivitetään kapealla ruudulla */
+  #todoModal .form-actions { flex-wrap: wrap; }
+  #todoModal .form-actions .btn { white-space: nowrap; }
 
   /* ── UUDEN TEHTÄVÄN LOMAKE (2026-10-01) ───────────────────
      Sama sisältö kuin todo.html:n lomakkeessa. Tunnisteet on prefiksoitu (#addTodoModal, at*), ettei
@@ -785,6 +788,7 @@
     </div>
     <div class="form-actions">
       <button class="btn" onclick="closeTodoModal()">Sulje</button>
+      <button class="btn" type="button" id="todoModalDoneBtn" onclick="toggleTodoDoneFromModal()">✓ Merkitse tehdyksi</button>
       <a class="btn btn-accent" href="todo.html" id="todoModalLink">Avaa Muistilista →</a>
     </div>
   </div>
@@ -1921,8 +1925,12 @@ function buildHalfRow(w, mo, nowKey, sel) {
 }
 
 // ── Todo modal ─────────────────────────────────────────
+let currentModalTodo = null; // ikkunassa auki oleva tehtävä (sama olio kuin todos-taulukossa)
+let todoDoneSaving = false;
+
 function openTodoModal(t) {
   const PRIORITY_FI = { high: 'Korkea', normal: 'Normaali', low: 'Matala' };
+  currentModalTodo = t;
 
   document.getElementById('todoModalTitle').textContent = t.title;
   document.getElementById('todoModalNotes').textContent = t.notes || '—';
@@ -1936,6 +1944,7 @@ function openTodoModal(t) {
   const doneEl = document.getElementById('todoModalDone');
   doneEl.textContent = t.is_done ? 'Tehty' : 'Tekemättä';
   doneEl.className = 'todo-modal-badge ' + (t.is_done ? 'done' : 'normal');
+  document.getElementById('todoModalDoneBtn').textContent = t.is_done ? '↺ Palauta tekemättömäksi' : '✓ Merkitse tehdyksi';
 
   const dueDateEl = document.getElementById('todoModalDueDate');
   if (t.due_date) {
@@ -1953,10 +1962,46 @@ function openTodoModal(t) {
 
 function closeTodoModal() {
   document.getElementById('todoModal').classList.remove('open');
+  currentModalTodo = null;
 }
 document.getElementById('todoModal').addEventListener('click', e => {
   if (e.target === document.getElementById('todoModal')) closeTodoModal();
 });
+
+// Merkitsee ikkunassa auki olevan tehtävän tehdyksi / palauttaa tekemättömäksi. Kentät samat kuin
+// todo.html:n toggleDone: is_done + done_at. Tehdyt tehtävät pysyvät kalenterissa himmennettyinä
+// ✓-merkillä (kuten ennenkin), joten ne voi palauttaa samasta ikkunasta.
+async function toggleTodoDoneFromModal() {
+  const t = currentModalTodo;
+  if (!t || todoDoneSaving) return;
+  const done = !t.is_done;
+  const btn = document.getElementById('todoModalDoneBtn');
+  todoDoneSaving = true;
+  btn.disabled = true;
+  try {
+    // .select() palauttaa päivitetyn rivin; tyhjä vastaus = päivitys ei osunut mihinkään (esim. ei oikeutta)
+    const { data, error } = await db.from('todos')
+      .update({ is_done: done, done_at: done ? new Date().toISOString() : null })
+      .eq('id', t.id)
+      .select();
+    if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
+    if (!data || data.length === 0) { showToast('Päivitys ei onnistunut — tehtävää ei voitu muuttaa', 'error'); return; }
+
+    t.is_done = done;
+    closeTodoModal();
+    // Päivämäärä jonka lohkot piirretään uusiksi: tehtävän päivä, tai pelkän viikon tehtävällä viikon maanantai
+    const refreshDate = t.due_date || (t.due_week ? dateToStr(weekKeyToMonday(t.due_week)) : null);
+    if (refreshDate) refreshCalendarForDate(refreshDate);
+    else renderCalendar();
+    showToast(done ? 'Merkitty tehdyksi' : 'Palautettu tekemättömäksi', 'success');
+  } catch (e) {
+    console.error('toggleTodoDoneFromModal:', e);
+    showToast('Tallennus epäonnistui', 'error');
+  } finally {
+    todoDoneSaving = false;
+    btn.disabled = false;
+  }
+}
 
 // ── Uuden tehtävän lisäys kalenterista (2026-10-01) ────
 // Tallentaa samaan todos-tauluun kuin todo.html, samoilla kentillä (due_date + due_week + due_time),
@@ -2048,7 +2093,7 @@ async function saveAddTodo() {
     else await loadData(); // varalta: jos insert ei palauttanut riviä, haetaan tiedot uudelleen
 
     closeAddTodo();
-    refreshCalendarAfterTodoAdd(dueDate);
+    refreshCalendarForDate(dueDate);
     showToast('Tehtävä lisätty', 'success');
   } catch (e) {
     console.error('saveAddTodo:', e);
@@ -2059,16 +2104,20 @@ async function saveAddTodo() {
   }
 }
 
-// Piirtää uudelleen vain ne kuukausilohkot, joihin uusi tehtävä vaikuttaa, ja pitää ruudulla
-// näkyvän kohdan paikallaan. Päiväruutu on päivän omassa kuukausilohkossa; puhelimen viikkolista
-// taas on sen kuukauden lohkossa, jossa viikon torstai on — siksi päivitetään molemmat.
-function refreshCalendarAfterTodoAdd(dateStr) {
+// Piirtää uudelleen vain ne kuukausilohkot, joihin tehtävän lisäys tai muutos vaikuttaa, ja pitää
+// ruudulla näkyvän kohdan paikallaan. Päiväruutu on päivän omassa kuukausilohkossaan; puhelimen
+// viikkolista taas on sen kuukauden lohkossa, jossa viikon torstai on; ja pelkän viikon tehtävä
+// näkyy työpöydällä myös kuun 1. päivän ruudussa — siksi päivitetään kaikki viikon kuukaudet
+// (päivän, torstain ja sunnuntain kuukausi).
+function refreshCalendarForDate(dateStr) {
   if (effectiveMode() === 'half') { renderHalfYear(); return; }
   const d = parseDateStr(dateStr);
   const wk = getWeekNumber(d);
-  const thu = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() || 7) - 1) + 3);
+  const mondayOffset = (d.getDay() || 7) - 1;
+  const thu = new Date(d.getFullYear(), d.getMonth(), d.getDate() - mondayOffset + 3);
+  const sun = new Date(d.getFullYear(), d.getMonth(), d.getDate() - mondayOffset + 6);
   const targets = new Map();
-  [d, thu].forEach(x => targets.set(x.getFullYear() + '-' + x.getMonth(), [x.getFullYear(), x.getMonth()]));
+  [d, thu, sun].forEach(x => targets.set(x.getFullYear() + '-' + x.getMonth(), [x.getFullYear(), x.getMonth()]));
 
   const wrap = document.getElementById('months');
   // Ankkuri = näkyvissä oleva päiväruutu (työpöytä) tai viikkolohko (puhelin); piilotetun
