@@ -1,564 +1,2123 @@
 <!DOCTYPE html>
+<!-- Claude-versio: 2026-10-01 18:00 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Muistilista — Okkosen Puutuote</title>
+<title>Kalenteri — Okkosen Puutuote</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth-guard.js"></script>
 <style>
-:root{--bg:#faf7f2;--bg2:#f3ede4;--bg3:#ede4d8;--panel:#ffffff;--border:#e0d4c4;--border2:#cfc0ac;--accent:#d97706;--accent-dim:#b45309;--accent-bg:rgba(217,119,6,0.10);--text:#2a1f14;--text-mid:#6b4f38;--text-dim:#a08878;--shadow:0 1px 4px rgba(100,60,20,0.08);--radius:6px;--red:#dc2626;--yellow:#d97706;--green:#16a34a;}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;min-height:100vh;}
-header{background:var(--panel);border-bottom:2px solid var(--accent);padding:10px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
-header .logo{height:32px;width:auto;}
-.nav-menu-wrap{position:relative;}
-.nav-btn{background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:6px 12px;border-radius:4px;cursor:pointer;letter-spacing:.04em;}
-.nav-btn:hover{background:var(--bg3);}
-.nav-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--panel);border:1px solid var(--border2);border-radius:var(--radius);min-width:200px;z-index:999;box-shadow:0 4px 16px rgba(100,60,20,0.15);overflow:hidden;}
-.nav-dropdown.open{display:block;}
-.nav-section-label{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);padding:8px 14px 4px;}
-.nav-item{display:block;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);text-decoration:none;transition:background .1s;}
-.nav-item:hover{background:var(--accent-bg);color:var(--accent);}
-.nav-item.current{color:var(--accent);font-weight:600;}
-header h1{font-size:16px;font-weight:500;}
-.header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--panel);color:var(--text-mid);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.03em;white-space:nowrap;}
-.btn:hover{background:var(--bg2);color:var(--text);border-color:var(--accent);}
-.btn-accent{background:var(--accent);color:white;border-color:var(--accent);}
-.btn-accent:hover{background:var(--accent-dim);border-color:var(--accent-dim);color:white;}
-.btn-sm{padding:4px 10px;font-size:11px;}
-.page{max-width:1100px;margin:0 auto;padding:24px;}
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;}
-.page-header h2{font-size:20px;font-weight:600;}
-.show-done-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;}
-.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);}
-.tab-btn{padding:8px 16px;border:none;background:none;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;letter-spacing:.04em;}
-.tab-btn:hover{color:var(--text);}
-.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
-.columns{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-.col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);}
-.col-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-mid);}
-.col-title.shared{color:var(--accent);}
-.todo-list{display:flex;flex-direction:column;gap:8px;min-height:40px;}
-.todo-item{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--border2);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:flex-start;gap:10px;box-shadow:var(--shadow);transition:opacity .2s;}
-.todo-item.done{opacity:.45;}
-.todo-item.priority-high{border-left-color:var(--red);}
-.todo-item.priority-normal{border-left-color:var(--yellow);}
-.todo-item.priority-low{border-left-color:var(--green);}
-.todo-check{width:18px;height:18px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--accent);}
-.todo-body{flex:1;min-width:0;}
-.todo-title{font-size:14px;font-weight:500;color:var(--text);line-height:1.4;}
-.todo-item.done .todo-title{text-decoration:line-through;color:var(--text-dim);}
-.todo-notes{font-size:12px;color:var(--text-dim);margin-top:2px;}
-.todo-meta{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;align-items:center;}
-.todo-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
-.todo-date.overdue{color:var(--red);font-weight:600;}
-.badge-priority{font-size:10px;font-family:'IBM Plex Mono',monospace;padding:1px 6px;border-radius:99px;font-weight:600;}
-.badge-high{background:rgba(220,38,38,.12);color:var(--red);}
-.badge-normal{background:rgba(217,119,6,.12);color:var(--yellow);}
-.badge-low{background:rgba(22,163,74,.12);color:var(--green);}
-.todo-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;padding:2px 6px;border-radius:3px;flex-shrink:0;transition:color .1s;line-height:1;}
-.todo-del:hover{color:var(--red);}
-.todo-edit{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:15px;padding:2px 6px;border-radius:3px;flex-shrink:0;transition:color .1s;line-height:1;}
-.todo-edit:hover{color:var(--yellow);}
-.todo-empty{text-align:center;padding:32px 16px;color:var(--text-dim);font-size:13px;border:2px dashed var(--border);border-radius:var(--radius);}
-.checklist-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px;}
-.checklist-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
-.checklist-header-title{font-weight:600;font-size:14px;flex:1;}
-.checklist-progress{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);}
-.checklist-body{padding:8px 0;}
-.checklist-item{display:flex;align-items:center;gap:10px;padding:7px 14px;transition:background .1s;}
-.checklist-item:hover{background:var(--bg2);}
-.checklist-item.done .checklist-item-text{text-decoration:line-through;color:var(--text-dim);}
-.checklist-item-text{flex:1;font-size:13px;}
-.checklist-item-del{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:12px;padding:2px 6px;opacity:0;transition:opacity .1s;}
-.checklist-item:hover .checklist-item-del{opacity:1;}
-.checklist-item-del:hover{color:var(--red);}
-.checklist-add{display:flex;gap:8px;padding:8px 14px;border-top:1px solid var(--border);}
-.checklist-add input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:6px 10px;font-size:13px;font-family:inherit;color:var(--text);outline:none;}
-.checklist-add input:focus{border-color:var(--accent);}
-.new-checklist-btn{width:100%;margin-bottom:12px;padding:10px;border:2px dashed var(--border2);border-radius:var(--radius);background:none;color:var(--text-dim);font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit;}
-.new-checklist-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-bg);}
-.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:200;align-items:center;justify-content:center;}
-.modal-backdrop.open{display:flex;}
-.modal{background:var(--panel);border:1px solid var(--border2);border-radius:8px;padding:28px;width:460px;max-width:96vw;box-shadow:0 8px 32px rgba(100,60,20,0.15);}
-.modal h2{font-size:16px;font-weight:600;margin-bottom:18px;}
-.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
-.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
-label{font-size:11px;color:var(--text-mid);text-transform:uppercase;letter-spacing:.05em;font-family:'IBM Plex Mono',monospace;}
-input[type=text],input[type=date],input[type=time],select,textarea{background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:7px 11px;font-family:inherit;font-size:13px;outline:none;transition:border-color .15s;width:100%;}
-input:focus,select:focus,textarea:focus{border-color:var(--accent);}
-select option{background:var(--panel);}
-.shared-toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-mid);cursor:pointer;margin-top:4px;}
-.shared-toggle input{width:auto;accent-color:var(--accent);}
-.form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;}
-#toast{position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 18px;font-size:13px;color:var(--text);z-index:999;display:none;box-shadow:var(--shadow);}
-#toast.success{border-color:#22c55e;color:#15803d;}
-#toast.error{border-color:#ef4444;color:#dc2626;}
-.btn-logout{background:none;border:1px solid var(--border2);color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:5px 12px;border-radius:4px;cursor:pointer;letter-spacing:.04em;transition:all .15s;}
-.btn-logout:hover{border-color:#dc2626;color:#dc2626;}
-@media(max-width:640px){.page{padding:16px;}.columns{grid-template-columns:1fr;}}
+  :root {
+    --bg:        #faf7f2;
+    --bg2:       #f3ede4;
+    --bg3:       #ede4d8;
+    --panel:     #ffffff;
+    --border:    #e0d4c4;
+    --border2:   #cfc0ac;
+    --accent:    #d97706;
+    --accent-dim:#b45309;
+    --accent-bg: rgba(217,119,6,0.10);
+    --text:      #2a1f14;
+    --text-mid:  #6b4f38;
+    --text-dim:  #a08878;
+    --today-bg:  rgba(217,119,6,0.12);
+    --ordered-bg:#dbeafe;
+    --ordered-fg:#1d4ed8;
+    --completed-bg:#dcfce7;
+    --completed-fg:#15803d;
+    --invoice-bg: #fef3c7;
+    --invoice-fg: #92400e;
+    --invoice-overdue-bg: #fee2e2;
+    --invoice-overdue-fg: #dc2626;
+    --milestone-bg: #e0e7ff;
+    --milestone-fg: #4338ca;
+    --todo-bg:   #f3e8ff;
+    --todo-fg:   #7c3aed;
+    --shadow:    0 1px 4px rgba(100,60,20,0.08);
+    --radius:    6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ───────────────────────────────────────────── */
+  header .logo { height: 32px; width: auto; }
+
+  header {
+    background: var(--panel);
+    border-bottom: 2px solid var(--accent);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow);
+  }
+  .nav-menu-wrap { position: relative; }
+  .nav-btn {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: .04em;
+  }
+  .nav-btn:hover { background: var(--bg3); }
+  .nav-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    min-width: 200px;
+    z-index: 999;
+    box-shadow: 0 4px 16px rgba(100,60,20,0.15);
+    overflow: hidden;
+  }
+  .nav-dropdown.open { display: block; }
+  .nav-section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 14px 4px;
+  }
+  .nav-item {
+    display: block;
+    padding: 8px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    text-decoration: none;
+    transition: background .1s;
+  }
+  .nav-item:hover { background: var(--accent-bg); color: var(--accent); }
+  .nav-item.current { color: var(--accent); font-weight: 600; }
+  header h1 {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .btn-logout { background: none; border: 1px solid var(--border2); color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 4px; cursor: pointer; letter-spacing: .04em; transition: all .15s; }
+  .btn-logout:hover { border-color: #dc2626; color: #dc2626; }
+
+  /* ── NAVIGAATIO ───────────────────────────────────────── */
+  .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .cal-nav-left { display: flex; align-items: center; gap: 10px; }
+  .cal-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 220px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    background: var(--panel);
+    color: var(--text-mid);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    letter-spacing: .03em;
+  }
+  .btn:hover { background: var(--bg2); color: var(--text); border-color: var(--accent); }
+  .btn-accent { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-accent:hover { background: var(--accent-dim); border-color: var(--accent-dim); color: white; }
+
+  /* ── LEGENDA ──────────────────────────────────────────── */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-mid);
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── KALENTERI ────────────────────────────────────────── */
+  .cal-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+  }
+  .cal-weekday {
+    padding: 10px 8px;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-mid);
+  }
+  .cal-weekday.weekend { color: var(--text-dim); }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .cal-day {
+    min-height: 100px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 6px;
+    vertical-align: top;
+    transition: background .1s;
+  }
+  .cal-day:nth-child(7n) { border-right: none; }
+  .cal-day.other-month { background: var(--bg); }
+  .cal-day.today { background: var(--today-bg); }
+  .cal-day.weekend { background: var(--bg2); }
+  .cal-day.weekend.other-month { background: var(--bg3); }
+
+  .day-number {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mid);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .day-number.today-num {
+    color: var(--accent);
+  }
+  .week-num {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  /* ── "+ LISÄÄ TEHTÄVÄ" PÄIVÄRUUDUN KULMASSA (2026-10-01) ───
+     Nappi on päivänumeron rivillä oikeassa reunassa. Negatiiviset marginaalit estävät sitä
+     kasvattamasta riviä, joten ruutujen sisältö ei siirry. Hover-laitteilla (hiiri) nappi
+     näkyy vasta kun hiiri on ruudun päällä; kosketuslaitteilla se on aina näkyvissä. */
+  .day-number.has-add .week-num { margin: 0 auto 0 8px; }
+  .day-add {
+    width: 18px; height: 18px; margin: -2px 0; padding: 0; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--panel); border: 1px solid var(--border2); border-radius: 4px;
+    color: var(--text-mid); font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600;
+    line-height: 1; cursor: pointer; transition: all .12s;
+  }
+  .day-add:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (hover: hover) {
+    .day-add { opacity: 0; }
+    .cal-day:hover .day-add, .day-add:focus-visible { opacity: 1; }
+  }
+
+  /* ── TAPAHTUMAT ───────────────────────────────────────── */
+  .event {
+    display: block;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity .1s;
+    text-decoration: none;
+  }
+  .event:hover { opacity: .8; }
+  .event-ordered {
+    background: var(--ordered-bg);
+    color: var(--ordered-fg);
+    border-left: 3px solid var(--ordered-fg);
+  }
+  .event-completed {
+    background: var(--completed-bg);
+    color: var(--completed-fg);
+    border-left: 3px solid var(--completed-fg);
+  }
+  .event-absence {
+    background: var(--absence-bg);
+    color: var(--absence-fg);
+    border-left: 3px solid var(--absence-fg);
+  }
+  .event-todo {
+    background: var(--todo-bg);
+    color: var(--todo-fg);
+    border-left: 3px solid var(--todo-fg);
+    cursor: pointer;
+  }
+  .event-invoice {
+    background: var(--invoice-bg);
+    color: var(--invoice-fg);
+    border-left: 3px solid var(--invoice-fg);
+    cursor: pointer;
+  }
+  .event-forest {
+    background: #fef9ec;
+    color: #92400e;
+    border-left: 3px solid #d97706;
+    cursor: pointer;
+  }
+  .event-invoice.overdue {
+    background: var(--invoice-overdue-bg);
+    color: var(--invoice-overdue-fg);
+    border-left-color: var(--invoice-overdue-fg);
+  }
+  .event-milestone {
+    background: var(--milestone-bg);
+    color: var(--milestone-fg);
+    border-left: 3px solid var(--milestone-fg);
+  }
+  /* Sama punainen kuin erääntyneellä laskulla — yksi väri "tätä on myöhässä" -tilalle koko sovelluksessa */
+  .event-milestone.late {
+    background: var(--invoice-overdue-bg);
+    color: var(--invoice-overdue-fg);
+    border-left-color: var(--invoice-overdue-fg);
+  }
+
+  /* ── JATKUVA KUUKAUSISKROLLI ──────────────────────────────
+     Kuukaudet peräkkäin kuluvasta kuusta alaspäin. Navigointipalkki, tilauspaneeli ja
+     viikonpäiväotsikko jäävät kiinni ruudun yläreunaan; niiden korkeudet asetetaan
+     JS:llä CSS-muuttujiin (updateStickyOffsets). */
+  .legend { margin-bottom: 14px; }
+  .month-block { margin-bottom: 28px; }
+  .month-title { font-size: 20px; font-weight: 600; color: var(--text); padding: 4px 2px 8px; }
+  .month-block .cal-weekdays {
+    position: sticky; top: var(--wk-top, 53px); z-index: 20;
+    border: 1px solid var(--border); border-radius: 8px 8px 0 0;
+  }
+  .month-block .cal-wrap { border-top: none; border-radius: 0 0 8px 8px; }
+  #printArea { display: none; }
+  @media (min-width: 641px) {
+    .cal-nav {
+      position: sticky; top: var(--hdr-h, 53px); z-index: 95;
+      background: var(--bg); padding: 8px 0 10px; margin-bottom: 0;
+    }
+  }
+
+  /* ── PUOLIVUOSINÄKYMÄ ─────────────────────────────────────
+     Kuusi kuukautta rinnakkain, viikot riveinä; rivin väri = toimitusten määrä (lv0–lv4).
+     Kytkin Nimet | Määrät valitsee näytetäänkö asiakkaiden nimet vai pelkät lukumäärät. */
+  .seg { display: inline-flex; border: 1px solid var(--border2); border-radius: var(--radius); overflow: hidden; }
+  .seg button {
+    height: 36px; padding: 0 16px; background: var(--panel); border: none; color: var(--text-mid);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--text); }
+  .seg button:not([aria-pressed="true"]):hover { background: var(--bg2); }
+  .mode-toggle { margin-right: 6px; }
+
+  .hv-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 22px; margin-bottom: 12px; }
+  .hv-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--text-mid); }
+  .hv-legend-title { font-weight: 600; color: var(--text); }
+  .hv-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .hv-swatch { width: 30px; height: 16px; border-radius: 3px; box-sizing: border-box; }
+  .hv-sw { width: 22px; height: 14px; border-radius: 2px; box-sizing: border-box; }
+  .hv-sw-ordered { background: var(--ordered-bg); border-left: 3px solid var(--ordered-fg); }
+  .hv-sw-completed { background: var(--completed-bg); border-left: 3px solid var(--completed-fg); }
+  .hv-sq { width: 6px; height: 6px; border-radius: 1px; background: var(--milestone-fg); display: inline-block; }
+
+  .lv0 { background: #ffffff; border: 1px dashed var(--border2); }
+  .lv1 { background: #fdf0d8; border: 1px solid #e8d5b0; }
+  .lv2 { background: #f9d08a; border: 1px solid #e6b45a; }
+  .lv3 { background: #f0a03c; border: 1px solid #d68a20; }
+  .lv4 { background: #d97706; border: 1px solid #b45309; }
+
+  .hv-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow);
+    padding: 12px 14px 14px; scroll-margin-top: calc(var(--wk-top, 53px) + 8px);
+  }
+  .hv-chartcard { margin-bottom: 16px; padding: 12px 16px 10px; }
+  .hv-chart-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  .hv-chart-title { font-size: 13px; font-weight: 600; }
+  .hv-chart-note { font-size: 12px; color: var(--text-mid); }
+  .hv-chart-sum { margin-left: auto; font-size: 12px; color: var(--text-mid); }
+  .hv-chart-sum b { color: var(--text); }
+  .hv-chart-cols { display: flex; gap: 12px; }
+  .hv-cgroup { flex-basis: 0; min-width: 0; }
+  .hv-cbars { display: flex; align-items: flex-end; gap: 3px; border-bottom: 1px solid var(--border2); }
+  .hv-cbar { flex: 1; border-radius: 2px 2px 0 0; border: none !important; }
+  .hv-cbar.lv0 { background: var(--border2); }
+  .hv-cbar.now { outline: 2px solid var(--text); }
+  .hv-clabel { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mid); margin-top: 4px; }
+
+  .hv-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  @media (max-width: 1200px) { .hv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .hv-month-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+  .hv-month-title { font-size: 16px; font-weight: 600; }
+  .hv-month-total { font-size: 12px; color: var(--text-mid); }
+  .hv-rows { display: flex; flex-direction: column; gap: 4px; }
+  .hv-row { display: flex; align-items: center; gap: 8px; height: 30px; }
+  .hv-week {
+    width: 124px; flex-shrink: 0; background: none; border: none; padding: 0; text-align: left; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mid); white-space: nowrap;
+  }
+  .hv-week b { color: var(--text); }
+  .hv-week:hover { color: var(--accent-dim); text-decoration: underline; }
+  .hv-bar {
+    flex-grow: 1; min-width: 0; height: 30px; box-sizing: border-box; border-radius: 4px; padding: 0 6px;
+    display: flex; align-items: center; gap: 4px; overflow: hidden;
+  }
+  .hv-bar.dim { opacity: .5; }
+  .hv-bar.has-sel { outline: 2px solid var(--text); outline-offset: 1px; }
+  .hv-count { font-size: 14px; font-weight: 700; color: var(--text); }
+  .hv-free { font-size: 11px; font-style: italic; color: var(--text-mid); }
+  .hv-more { flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--text); padding: 0 2px; }
+  .hv-now {
+    flex-shrink: 0; padding: 1px 6px; border-radius: 3px; background: var(--accent); color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+  }
+  .hv-chip {
+    flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: 4px; overflow: hidden; white-space: nowrap;
+    border: none; font-family: inherit; font-size: 11px; font-weight: 500; padding: 2px 6px; border-radius: 3px; cursor: pointer;
+  }
+  .hv-bar.multi .hv-chip { flex: 1 1 0; }
+  .hv-emo { flex-shrink: 0; font-size: 11px; }
+  .hv-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .hv-sub { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 400; opacity: .85; }
+  .hv-chip.sel { outline: 2px solid var(--text); font-weight: 700; }
+  .hv-chip.dim { opacity: .38; }
+  /* Tapahtumatyyppien värit */
+  .k-ordered   { background: var(--ordered-bg);   color: var(--ordered-fg);   border-left: 3px solid var(--ordered-fg); }
+  .k-completed { background: var(--completed-bg); color: var(--completed-fg); border-left: 3px solid var(--completed-fg); }
+  .k-ms-piirustukset { background: #e0e7ff; color: #4338ca; border-left: 3px solid #4338ca; }
+  .k-ms-ikkuna_ovi   { background: #cffafe; color: #0e7490; border-left: 3px solid #0e7490; }
+  .k-ms-puuosat      { background: #f1e2cc; color: #7c4a1d; border-left: 3px solid #7c4a1d; }
+  .k-ms-tuotanto     { background: #fce7f3; color: #be185d; border-left: 3px solid #be185d; }
+  .k-inv       { background: var(--invoice-bg); color: var(--invoice-fg); border-left: 3px solid var(--invoice-fg); }
+  .k-inv-over  { background: var(--invoice-overdue-bg); color: var(--invoice-overdue-fg); border-left: 3px solid var(--invoice-overdue-fg); }
+  .k-forest    { background: #ecfccb; color: #3f6212; border-left: 3px solid #3f6212; }
+  .k-todo      { background: var(--todo-bg); color: var(--todo-fg); border-left: 3px solid var(--todo-fg); }
+  .hv-sq.k-ordered, .hv-sq.k-completed, .hv-sq[class*="k-"] { width: 8px; height: 8px; border: none; border-radius: 2px; background: currentColor; }
+  .hv-ms { margin-left: auto; display: flex; gap: 2px; flex-shrink: 0; }
+
+  /* Tulostettava puolivuosi (#printArea): tiiviimpi, aina 3 saraketta */
+  .hv-print .hv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .hv-print .hv-card { padding: 8px 10px 8px; box-shadow: none; }
+  .hv-print .hv-chartcard { margin-bottom: 8px; }
+  .hv-print .hv-toolbar { margin-bottom: 8px; justify-content: center; }
+  .hv-print .hv-month-head { margin-bottom: 6px; }
+  .hv-print .hv-row, .hv-print .hv-bar { height: 25px; }
+  .hv-print .hv-chip, .hv-print .hv-week { cursor: auto; }
+
+  /* ── TILAUKSEN KOROSTUS + AIKAJANAPANEELI ─────────────────
+     Klikkaus tilauksen tapahtumaan (toimitus, merkkipaalu, lasku) korostaa saman tilauksen
+     kaikki tapahtumat ja himmentää muut. Paneeli listaa tilauksen päivät aikajärjestyksessä;
+     rivin klikkaus hyppää siihen kuukauteen. */
+  .event[data-quote-id] { cursor: pointer; }
+  body.has-selection .event:not(.sel) { opacity: .25; }
+  body.has-selection .event.sel { outline: 2px solid var(--accent); outline-offset: 1px; opacity: 1; }
+  .order-panel {
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-left-width: 4px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    position: sticky;
+    top: var(--panel-top, 53px);
+    z-index: 90;
+  }
+  .order-panel[hidden] { display: none; }
+  .op-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .op-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .op-title small { font-family: 'IBM Plex Mono', monospace; font-weight: 400; font-size: 11px; color: var(--text-dim); margin-left: 6px; }
+  .op-head .op-spacer { margin-left: auto; display: flex; gap: 8px; }
+  .op-items { display: flex; flex-wrap: wrap; gap: 6px; }
+  .op-item {
+    display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px;
+    padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border2);
+    background: var(--bg2); color: var(--text); font-family: inherit; font-size: 12px;
+    cursor: pointer; text-align: left; transition: all .15s;
+  }
+  .op-item:hover { border-color: var(--accent); background: var(--accent-bg); }
+  .op-item .op-label { font-weight: 600; }
+  .op-item .op-when { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mid); }
+  .op-item.late { background: var(--invoice-overdue-bg); border-color: var(--invoice-overdue-fg); }
+  .op-item.late .op-label, .op-item.late .op-when { color: var(--invoice-overdue-fg); }
+  .op-item.here { box-shadow: inset 0 -3px 0 var(--accent); }
+  .op-empty { color: var(--text-dim); font-size: 12px; }
+
+  /* ── LISÄÄ POISSAOLO MODAL ────────────────────────────── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 28px;
+    width: 420px;
+    max-width: 96vw;
+    box-shadow: 0 8px 32px rgba(100,60,20,0.15);
+  }
+  .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 18px; color: var(--text); }
+  .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  label { font-size: 12px; color: var(--text-mid); text-transform: uppercase; letter-spacing: .05em; font-family: 'IBM Plex Mono', monospace; }
+  input, select, textarea {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    border-radius: 4px;
+    padding: 7px 11px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--panel); }
+  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+  /* ── TODO-MODAL ───────────────────────────────────────── */
+  .todo-modal-field { margin-bottom: 12px; }
+  .todo-modal-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; font-family: 'IBM Plex Mono', monospace; margin-bottom: 3px; }
+  .todo-modal-value { font-size: 14px; color: var(--text); }
+  .todo-modal-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+  .todo-modal-badge.high   { background: #fee2e2; color: #dc2626; }
+  .todo-modal-badge.normal { background: #e0f2fe; color: #0369a1; }
+  .todo-modal-badge.low    { background: #f1f5f9; color: #64748b; }
+  .todo-modal-badge.shared { background: var(--todo-bg); color: var(--todo-fg); }
+  .todo-modal-badge.done   { background: #dcfce7; color: #15803d; }
+
+  /* ── UUDEN TEHTÄVÄN LOMAKE (2026-10-01) ───────────────────
+     Sama sisältö kuin todo.html:n lomakkeessa. Tunnisteet on prefiksoitu (#addTodoModal, at*), ettei
+     ne törmää olemassa olevaan katselu-ikkunaan (#todoModal). */
+  #addTodoModal .modal { max-height: 94vh; overflow-y: auto; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  textarea { resize: vertical; }
+  .shared-toggle {
+    display: flex; align-items: center; gap: 8px; margin-top: 4px; cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; color: var(--text-mid);
+    text-transform: none; letter-spacing: 0;
+  }
+  .shared-toggle input { width: auto; padding: 0; background: none; border: none; accent-color: var(--accent); }
+  .at-date-hint { font-size: 12px; color: var(--text-dim); margin: -6px 0 12px; font-family: 'IBM Plex Mono', monospace; }
+
+  /* ── TOAST ────────────────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 999;
+    display: none;
+    box-shadow: var(--shadow);
+  }
+  #toast.success { border-color: #22c55e; color: #15803d; }
+  #toast.error { border-color: #ef4444; color: #dc2626; }
+
+  /* ── MOBIILI ──────────────────────────────────────────── */
+  .mobile-list { display: none; }
+
+  @media (max-width: 640px) {
+    .page { padding: 16px; }
+    .cal-wrap { display: none; }
+    .month-block .cal-weekdays { display: none; }
+    .mode-toggle { display: none; }
+    #halfView { display: none !important; }
+    .mobile-list { display: block; }
+    .cal-title { font-size: 18px; min-width: 0; }
+    .legend { display: none; }
+    /* Sama ennaltaehkäisevä korjaus kuin tarjous.html:ssä (2026-09) — yläpalkin napit (nyt kaksi:
+       tulostus + uloskirjautuminen) eivät saa työntää koko sivua leveämmäksi kuin puhelimen
+       näyttö, koska se rikkoisi position:fixed-elementtien asemoinnin. KORJATTU 2026-09-12:
+       ensimmäinen versio laittoi tämän koko header-elementtiin, mikä leikkasi ☰-valikon
+       avattavan .nav-dropdown:n pois näkyvistä (se on headerin toinen lapsi, ei
+       header-rightin sisällä — CSS pakottaa overflow-y:n autoksi kun overflow-x ei ole
+       visible, mikä leikkaa kaiken headerin ulkopuolelle ulottuvan). Kohdistettu nyt vain
+       .header-right-elementtiin, joka on sisarelementti eikä sisällä valikkoa ollenkaan. */
+    .header-right { overflow-x: auto; min-width: 0; }
+    .header-right::-webkit-scrollbar { display: none; }
+
+    .week-block {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .week-block-header {
+      background: var(--bg2);
+      padding: 8px 12px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-mid);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    /* "+ Tehtävä" viikkolohkon otsikossa (2026-10-01) — puhelimella ei ole päiväruudukkoa */
+    .week-add {
+      flex-shrink: 0; min-height: 30px; padding: 4px 10px;
+      background: var(--panel); border: 1px solid var(--border2); border-radius: 4px;
+      color: var(--accent-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+      cursor: pointer;
+    }
+    .week-add:active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .week-block-body { padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .week-block-empty { color: var(--text-dim); font-size: 12px; padding: 8px 12px; }
+    /* Uuden tehtävän lomake puhelimella: kentät allekkain ja 16 px fontti, jotta iPhone ei zoomaa
+       sisään kenttään koskettaessa */
+    #addTodoModal .modal { padding: 20px; }
+    #addTodoModal .form-row-3 { grid-template-columns: 1fr; gap: 0; }
+    #addTodoModal input, #addTodoModal select, #addTodoModal textarea { font-size: 16px; }
+  }
+
+
+  /* ── TULOSTA KUUKAUSI (2026-09-12) ───────────────────────
+     Tulostaa näkyvän kuukauden isolla, väljällä ruudukolla — tarkoitus liimata seinälle ja
+     täydentää kynällä käsin. Eri asia kuin print_kalenteri.html (tästä päivästä +30pv,
+     viikkolista) — tämä tulostaa juuri sen kuukausiruudukon joka ruudulla näkyy sellaisenaan,
+     riippumatta selaimen leveydestä tulostushetkellä. */
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { size: A4 landscape; margin: 10mm; }
+    header, .cal-nav, .mobile-list, #toast, .modal-backdrop, .order-panel, #months, #monthsSentinel, #halfView { display: none !important; }
+    /* Tulostetaan vain valintaikkunassa valittu kuukausi (#printArea) */
+    #printArea { display: block !important; }
+    .month-block { margin: 0; }
+    .month-title { text-align: center; font-size: 24px; padding: 0 0 6px; }
+    .month-block .cal-weekdays { display: grid !important; position: static; }
+    /* Korostus/himmennys ei kuulu paperille */
+    body.has-selection .event:not(.sel) { opacity: 1; }
+    body.has-selection .event.sel { outline: none; }
+    .legend { justify-content: center; }
+    .page { padding: 0; max-width: none; }
+    /* Pakotetaan ruudukko näkyviin vaikka tulostushetkellä selainikkuna olisi kapea
+       (mobiilinäkymä muuten piilottaisi sen ja näyttäisi listaa sen sijaan) */
+    .cal-wrap { display: block !important; box-shadow: none; }
+    .cal-day { min-height: 28mm; page-break-inside: avoid; }
+    /* Lisäysnapit eivät kuulu paperille */
+    .day-add, .week-add { display: none !important; }
+  }
 </style>
 </head>
 <body>
+
 <header>
   <img src="okkonenlogopuu.svg" alt="Okkosen Puutuote" class="logo">
   <div class="nav-menu-wrap">
-    <button class="nav-btn" onclick="toggleNav(event)">&#9776; Valikko</button>
+    <button class="nav-btn" onclick="toggleNav(event)">☰ Valikko</button>
     <div class="nav-dropdown" id="navDropdown">
       <div class="nav-section-label">Sivut</div>
-      <a class="nav-item" href="asiakkaat.html">Asiakkaat</a>
-      <a class="nav-item" href="hinnasto.html">Hinnasto</a>
-      <a class="nav-item" href="tarjoukset.html">Tarjoukset</a>
-      <a class="nav-item" href="tarjous.html">Uusi tarjous</a>
+      <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
+      <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
+      <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
+      <a class="nav-item" href="tarjous.html">✏️ Uusi tarjous</a>
       <a class="nav-item" href="myymala.html">🏪 Myymälä</a>
-      <a class="nav-item" href="kalenteri.html">Kalenteri</a>
-      <a class="nav-item current" href="todo.html">Muistilista</a>
+      <a class="nav-item current" href="kalenteri.html">📅 Kalenteri</a>
+      <a class="nav-item" href="todo.html">✅ Muistilista</a>
       <a class="nav-item" href="laskutus.html">💰 Laskutus</a>
+      <a class="nav-item" href="metsalog.html">🌲 Metsälog</a>
     </div>
   </div>
-  <h1>Muistilista</h1>
+  <h1>Kalenteri</h1>
   <div class="header-right">
-    <label class="show-done-wrap">
-      <input type="checkbox" id="showDone" onchange="renderAll()" style="accent-color:var(--accent);width:auto;">
-      Nayta tehdyt
-    </label>
+    <a class="btn-logout" href="print_kalenteri.html" target="_blank" rel="noopener" title="Avaa tulostettava kahvihuoneen kalenteri uuteen välilehteen">🖨 Tulosta kahvihuone</a>
     <button class="btn-logout" onclick="logout()">Kirjaudu ulos</button>
   </div>
 </header>
+
 <div class="page">
-  <div class="page-header"><h2>Muistilista ja tehtavat</h2></div>
-  <div class="tabs">
-    <button class="tab-btn active" id="tab-todos" onclick="switchTab('todos')">Tehtavat</button>
-    <button class="tab-btn" id="tab-lists" onclick="switchTab('lists')">Listat</button>
-  </div>
-  <div id="view-todos">
-    <div class="columns">
-      <div>
-        <div class="col-header">
-          <span class="col-title">Omat</span>
-          <button class="btn btn-sm btn-accent" onclick="openModal(false)">+ Lisaa</button>
-        </div>
-        <div class="todo-list" id="listOmat"></div>
+
+  <!-- NAVIGAATIO -->
+  <div class="cal-nav">
+    <div class="cal-nav-left">
+      <div class="seg mode-toggle" role="group" aria-label="Näkymä">
+        <button type="button" id="modeMonth" aria-pressed="true" onclick="setMode('month')">Kuukausi</button>
+        <button type="button" id="modeHalf" aria-pressed="false" onclick="setMode('half')">Puolivuosi</button>
       </div>
-      <div>
-        <div class="col-header">
-          <span class="col-title shared">Yhteiset</span>
-          <button class="btn btn-sm btn-accent" onclick="openModal(true)">+ Lisaa</button>
-        </div>
-        <div class="todo-list" id="listYhteiset"></div>
-      </div>
+      <button class="btn" onclick="prevMonth()">‹</button>
+      <div class="cal-title" id="calTitle">—</div>
+      <button class="btn" onclick="nextMonth()">›</button>
+      <button class="btn" onclick="goToday()">Tänään</button>
+      <button class="btn" id="printBtn" onclick="printMonth()" title="Valitse kuukausi ja tulosta se isolla ruudukolla, seinälle liimattavaksi">🖨 Tulosta kuukausi</button>
     </div>
   </div>
-  <div id="view-lists" style="display:none;">
-    <div class="columns">
-      <div>
-        <div class="col-header"><span class="col-title">Omat listat</span></div>
-        <button class="new-checklist-btn" onclick="openNewListModal(false)">+ Uusi lista</button>
-        <div id="omatListat"></div>
+
+  <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--ordered-bg);border-left:3px solid var(--ordered-fg);"></div>
+        Tilattu
       </div>
-      <div>
-        <div class="col-header"><span class="col-title shared">Yhteiset listat</span></div>
-        <button class="new-checklist-btn" onclick="openNewListModal(true)">+ Uusi lista</button>
-        <div id="yhteisListat"></div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--completed-bg);border-left:3px solid var(--completed-fg);"></div>
+        Valmis
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--invoice-bg);border-left:3px solid var(--invoice-fg);"></div>
+        Lasku erääntyy
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--invoice-overdue-bg);border-left:3px solid var(--invoice-overdue-fg);"></div>
+        Erääntynyt / myöhässä
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--milestone-bg);border-left:3px solid var(--milestone-fg);"></div>
+        Merkkipaalu
+      </div>
+          <div class="legend-item">
+        <div class="legend-dot" style="background:#fef9ec;border-left:3px solid #d97706;"></div>
+        Puunnouto
       </div>
     </div>
+
+  <!-- TILAUKSEN AIKAJANA (näkyy kun tilauksen tapahtumaa klikataan) -->
+  <div class="order-panel" id="orderPanel" hidden>
+    <div class="op-head">
+      <div class="op-title" id="opTitle"></div>
+      <div class="op-spacer">
+        <a class="btn" id="opOpen" href="#" target="_blank" rel="noopener">Avaa tarjous →</a>
+        <button class="btn" onclick="clearSelection()" title="Poista korostus (Esc)">✕ Sulje</button>
+      </div>
+    </div>
+    <div class="op-items" id="opItems"></div>
   </div>
+
+  <!-- KUUKAUDET: jatkuva skrolli kuluvasta kuusta alaspäin (JS täyttää) -->
+  <!-- PUOLIVUOSINÄKYMÄ (vain yli 640 px leveällä ruudulla, JS täyttää) -->
+  <div id="halfView" hidden></div>
+
+  <div id="months"></div>
+  <div id="monthsSentinel"></div>
+
+  <!-- Tulostettava yksittäinen kuukausi (näkyy vain tulostuksessa) -->
+  <div id="printArea"></div>
+
 </div>
+
+<!-- TODO MODAL -->
 <div class="modal-backdrop" id="todoModal">
   <div class="modal">
-    <h2 id="modalTitle">Uusi tehtava</h2>
-    <div class="form-group"><label>Tehtava *</label><input type="text" id="fTitle" placeholder="esim. Soita Jormalle"></div>
-    <div class="form-group"><label>Lisatiedot</label><textarea id="fNotes" rows="2" placeholder="Vapaaehtoinen..."></textarea></div>
-    <div class="form-row-3">
-      <div class="form-group"><label>Paivamaara</label><input type="date" id="fDate"></div>
-      <div class="form-group"><label>Kellonaika</label><input type="time" id="fTime"></div>
-      <div class="form-group"><label>Tarkeys</label>
-        <select id="fPriority"><option value="high">Kiireellinen</option><option value="normal" selected>Normaali</option><option value="low">Ei kiireellinen</option></select>
+    <h2 id="todoModalTitle">Tehtävä</h2>
+    <div class="todo-modal-field">
+      <div class="todo-modal-label">Kuvaus</div>
+      <div class="todo-modal-value" id="todoModalNotes" style="color:var(--text-mid);font-size:13px;"></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div class="todo-modal-label">Prioriteetti</div>
+        <span class="todo-modal-badge" id="todoModalPriority"></span>
+      </div>
+      <div>
+        <div class="todo-modal-label">Tyyppi</div>
+        <span class="todo-modal-badge shared" id="todoModalType"></span>
+      </div>
+      <div>
+        <div class="todo-modal-label">Tila</div>
+        <span class="todo-modal-badge" id="todoModalDone"></span>
       </div>
     </div>
-    <label class="shared-toggle"><input type="checkbox" id="fShared"> Nakyy kaikille</label>
+    <div class="todo-modal-field" id="todoModalDueDateWrap">
+      <div class="todo-modal-label">Ajankohta</div>
+      <div class="todo-modal-value" id="todoModalDueDate"></div>
+    </div>
     <div class="form-actions">
-      <button class="btn" onclick="closeModal()">Peruuta</button>
-      <button class="btn btn-accent" onclick="saveTodo()">Tallenna</button>
+      <button class="btn" onclick="closeTodoModal()">Sulje</button>
+      <a class="btn btn-accent" href="todo.html" id="todoModalLink">Avaa Muistilista →</a>
     </div>
   </div>
 </div>
-<div class="modal-backdrop" id="listModal">
-  <div class="modal">
-    <h2>Uusi lista</h2>
-    <div class="form-group"><label>Listan nimi *</label><input type="text" id="fListName" placeholder="esim. Ostoslista"></div>
-    <div class="form-actions">
-      <button class="btn" onclick="closeListModal()">Peruuta</button>
-      <button class="btn btn-accent" onclick="saveNewList()">Luo lista</button>
-    </div>
-  </div>
-</div>
-<div id="toast"></div>
-<script>
-var SURL = "https://iofjnoxvksbaqorqaydh.supabase.co";
-var SKEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo";
-var scl = supabase.createClient(SURL, SKEY);
-var todos = [];
-var checklists = [];
-var currentUserId = null;
-var newListShared = false;
-var currentEditId = null;
 
+<!-- UUSI TEHTÄVÄ (lisäys kalenterista, 2026-10-01) -->
+<div class="modal-backdrop" id="addTodoModal">
+  <div class="modal">
+    <h2>Uusi tehtävä</h2>
+    <div class="form-group">
+      <label for="atTitle">Tehtävä *</label>
+      <input type="text" id="atTitle" placeholder="esim. Soita Jormalle" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label for="atNotes">Lisätiedot</label>
+      <textarea id="atNotes" rows="2" placeholder="Vapaaehtoinen..."></textarea>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label for="atDate">Päivämäärä *</label>
+        <input type="date" id="atDate">
+      </div>
+      <div class="form-group">
+        <label for="atTime">Kellonaika</label>
+        <input type="time" id="atTime">
+      </div>
+      <div class="form-group">
+        <label for="atPriority">Tärkeys</label>
+        <select id="atPriority">
+          <option value="high">Kiireellinen</option>
+          <option value="normal" selected>Normaali</option>
+          <option value="low">Ei kiireellinen</option>
+        </select>
+      </div>
+    </div>
+    <div class="at-date-hint" id="atDateHint"></div>
+    <label class="shared-toggle"><input type="checkbox" id="atShared" checked> Näkyy kaikille (poista rasti, jos tehtävä on vain sinun)</label>
+    <div class="form-actions">
+      <button class="btn" type="button" onclick="closeAddTodo()">Peruuta</button>
+      <button class="btn btn-accent" type="button" id="atSaveBtn" onclick="saveAddTodo()">Tallenna</button>
+    </div>
+  </div>
+</div>
+
+<!-- TULOSTA KUUKAUSI: valinta -->
+<div class="modal-backdrop" id="printModal">
+  <div class="modal">
+    <h2>Tulosta kuukausi</h2>
+    <div class="form-group">
+      <label for="printMonthSelect">Kuukausi</label>
+      <select id="printMonthSelect"></select>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closePrintModal()">Peruuta</button>
+      <button class="btn btn-accent" onclick="doPrintMonth()">🖨 Tulosta</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── Tila ───────────────────────────────────────────────
+let viewYear  = new Date().getFullYear();   // ruudulla näkyvä kuukausi (päivittyy skrollatessa)
+let viewMonth = new Date().getMonth();      // 0-11
+let startYear  = new Date().getFullYear();  // ensimmäinen piirretty kuukausi (lista jatkuu siitä alaspäin)
+let startMonth = new Date().getMonth();
+let monthsRendered = 0;
+const MAX_MONTHS = 36;                      // kuinka monta kuukautta alkukuusta eteenpäin voi skrollata
+const WEEKDAYS_HTML = ['Ma','Ti','Ke','To','Pe','La','Su']
+  .map((n, i) => '<div class="cal-weekday' + (i >= 5 ? ' weekend' : '') + '">' + n + '</div>').join('');
+let wkTop = 53; // viikonpäiväotsikon kiinnityskohta (px), ks. updateStickyOffsets
+let viewMode = 'month';                     // 'month' (jatkuva skrolli) | 'half' (puolivuosinäkymä)
+let showNames = true;                       // puolivuosinäkymä: true = asiakkaiden nimet, false = pelkät lukumäärät
+let halfYear  = new Date().getFullYear();   // puolivuoden ensimmäinen kuukausi
+let halfMonth = new Date().getMonth();
+let quotes    = [];
+let todos     = [];
+let invoices  = []; // laskutuserät joilla on due_date
+let forestSpots = []; // puukasat joilla on pickup_date
+let milestones = []; // order_milestones-rivit joilla on target_week, ei vielä valmiit
+let selectedQuoteId = null; // korostettu tilaus (quote id merkkijonona) tai null
+
+const MILESTONE_TYPES_CAL = {
+  piirustukset: { emoji: '🖼️', label: 'Piirustukset' },
+  ikkuna_ovi:   { emoji: '🪟', label: 'Ikkuna/ovi' },
+  puuosat:      { emoji: '🪵', label: 'Puuosat' },
+  tuotanto:     { emoji: '🏭', label: 'Tuotanto' },
+};
+
+const MONTHS_FI = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
+                   'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+
+// ── Nav ────────────────────────────────────────────────
 function toggleNav(e) {
   e.stopPropagation();
-  document.getElementById("navDropdown").classList.toggle("open");
+  document.getElementById('navDropdown').classList.toggle('open');
 }
-document.addEventListener("click", function() {
-  document.getElementById("navDropdown").classList.remove("open");
-});
+document.addEventListener('click', () => document.getElementById('navDropdown').classList.remove('open'));
 
 async function logout() {
-  await scl.auth.signOut();
+  await db.auth.signOut();
   window.location.href = 'login.html';
 }
 
-function switchTab(tab) {
-  document.getElementById("tab-todos").classList.toggle("active", tab === "todos");
-  document.getElementById("tab-lists").classList.toggle("active", tab === "lists");
-  document.getElementById("view-todos").style.display = tab === "todos" ? "" : "none";
-  document.getElementById("view-lists").style.display = tab === "lists" ? "" : "none";
-}
+// ── Init ───────────────────────────────────────────────
+init();
 
 async function init() {
-  var s = await scl.auth.getSession();
-  currentUserId = (s.data && s.data.session) ? s.data.session.user.id : null;
-  await loadTodos();
-  await loadChecklists();
-  renderAll();
+  await loadData();
+  renderCalendar();
 }
 
-async function loadTodos() {
-  var r = await scl.from("todos").select("*").order("is_done").order("created_at");
-  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
-  todos = r.data || [];
+async function loadData() {
+  try {
+    // Hae tilatut ja valmiit tarjoukset joilla on toimitusviikko. deleted_at-suodatus
+    // (2026-09-28, kohta 3) — poistetut tarjoukset eivät saa näkyä kalenterissa.
+    const { data: qData } = await db
+      .from('quotes')
+      .select('id, quote_number, delivery_week, status, customers(name)')
+      .in('status', ['ORDERED', 'COMPLETED'])
+      .not('delivery_week', 'is', null)
+      .is('deleted_at', null);
+    quotes = qData || [];
+
+    // Hae todot joilla on due_week — omat + jaetut
+    const userId = window._currentUser?.id;
+    const { data: tData } = await db
+      .from('todos')
+      .select('id, title, notes, due_week, due_date, due_time, priority, is_shared, is_done, user_id')
+      .not('due_week', 'is', null)
+      .or(`is_shared.eq.true,user_id.eq.${userId}`);
+    todos = tData || [];
+    // Hae laskutuserät joilla on eräpäivä (lähetetty, ei maksettu). deleted_at on liittyvässä
+    // quotes-rivissä (nested join), joten PostgREST/supabase-js ei voi suodattaa sitä suoraan
+    // .eq()/.is()-kutsulla pääriviin — suodatetaan siis JS:ssä haun jälkeen (2026-09-28, kohta 3).
+    const { data: iData } = await db
+      .from('invoice_items')
+      .select('id, name, amount, due_date, status, quote_id, quotes(quote_number, customers(name), deleted_at)')
+      .eq('status', 'lahetetty')
+      .not('due_date', 'is', null);
+    invoices = (iData || []).filter(i => !i.quotes || !i.quotes.deleted_at);
+    // Hae puukasat joilla on sovittu noutopäivä
+    // Haetaan puukasat ja niiden puulajit joilla on noutopäivä
+    const { data: fData } = await db
+      .from('forest_spot_items')
+      .select('id, puulaji, maara_m3, pickup_date, forest_spots(id, kauppa_numero, nimi, tila)')
+      .not('pickup_date', 'is', null);
+    forestSpots = (fData || []).filter(i => i.forest_spots && i.forest_spots.tila !== 'noudettu');
+
+    // Hae keskeneräiset merkkipaalut (piirustukset/ikkuna-ovi/puuosat/tuotanto) joilla on viikko
+    // asetettu. Valmiiksi merkityt eivät näy kalenterissa enää, sama periaate kuin maksetut
+    // laskut jäävät pois yllä olevasta invoice_items-hausta.
+    const { data: mData } = await db
+      .from('order_milestones')
+      .select('id, milestone_type, target_week, quote_id, quotes(quote_number, customers(name), deleted_at)')
+      .eq('is_done', false)
+      .not('target_week', 'is', null);
+    // Sama JS-suodatus kuin invoice_items yllä — deleted_at on nested quotes-relaatiossa.
+    milestones = (mData || []).filter(m => !m.quotes || !m.quotes.deleted_at);
+  } catch(e) {
+    console.error('loadData:', e);
+  }
 }
 
-function renderAll() {
-  var showDone = document.getElementById("showDone").checked;
-  var today = new Date().toISOString().slice(0, 10);
-  var omat = todos.filter(function(t) { return !t.is_shared && t.user_id === currentUserId && (showDone || !t.is_done); });
-  var yhteiset = todos.filter(function(t) { return t.is_shared && (showDone || !t.is_done); });
-  buildList(document.getElementById("listOmat"), omat, today);
-  buildList(document.getElementById("listYhteiset"), yhteiset, today);
+// Normalisoi viikkoavaimen "YYYY-WW"-muotoon nollatäytteellä (esim. "2026-5" -> "2026-05").
+// order_milestones.target_week tallennetaan jo nollatäytettynä (ks. tarjous.html), mutta tämä
+// suojaa myös siltä varalta että joku rivi on tallennettu aiemmin ilman sitä.
+function normalizeWeekKey(wk) {
+  if (!wk || !wk.includes('-')) return wk;
+  const [y, w] = wk.split('-');
+  return `${y}-${String(parseInt(w, 10)).padStart(2, '0')}`;
 }
 
-var PLABEL = { high: "Kiireellinen", normal: "Normaali", low: "Ei kiireellinen" };
+// ── Viikkonumero ───────────────────────────────────────
+function getWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return String(d.getUTCFullYear()) + '-' + String(Math.ceil((((d - yearStart) / 86400000) + 1) / 7)).padStart(2, '0');
+}
 
-function buildList(container, items, today) {
-  container.innerHTML = "";
-  if (!items.length) {
-    var empty = document.createElement("div");
-    empty.className = "todo-empty";
-    empty.textContent = "Ei tehtavia";
-    container.appendChild(empty);
+function getWeekNum(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+// ── Renderöi kalenteri ─────────────────────────────────
+function renderCalendar() {
+  if (effectiveMode() === 'half') {
+    renderHalfYear();
+    renderOrderPanel();
+    updateStickyOffsets();
     return;
   }
-  items.forEach(function(t) {
-    var p = t.priority || "normal";
-    var isOverdue = !t.is_done && t.due_date && t.due_date < today;
-    var div = document.createElement("div");
-    div.className = "todo-item priority-" + p + (t.is_done ? " done" : "");
-    var cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.className = "todo-check";
-    cb.checked = !!t.is_done;
-    cb.addEventListener("change", function() { toggleDone(t.id, this.checked); });
-    var body = document.createElement("div");
-    body.className = "todo-body";
-    var title = document.createElement("div");
-    title.className = "todo-title";
-    title.textContent = t.title;
-    body.appendChild(title);
-    if (t.notes) {
-      var notes = document.createElement("div");
-      notes.className = "todo-notes";
-      notes.textContent = t.notes;
-      body.appendChild(notes);
-    }
-    var meta = document.createElement("div");
-    meta.className = "todo-meta";
-    if (t.due_date) {
-      var dateStr = t.due_date.split("-").reverse().join(".");
-      var timeStr = t.due_time ? " klo " + t.due_time.slice(0,5) : "";
-      var dateEl = document.createElement("span");
-      dateEl.className = "todo-date" + (isOverdue ? " overdue" : "");
-      dateEl.textContent = (isOverdue ? "! " : "") + dateStr + timeStr;
-      meta.appendChild(dateEl);
-    }
-    var badge = document.createElement("span");
-    badge.className = "badge-priority badge-" + p;
-    badge.textContent = PLABEL[p];
-    meta.appendChild(badge);
-    body.appendChild(meta);
-    var del = document.createElement("button");
-    del.className = "todo-del";
-    del.textContent = "X";
-    del.title = "Poista";
-    del.addEventListener("click", function() { deleteTodo(t.id); });
-    var edit = document.createElement("button");
-    edit.className = "todo-edit";
-    edit.textContent = "✎";
-    edit.title = "Muokkaa";
-    edit.addEventListener("click", function() { openModal(t.is_shared, t); });
-    div.appendChild(cb);
-    div.appendChild(body);
-    div.appendChild(edit);
-    div.appendChild(del);
-    container.appendChild(div);
-  });
+  document.getElementById('months').innerHTML = '';
+  monthsRendered = 0;
+  appendMonths(1);
+  fillIfNeeded();
+  updateStickyOffsets();
+  updateVisibleMonth();
+  applySelection();
 }
 
-async function toggleDone(id, done) {
-  await scl.from("todos").update({ is_done: done, done_at: done ? new Date().toISOString() : null }).eq("id", id);
-  var t = todos.find(function(x) { return x.id === id; });
-  if (t) t.is_done = done;
-  renderAll();
-}
-
-async function deleteTodo(id) {
-  if (!confirm("Poistetaanko tehtava?")) return;
-  await scl.from("todos").delete().eq("id", id);
-  todos = todos.filter(function(t) { return t.id !== id; });
-  renderAll();
-  showToast("Poistettu", "success");
-}
-
-function openModal(shared, todo) {
-  currentEditId = todo ? todo.id : null;
-  document.getElementById("modalTitle").textContent = todo ? "Muokkaa tehtavaa" : (shared ? "Uusi yhteinen tehtava" : "Uusi oma tehtava");
-  document.getElementById("fTitle").value = todo ? todo.title : "";
-  document.getElementById("fNotes").value = todo ? (todo.notes || "") : "";
-  document.getElementById("fDate").value = todo ? (todo.due_date || "") : "";
-  document.getElementById("fTime").value = todo ? (todo.due_time ? todo.due_time.slice(0,5) : "") : "";
-  document.getElementById("fPriority").value = todo ? (todo.priority || "normal") : "normal";
-  document.getElementById("fShared").checked = todo ? !!todo.is_shared : shared;
-  document.getElementById("todoModal").classList.add("open");
-  setTimeout(function() { document.getElementById("fTitle").focus(); }, 100);
-}
-function closeModal() { document.getElementById("todoModal").classList.remove("open"); }
-document.getElementById("todoModal").addEventListener("click", function(e) {
-  if (e.target === document.getElementById("todoModal")) closeModal();
-});
-document.getElementById("fTitle").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") saveTodo();
-});
-
-async function saveTodo() {
-  var title = document.getElementById("fTitle").value.trim();
-  if (!title) { showToast("Kirjoita tehtava", "error"); return; }
-  var due_date = document.getElementById("fDate").value || null;
-  var due_time = document.getElementById("fTime").value || null;
-  var payload = {
-    title: title,
-    notes: document.getElementById("fNotes").value.trim() || null,
-    due_date: due_date,
-    due_time: due_time,
-    due_week: due_date ? getWeekKey(new Date(due_date)) : null,
-    priority: document.getElementById("fPriority").value,
-    is_shared: document.getElementById("fShared").checked,
-  };
-  if (currentEditId) {
-    var r = await scl.from("todos").update(payload).eq("id", currentEditId).select();
-    if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
-    var idx = todos.findIndex(function(t) { return t.id === currentEditId; });
-    if (idx !== -1) todos[idx] = Object.assign(todos[idx], r.data[0]);
-    showToast("Tallennettu!", "success");
-  } else {
-    payload.user_id = currentUserId;
-    payload.is_done = false;
-    var r = await scl.from("todos").insert([payload]).select();
-    if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
-    todos.unshift(r.data[0]);
-    showToast("Lisatty!", "success");
+// Lisää n kuukautta listan loppuun (alkukuusta laskien)
+function appendMonths(n) {
+  const wrap = document.getElementById('months');
+  for (let i = 0; i < n && monthsRendered < MAX_MONTHS; i++) {
+    const d = new Date(startYear, startMonth + monthsRendered, 1);
+    wrap.appendChild(buildMonthBlock(d.getFullYear(), d.getMonth()));
+    monthsRendered++;
   }
-  renderAll();
-  closeModal();
+  markSelection();
 }
 
-async function loadChecklists() {
-  var r = await scl.from("checklists")
-    .select("*, checklist_items(*)")
-    .order("created_at");
-  if (r.error) { showToast("Virhe listojen latauksessa", "error"); return; }
-  checklists = (r.data || []).map(function(l) {
-    return {
-      id: l.id,
-      name: l.name,
-      is_shared: l.is_shared,
-      user_id: l.user_id,
-      items: (l.checklist_items || []).sort(function(a,b){ return a.sort_order - b.sort_order; }).map(function(i) {
-        return { id: i.id, text: i.text, done: i.is_done };
-      })
+// Piirtää kuukausia lisää kunnes lista yltää hyvän matkaa ruudun alareunan yli
+function fillIfNeeded() {
+  if (effectiveMode() === 'half') return;
+  const sentinel = document.getElementById('monthsSentinel');
+  while (monthsRendered < MAX_MONTHS && sentinel.getBoundingClientRect().top < window.innerHeight + 800) {
+    appendMonths(1);
+  }
+}
+
+// Yksi kuukausi: otsikko, viikonpäivärivi, ruudukko (desktop) ja viikkolista (mobiili)
+function buildMonthBlock(year, month) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const blk = document.createElement('section');
+  blk.className = 'month-block';
+  blk.dataset.y = year;
+  blk.dataset.m = month;
+
+  const title = document.createElement('div');
+  title.className = 'month-title';
+  title.textContent = MONTHS_FI[month] + ' ' + year;
+  blk.appendChild(title);
+
+  const wd = document.createElement('div');
+  wd.className = 'cal-weekdays';
+  wd.innerHTML = WEEKDAYS_HTML;
+  blk.appendChild(wd);
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
+
+  // Maanantai = 0, ..., sunnuntai = 6
+  let startDow = firstDay.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'cal-wrap';
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid';
+
+  // Edellisen kuun täytepäivät
+  for (let i = 0; i < startDow; i++) {
+    grid.appendChild(buildDayCell(new Date(year, month, -(startDow - 1 - i)), true, today));
+  }
+  // Tämän kuukauden päivät
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    grid.appendChild(buildDayCell(new Date(year, month, d), false, today));
+  }
+  // Seuraavan kuun täytepäivät
+  const remainder = (startDow + lastDay.getDate()) % 7;
+  if (remainder > 0) {
+    for (let i = 1; i <= 7 - remainder; i++) {
+      grid.appendChild(buildDayCell(new Date(year, month + 1, i), true, today));
+    }
+  }
+  wrap.appendChild(grid);
+  blk.appendChild(wrap);
+
+  blk.appendChild(buildMobileList(year, month));
+  return blk;
+}
+
+function buildDayCell(date, otherMonth, today) {
+  const cell = document.createElement('div');
+  const dow  = date.getDay(); // 0=su, 6=la
+  const isWeekend = dow === 0 || dow === 6;
+  const isToday   = date.getTime() === today.getTime();
+  const weekKey   = getWeekNumber(date);
+  const isMonday  = (date.getDay() === 1);
+  // Paikallinen päivämäärä — toISOString() siirsi suomalaisen keskiyön UTC:hen ja päivä heitti yhdellä
+  const dateStr   = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+
+  cell.className = 'cal-day'
+    + (otherMonth ? ' other-month' : '')
+    + (isWeekend  ? ' weekend' : '')
+    + (isToday    ? ' today' : '');
+
+  // Päivänumero + viikkonumero maanantailla
+  const numDiv = document.createElement('div');
+  numDiv.className = 'day-number' + (isToday ? ' today-num' : '');
+  numDiv.innerHTML = date.getDate()
+    + (isMonday ? '<span class="week-num">vko ' + getWeekNum(date) + '</span>' : '');
+  cell.appendChild(numDiv);
+
+  // Täytepäivät (viereisen kuun päivät) jätetään tyhjiksi: kuukaudet ovat nyt peräkkäin, ja
+  // päivä näkyy tapahtumineen omassa kuukausilohkossaan. Näin sama tapahtuma ei tuplaannu.
+  if (otherMonth) return cell;
+
+  // "+"-nappi: lisää tehtävä tälle päivälle (kuluvan kuukauden ruuduissa, myös menneillä päivillä)
+  cell.dataset.date = dateStr;
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'day-add';
+  addBtn.textContent = '+';
+  addBtn.title = 'Lisää tehtävä tälle päivälle';
+  addBtn.setAttribute('aria-label', 'Lisää tehtävä ' + date.getDate() + '.' + (date.getMonth() + 1) + '.');
+  addBtn.onclick = () => openAddTodo(dateStr);
+  numDiv.classList.add('has-add');
+  numDiv.appendChild(addBtn);
+
+  // Toimitukset tällä viikolla — näytetään maanantailla
+  if (isMonday || date.getDate() === 1) {
+    const weekQuotes = quotes.filter(q => normalizeWeekKey(q.delivery_week) === weekKey);
+    weekQuotes.forEach(q => {
+      const ev = document.createElement('a');
+      ev.className = 'event event-' + (q.status === 'COMPLETED' ? 'completed' : 'ordered');
+      ev.href = 'tarjous.html?id=' + q.id;
+      ev.dataset.quoteId = String(q.id);
+      ev.target = '_blank';
+      ev.rel = 'noopener';
+      ev.textContent = (q.customers?.name || q.quote_number || '—');
+      ev.title = (q.quote_number || '') + ' · ' + (q.customers?.name || '') + ' · vko ' + weekKey.split('-')[1];
+      cell.appendChild(ev);
+    });
+
+    // Merkkipaalut tällä viikolla — sama paikka/tyyli kuin toimitusviikot, oma väri per rivi.
+    // "Myöhässä" = viikko on jo mennyt eikä merkkipaalua ole merkitty valmiiksi (ks. loadData,
+    // joka jo suodattaa pois is_done=true-rivit — kaikki tässä listassa on siis keskeneräisiä).
+    const weekMilestones = milestones.filter(m => normalizeWeekKey(m.target_week) === weekKey);
+    weekMilestones.forEach(m => {
+      const cfg = MILESTONE_TYPES_CAL[m.milestone_type] || { emoji: '📌', label: m.milestone_type };
+      const isLate = normalizeWeekKey(m.target_week) < getWeekNumber(today);
+      const ev = document.createElement('a');
+      ev.className = 'event event-milestone' + (isLate ? ' late' : '');
+      ev.href = 'tarjous.html?id=' + m.quote_id;
+      ev.dataset.quoteId = String(m.quote_id);
+      ev.target = '_blank';
+      ev.rel = 'noopener';
+      const customerName = m.quotes?.customers?.name || m.quotes?.quote_number || '—';
+      ev.textContent = cfg.emoji + ' ' + cfg.label + ' · ' + customerName;
+      ev.title = cfg.label + ' · ' + customerName + (isLate ? ' · MYÖHÄSSÄ' : '');
+      cell.appendChild(ev);
+    });
+  }
+
+  // Laskutuserien eräpäivät
+  const dayInvoices = invoices.filter(i => i.due_date === dateStr);
+  dayInvoices.forEach(inv => {
+    const isOverdue = inv.due_date < new Date().toISOString().slice(0,10);
+    const ev = document.createElement('a');
+    ev.className = 'event event-invoice' + (isOverdue ? ' overdue' : '');
+    ev.href = 'laskutus.html';
+    if (inv.quote_id != null) ev.dataset.quoteId = String(inv.quote_id);
+    ev.target = '_blank';
+    ev.rel = 'noopener';
+    const customerName = inv.quotes?.customers?.name || inv.quotes?.quote_number || '—';
+    const amt = inv.amount ? ' · ' + Math.round(inv.amount).toLocaleString('fi-FI') + ' €' : '';
+    ev.textContent = '💰 ' + customerName + amt;
+    ev.title = inv.name + ' · ' + customerName + (isOverdue ? ' · ERÄÄNTYNYT' : '');
+    cell.appendChild(ev);
+  });
+
+  // Tehtävät
+  const dayTodos = todos.filter(t => {
+    if (t.due_date) return t.due_date === dateStr;
+    return t.due_week === weekKey && (isMonday || date.getDate() === 1);
+  });
+  dayTodos.forEach(t => {
+    const ev = document.createElement('div');
+    ev.className = 'event event-todo';
+    const timePrefix = t.due_time ? t.due_time.slice(0,5) + ' ' : '';
+    ev.textContent = (t.is_done ? '✓ ' : '') + timePrefix + t.title;
+    ev.title = t.title + (t.notes ? '\n' + t.notes : '');
+    if (t.is_done) ev.style.opacity = '0.55';
+    ev.onclick = () => openTodoModal(t);
+    cell.appendChild(ev);
+  });
+
+  // Puukasojen noudot
+  const dayForest = forestSpots.filter(i => i.pickup_date === dateStr);
+  dayForest.forEach(i => {
+    const spot = i.forest_spots;
+    const ev = document.createElement('a');
+    ev.className = 'event event-forest';
+    ev.href = 'metsalog.html';
+    ev.target = '_blank';
+    ev.rel = 'noopener';
+    const vol = i.maara_m3 ? ' ' + i.maara_m3 + ' m³' : '';
+    ev.textContent = '🌲 #' + (spot.kauppa_numero || '?') + ' ' + i.puulaji + vol;
+    ev.title = (spot.nimi || '') + ' · ' + i.puulaji + vol;
+    cell.appendChild(ev);
+  });
+
+  return cell;
+}
+
+// ── Mobiililista ───────────────────────────────────────
+function buildMobileList(year, month) {
+  const list = document.createElement('div');
+  list.className = 'mobile-list';
+
+  // Kerää kuukauden viikot. Viikko kuuluu sille kuukaudelle, jossa sen torstai on (kuten ISO-viikon
+  // numerointi), jotta kuukauden rajalle osuva viikko ei tule listaan kahdesti peräkkäin.
+  const weeks = new Map();
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
+
+  for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+    if (d.getDay() !== 4) continue;
+    const wk = getWeekNumber(new Date(d));
+    if (!weeks.has(wk)) weeks.set(wk, []);
+  }
+
+  // Lisää toimitukset
+  quotes.forEach(q => {
+    const wk = normalizeWeekKey(q.delivery_week);
+    if (weeks.has(wk)) {
+      weeks.get(wk).push({ type: q.status === 'COMPLETED' ? 'completed' : 'ordered', q });
+    }
+  });
+
+  // Lisää puukasojen noudot päivämäärän mukaan
+  forestSpots.forEach(i => {
+    if (!i.pickup_date) return;
+    const d = new Date(i.pickup_date + 'T00:00:00');
+    const wk = getWeekNumber(d);
+    if (weeks.has(wk)) {
+      weeks.get(wk).push({ type: 'forest', s: { ...i.forest_spots, _puulaji: i.puulaji, _maara: i.maara_m3 } });
+    }
+  });
+
+  // Lisää keskeneräiset merkkipaalut (samat kuin desktop-näkymässä, ks. loadData)
+  milestones.forEach(m => {
+    const wk = normalizeWeekKey(m.target_week);
+    if (weeks.has(wk)) {
+      const isLate = wk < getWeekNumber(new Date());
+      weeks.get(wk).push({ type: 'milestone', m, isLate });
+    }
+  });
+
+  // Lisää todot
+  todos.forEach(t => {
+    if (weeks.has(t.due_week)) {
+      weeks.get(t.due_week).push({ type: 'todo', t });
+    }
+  });
+
+  if (weeks.size === 0) {
+    list.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:40px;">Ei tapahtumia</div>';
+    return list;
+  }
+
+  weeks.forEach((events, wk) => {
+    const block = document.createElement('div');
+    block.className = 'week-block';
+    block.dataset.wk = wk;
+    const wkNum = wk.split('-')[1];
+    // Otsikko rakennetaan DOM:lla (ei innerHTML +=), koska "+ Tehtävä" -napin kuuntelija katoaisi,
+    // jos lohkon sisältö jäsennettäisiin uudelleen merkkijonosta.
+    const hdr = document.createElement('div');
+    hdr.className = 'week-block-header';
+    const hdrLabel = document.createElement('span');
+    hdrLabel.textContent = 'Viikko ' + wkNum + ' · ' + wk.split('-')[0];
+    hdr.appendChild(hdrLabel);
+    const weekAdd = document.createElement('button');
+    weekAdd.type = 'button';
+    weekAdd.className = 'week-add';
+    weekAdd.textContent = '+ Tehtävä';
+    weekAdd.setAttribute('aria-label', 'Lisää tehtävä viikolle ' + parseInt(wkNum, 10));
+    weekAdd.onclick = () => openAddTodo(defaultDateForWeek(wk));
+    hdr.appendChild(weekAdd);
+    block.appendChild(hdr);
+
+    if (events.length === 0) {
+      const emptyEl = document.createElement('div');
+      emptyEl.className = 'week-block-empty';
+      emptyEl.textContent = 'Ei tapahtumia';
+      block.appendChild(emptyEl);
+    } else {
+      const body = document.createElement('div');
+      body.className = 'week-block-body';
+      events.forEach(ev => {
+        if (ev.q) {
+          const a = document.createElement('a');
+          a.className = 'event event-' + ev.type;
+          a.href = 'tarjous.html?id=' + ev.q.id;
+          a.dataset.quoteId = String(ev.q.id);
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = ev.q.customers?.name || ev.q.quote_number || '—';
+          body.appendChild(a);
+        } else if (ev.t) {
+          const d = document.createElement('div');
+          d.className = 'event event-todo';
+          d.textContent = (ev.t.is_done ? '✓ ' : '') + ev.t.title;
+          if (ev.t.is_done) d.style.opacity = '0.55';
+          d.onclick = () => openTodoModal(ev.t);
+          body.appendChild(d);
+        } else if (ev.s) {
+          const a = document.createElement('a');
+          a.className = 'event event-forest';
+          a.href = 'metsalog.html';
+          a.target = '_blank';
+          a.rel = 'noopener';
+          const vol = ev.s.maara_m3 ? ' · ' + ev.s.maara_m3 + ' m³' : '';
+          const vol2 = ev.s._maara ? ' ' + ev.s._maara + ' m³' : '';
+          a.textContent = '🌲 #' + (ev.s.kauppa_numero || '?') + ' ' + (ev.s._puulaji || '') + vol2;
+          body.appendChild(a);
+        } else if (ev.m) {
+          const cfg = MILESTONE_TYPES_CAL[ev.m.milestone_type] || { emoji: '📌', label: ev.m.milestone_type };
+          const a = document.createElement('a');
+          a.className = 'event event-milestone' + (ev.isLate ? ' late' : '');
+          a.href = 'tarjous.html?id=' + ev.m.quote_id;
+          a.dataset.quoteId = String(ev.m.quote_id);
+          a.target = '_blank';
+          a.rel = 'noopener';
+          const customerName = ev.m.quotes?.customers?.name || ev.m.quotes?.quote_number || '—';
+          a.textContent = cfg.emoji + ' ' + cfg.label + ' · ' + customerName;
+          body.appendChild(a);
+        }
+      });
+      block.appendChild(body);
+    }
+    list.appendChild(block);
+  });
+  return list;
+}
+
+// ── Navigointi ─────────────────────────────────────────
+function prevMonth() {
+  if (effectiveMode() === 'half') { shiftHalf(-6); return; }
+  goToMonth(viewYear, viewMonth - 1);
+}
+function nextMonth() {
+  if (effectiveMode() === 'half') { shiftHalf(6); return; }
+  goToMonth(viewYear, viewMonth + 1);
+}
+function goToday() {
+  const t = new Date();
+  if (effectiveMode() === 'half') {
+    halfYear = t.getFullYear();
+    halfMonth = t.getMonth();
+    renderHalfYear();
+    window.scrollTo(0, 0);
+    return;
+  }
+  startYear = t.getFullYear();
+  startMonth = t.getMonth();
+  renderCalendar();
+  window.scrollTo(0, 0);
+  updateVisibleMonth();
+}
+
+// Skrollaa annetun kuukauden kohdalle. Jos kuukausi on ennen listan alkua tai liian kaukana,
+// lista rakennetaan uudelleen alkamaan siitä kuusta.
+function goToMonth(y, m, instant) {
+  const d = new Date(y, m, 1);
+  y = d.getFullYear(); m = d.getMonth();
+  if (effectiveMode() === 'half') {
+    // Puolivuosinäkymä: jos kuukausi on jo ikkunassa, vieritä sen kortti näkyviin; muuten siirrä ikkuna
+    const off = (y - halfYear) * 12 + (m - halfMonth);
+    if (off < 0 || off > 5) { halfYear = y; halfMonth = m; renderHalfYear(); }
+    const card = document.querySelector('#halfView .hv-card[data-ym="' + y + '-' + m + '"]');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+  let idx = (y - startYear) * 12 + (m - startMonth);
+  let smooth = !instant;
+  if (idx < 0 || idx >= MAX_MONTHS) {
+    startYear = y; startMonth = m; idx = 0; smooth = false;
+    renderCalendar();
+  }
+  while (monthsRendered <= idx) appendMonths(1);
+  const blk = document.getElementById('months').children[idx];
+  const top = blk.getBoundingClientRect().top + window.scrollY - wkTop;
+  window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+}
+
+// Päivittää yläpalkin otsikon sen kuukauden mukaan, joka on kiinnitettyjen palkkien alla
+function updateVisibleMonth() {
+  if (effectiveMode() === 'half') return;
+  const blocks = document.getElementById('months').children;
+  if (!blocks.length) return;
+  const line = wkTop + 60;
+  let cur = blocks[0];
+  for (const b of blocks) {
+    if (b.getBoundingClientRect().top <= line) cur = b; else break;
+  }
+  const y = +cur.dataset.y, m = +cur.dataset.m;
+  document.getElementById('calTitle').textContent = MONTHS_FI[m] + ' ' + y;
+  if (y !== viewYear || m !== viewMonth) {
+    viewYear = y; viewMonth = m;
+    if (selectedQuoteId !== null) renderOrderPanel(); // "here"-merkintä
+  }
+}
+
+// Kiinteiden palkkien korkeudet CSS-muuttujiin, jotta sisäkkäiset sticky-elementit pinoutuvat oikein
+function updateStickyOffsets() {
+  const hdr = document.querySelector('header').offsetHeight;
+  const nav = document.querySelector('.cal-nav');
+  const navH = getComputedStyle(nav).position === 'sticky' ? nav.offsetHeight : 0;
+  const panel = document.getElementById('orderPanel');
+  const panelH = panel.hidden ? 0 : panel.offsetHeight;
+  const root = document.documentElement.style;
+  root.setProperty('--hdr-h', hdr + 'px');
+  root.setProperty('--panel-top', (hdr + navH) + 'px');
+  root.setProperty('--wk-top', (hdr + navH + panelH) + 'px');
+  wkTop = hdr + navH + panelH;
+}
+
+let scrollTick = false;
+window.addEventListener('scroll', () => {
+  if (scrollTick) return;
+  scrollTick = true;
+  requestAnimationFrame(() => {
+    scrollTick = false;
+    fillIfNeeded();
+    updateVisibleMonth();
+  });
+}, { passive: true });
+window.addEventListener('resize', () => {
+  applyMode();
+  if (effectiveMode() === 'half') renderHalfYear();
+  else if (!document.getElementById('months').children.length) renderCalendar();
+  updateStickyOffsets();
+  updateVisibleMonth();
+});
+
+// ── Tilauksen korostus + aikajanapaneeli ───────────────
+// Tapahtuman klikkaus (toimitus / merkkipaalu / lasku) valitsee tilauksen sen sijaan että avaisi
+// tarjouksen uuteen välilehteen. Tarjouksen saa auki paneelin napista, tai Ctrl/Cmd/Shift-klikillä.
+document.addEventListener('click', e => {
+  const ev = e.target.closest('[data-quote-id]');
+  if (!ev) return;
+  // Linkkinä toimivat tapahtumat: Ctrl/Cmd/Shift-klikkaus avaa tarjouksen normaalisti
+  if (ev.tagName === 'A' && (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0)) return;
+  e.preventDefault();
+  selectQuote(ev.dataset.quoteId);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('addTodoModal').classList.contains('open')) { closeAddTodo(); return; }
+  if (document.getElementById('printModal').classList.contains('open')) { closePrintModal(); return; }
+  if (selectedQuoteId && !document.getElementById('todoModal').classList.contains('open')) clearSelection();
+});
+
+function selectQuote(id) {
+  selectedQuoteId = (String(selectedQuoteId) === String(id)) ? null : String(id);
+  applySelection();
+}
+function clearSelection() {
+  selectedQuoteId = null;
+  applySelection();
+}
+
+// Merkitsee DOMiin korostetut tapahtumat ja päivittää paneelin. Kutsutaan myös aina
+// renderCalendar():n lopussa, koska ruudukko rakennetaan silloin uusiksi.
+function markSelection() {
+  document.body.classList.toggle('has-selection', selectedQuoteId !== null);
+  document.querySelectorAll('#months .event[data-quote-id]').forEach(el => {
+    el.classList.toggle('sel', selectedQuoteId !== null && el.dataset.quoteId === selectedQuoteId);
+  });
+}
+function applySelection() {
+  markSelection();
+  renderOrderPanel();
+  updateStickyOffsets();
+  if (effectiveMode() === 'half') renderHalfYear(); // korostus näkyy myös puolivuosinäkymässä
+}
+
+// ISO-viikkoavain "YYYY-WW" -> viikon maanantai (paikallinen Date)
+function weekKeyToMonday(key) {
+  const [y, w] = normalizeWeekKey(key).split('-').map(n => parseInt(n, 10));
+  const jan4 = new Date(y, 0, 4);
+  const monday = new Date(y, 0, 4 - ((jan4.getDay() || 7) - 1));
+  monday.setDate(monday.getDate() + (w - 1) * 7);
+  return monday;
+}
+function fmtDM(d) { return d.getDate() + '.' + (d.getMonth() + 1) + '.'; }
+function fmtWeekRange(monday) {
+  const fri = new Date(monday); fri.setDate(fri.getDate() + 4);
+  return monday.getMonth() === fri.getMonth()
+    ? monday.getDate() + '.–' + fri.getDate() + '.' + (fri.getMonth() + 1) + '.'
+    : fmtDM(monday) + '–' + fmtDM(fri);
+}
+function parseDateStr(s) { // "YYYY-MM-DD" -> paikallinen Date (ei UTC-siirtymää)
+  const [y, m, d] = s.split('-').map(n => parseInt(n, 10));
+  return new Date(y, m - 1, d);
+}
+
+// Kerää valitun tilauksen kaikki päivät (toimitus, keskeneräiset merkkipaalut, avoimet laskut)
+function collectOrderItems(id) {
+  const items = [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayWk = getWeekNumber(today);
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+  const q = quotes.find(x => String(x.id) === id);
+  if (q) {
+    const mon = weekKeyToMonday(q.delivery_week);
+    items.push({ date: mon, label: '🚚 Toimitus', when: 'vko ' + parseInt(normalizeWeekKey(q.delivery_week).split('-')[1], 10) + ' · ' + fmtWeekRange(mon), late: false });
+  }
+  milestones.filter(m => String(m.quote_id) === id).forEach(m => {
+    const cfg = MILESTONE_TYPES_CAL[m.milestone_type] || { emoji: '📌', label: m.milestone_type };
+    const wk = normalizeWeekKey(m.target_week);
+    const mon = weekKeyToMonday(wk);
+    items.push({ date: mon, label: cfg.emoji + ' ' + cfg.label, when: 'vko ' + parseInt(wk.split('-')[1], 10) + ' · ' + fmtWeekRange(mon), late: wk < todayWk });
+  });
+  invoices.filter(i => String(i.quote_id) === id).forEach(i => {
+    const d = parseDateStr(i.due_date);
+    const amt = i.amount ? ' · ' + Math.round(i.amount).toLocaleString('fi-FI') + ' €' : '';
+    items.push({ date: d, label: '💰 ' + (i.name || 'Lasku') + amt, when: fmtDM(d) + d.getFullYear(), late: i.due_date < todayStr });
+  });
+  items.sort((a, b) => a.date - b.date);
+  return items;
+}
+
+function renderOrderPanel() {
+  const panel = document.getElementById('orderPanel');
+  if (selectedQuoteId === null) { panel.hidden = true; return; }
+  panel.hidden = false;
+
+  // Otsikkotiedot mistä tahansa tapahtumalähteestä
+  const src = quotes.find(x => String(x.id) === selectedQuoteId)
+    || milestones.find(x => String(x.quote_id) === selectedQuoteId)
+    || invoices.find(x => String(x.quote_id) === selectedQuoteId);
+  const number = src ? (src.quote_number || src.quotes?.quote_number || '') : '';
+  const customer = (src && (src.customers?.name || src.quotes?.customers?.name)) || '';
+
+  const title = document.getElementById('opTitle');
+  title.textContent = customer || number || 'Tilaus';
+  if (customer && number) {
+    const s = document.createElement('small');
+    s.textContent = number;
+    title.appendChild(s);
+  }
+  document.getElementById('opOpen').href = 'tarjous.html?id=' + encodeURIComponent(selectedQuoteId);
+
+  const box = document.getElementById('opItems');
+  box.innerHTML = '';
+  const items = collectOrderItems(selectedQuoteId);
+  if (items.length === 0) {
+    const e = document.createElement('div');
+    e.className = 'op-empty';
+    e.textContent = 'Ei aikatauluttettuja päiviä.';
+    box.appendChild(e);
+  }
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'op-item' + (it.late ? ' late' : '')
+      + (isMonthShown(it.date) ? ' here' : '');
+    const l = document.createElement('span'); l.className = 'op-label'; l.textContent = it.label;
+    const w = document.createElement('span'); w.className = 'op-when'; w.textContent = it.when;
+    b.append(l, w);
+    b.title = 'Hyppää kuukauteen ' + MONTHS_FI[it.date.getMonth()].toLowerCase() + ' ' + it.date.getFullYear();
+    b.onclick = () => goToMonth(it.date.getFullYear(), it.date.getMonth());
+    box.appendChild(b);
+  });
+}
+
+// Tulosta kuukausi: valintaikkuna (oletuksena ruudulla näkyvä kuukausi), sitten yksi kuukausi
+// isolla ruudukolla A4-vaakaan seinälle liimattavaksi. Tulostettava kuukausi piirretään erilliseen
+// #printArea-alueeseen, ja tulostus-CSS piilottaa muun (ks. @media print yllä).
+function printMonth() {
+  if (effectiveMode() === 'half') { printHalf(); return; }
+  const sel = document.getElementById('printMonthSelect');
+  sel.innerHTML = '';
+  for (let i = -6; i <= 18; i++) {
+    const d = new Date(viewYear, viewMonth + i, 1);
+    const o = document.createElement('option');
+    o.value = d.getFullYear() + '-' + d.getMonth();
+    o.textContent = MONTHS_FI[d.getMonth()] + ' ' + d.getFullYear();
+    if (i === 0) o.selected = true;
+    sel.appendChild(o);
+  }
+  document.getElementById('printModal').classList.add('open');
+  sel.focus();
+}
+function closePrintModal() {
+  document.getElementById('printModal').classList.remove('open');
+}
+function doPrintMonth() {
+  const [y, m] = document.getElementById('printMonthSelect').value.split('-').map(Number);
+  closePrintModal();
+  const area = document.getElementById('printArea');
+  area.innerHTML = '';
+  area.appendChild(buildMonthBlock(y, m));
+  window.addEventListener('afterprint', () => { area.innerHTML = ''; }, { once: true });
+  window.print();
+}
+document.getElementById('printModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('printModal')) closePrintModal();
+});
+
+// ── Puolivuosinäkymä ───────────────────────────────────
+// Puhelimella (≤640 px) näkymä on aina kuukausinäkymä.
+function effectiveMode() {
+  return (viewMode === 'half' && window.innerWidth > 640) ? 'half' : 'month';
+}
+
+function applyMode() {
+  const half = effectiveMode() === 'half';
+  document.getElementById('halfView').hidden = !half;
+  const lg = document.querySelector('.legend'); if (lg) lg.style.display = half ? 'none' : '';
+  document.getElementById('months').hidden = half;
+  document.getElementById('monthsSentinel').hidden = half;
+  document.getElementById('modeMonth').setAttribute('aria-pressed', String(!half));
+  document.getElementById('modeHalf').setAttribute('aria-pressed', String(half));
+  const pb = document.getElementById('printBtn');
+  pb.textContent = half ? '🖨 Tulosta puolivuosi' : '🖨 Tulosta kuukausi';
+  pb.title = half
+    ? 'Tulostaa näkyvän puolivuoden yhdelle A4-sivulle (nimet tai määrät sen mukaan mikä on valittuna)'
+    : 'Valitse kuukausi ja tulosta se isolla ruudukolla, seinälle liimattavaksi';
+}
+
+function setMode(mode) {
+  if (mode === viewMode) return;
+  viewMode = mode;
+  if (mode === 'half') {
+    halfYear = viewYear;
+    halfMonth = viewMonth;
+    applyMode();
+    renderHalfYear();
+    renderOrderPanel();
+    updateStickyOffsets();
+    window.scrollTo(0, 0);
+  } else {
+    applyMode();
+    if (!document.getElementById('months').children.length) renderCalendar();
+    updateStickyOffsets();
+    goToMonth(halfYear, halfMonth, true);
+  }
+}
+
+// Viikkorivin klikkaus: avaa kuukausinäkymän kyseiseen kuukauteen
+function openMonthFromHalf(y, m) {
+  viewMode = 'month';
+  applyMode();
+  if (!document.getElementById('months').children.length) renderCalendar();
+  updateStickyOffsets();
+  goToMonth(y, m, true);
+}
+
+function shiftHalf(n) {
+  const d = new Date(halfYear, halfMonth + n, 1);
+  halfYear = d.getFullYear();
+  halfMonth = d.getMonth();
+  renderHalfYear();
+}
+
+function isMonthShown(date) {
+  if (effectiveMode() === 'half') {
+    const off = (date.getFullYear() - halfYear) * 12 + (date.getMonth() - halfMonth);
+    return off >= 0 && off <= 5;
+  }
+  return date.getFullYear() === viewYear && date.getMonth() === viewMonth;
+}
+
+function renderHalfYear() {
+  const host = document.getElementById('halfView');
+  host.innerHTML = '';
+  host.appendChild(buildHalfView(false));
+}
+
+function printHalf() {
+  const area = document.getElementById('printArea');
+  area.innerHTML = '';
+  area.appendChild(buildHalfView(true));
+  window.addEventListener('afterprint', () => { area.innerHTML = ''; }, { once: true });
+  window.print();
+}
+
+function mk(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+// Viikkoavain -> { del: [toimitukset], ms: [keskeneräiset merkkipaalut] }
+function halfWeekData() {
+  const map = new Map();
+  const get = k => { if (!map.has(k)) map.set(k, { del: [], ms: [], all: [] }); return map.get(k); };
+  const localStr = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const todayStr = localStr(new Date());
+  const weekOfDate = str => getWeekNumber(new Date(str.slice(0, 10) + 'T12:00:00'));
+  const add = (wk, it) => { const e = get(wk); e.all.push(it); if (it.kind === 'del') e.del.push(it); if (it.kind === 'ms') e.ms.push(it); };
+
+  quotes.forEach(q => {
+    const name = q.customers?.name || q.quote_number || '—';
+    add(normalizeWeekKey(q.delivery_week), {
+      kind: 'del', cls: q.status === 'COMPLETED' ? 'k-completed' : 'k-ordered', id: String(q.id),
+      emoji: '🚚', name, sub: 'Toimitus', name_only: name, status: q.status
+    });
+  });
+  milestones.forEach(m => {
+    const cfg = MILESTONE_TYPES_CAL[m.milestone_type] || { emoji: '📌', label: m.milestone_type };
+    const name = m.quotes?.customers?.name || m.quotes?.quote_number || '—';
+    add(normalizeWeekKey(m.target_week), {
+      kind: 'ms', cls: 'k-ms-' + m.milestone_type, id: String(m.quote_id),
+      emoji: cfg.emoji, name, sub: cfg.label
+    });
+  });
+  invoices.forEach(i => {
+    if (!i.due_date) return;
+    const name = i.quotes?.customers?.name || i.quotes?.quote_number || '—';
+    const amt = i.amount ? Math.round(i.amount).toLocaleString('fi-FI') + ' €' : '';
+    const over = i.due_date < todayStr;
+    add(weekOfDate(i.due_date), {
+      kind: 'inv', cls: over ? 'k-inv-over' : 'k-inv', id: i.quote_id != null ? String(i.quote_id) : null,
+      emoji: '💰', name, sub: [i.name || 'Lasku', amt].filter(Boolean).join(' · ') + (over ? ' · ERÄÄNTYNYT' : '')
+    });
+  });
+  forestSpots.forEach(i => {
+    if (!i.pickup_date) return;
+    const spot = i.forest_spots || {};
+    const vol = i.maara_m3 ? ' ' + i.maara_m3 + ' m³' : '';
+    add(weekOfDate(i.pickup_date), {
+      kind: 'forest', cls: 'k-forest', id: null,
+      emoji: '🌲', name: '#' + (spot.kauppa_numero || '?') + ' ' + i.puulaji, sub: (i.maara_m3 ? i.maara_m3 + ' m³' : 'Puunnouto')
+    });
+  });
+  todos.forEach(t => {
+    if (t.is_done) return;
+    const wk = t.due_date ? weekOfDate(t.due_date) : normalizeWeekKey(t.due_week);
+    if (!wk) return;
+    add(wk, { kind: 'todo', cls: 'k-todo', id: null, emoji: '✅', name: t.title, sub: 'Tehtävä', todo: t });
+  });
+  return map;
+}
+
+// Puolivuosi: 6 kuukautta halfYear/halfMonth-kuukaudesta alkaen. Viikko kuuluu sille kuukaudelle,
+// jossa sen torstai on (sama sääntö kuin mobiililistassa), joten yksikään viikko ei toistu.
+function buildHalfView(forPrint) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nowKey = getWeekNumber(today);
+  const data = halfWeekData();
+  const sel = selectedQuoteId;
+
+  const months = [];
+  let free = 0, busyKey = null, busyCount = 0, totalWeeks = 0;
+  for (let i = 0; i < 6; i++) {
+    const d0 = new Date(halfYear, halfMonth + i, 1);
+    const y = d0.getFullYear(), m = d0.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
+    const weeks = [];
+    let total = 0;
+    for (let day = 1; day <= last; day++) {
+      const d = new Date(y, m, day);
+      if (d.getDay() !== 4) continue;
+      const key = getWeekNumber(d);
+      const monday = new Date(y, m, day - 3);
+      const info = data.get(key) || { del: [], ms: [], all: [] };
+      const c = info.del.length;
+      weeks.push({ key, monday, info });
+      total += c;
+      totalWeeks++;
+      if (c === 0) free++;
+      if (c > busyCount) { busyCount = c; busyKey = key; }
+    }
+    months.push({ y, m, weeks, total });
+  }
+  const first = months[0], lastM = months[5];
+  const rangeTitle = MONTHS_FI[first.m] + ' ' + first.y + ' – ' + MONTHS_FI[lastM.m] + ' ' + lastM.y;
+
+  const wrap = mk('div', 'hv-wrap' + (forPrint ? ' hv-print' : ''));
+  if (forPrint) {
+    wrap.appendChild(mk('div', 'month-title', rangeTitle));
+  } else {
+    document.getElementById('calTitle').textContent = rangeTitle;
+  }
+
+  // Työkalurivi: Nimet | Määrät + selite
+  const bar = mk('div', 'hv-toolbar');
+  if (!forPrint) {
+    const seg = mk('div', 'seg');
+    seg.setAttribute('role', 'group');
+    seg.setAttribute('aria-label', 'Näytä asiakkaiden nimet tai lukumäärät');
+    [['Nimet', true], ['Määrät', false]].forEach(pair => {
+      const b = mk('button', '', pair[0]);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(showNames === pair[1]));
+      b.onclick = () => { showNames = pair[1]; renderHalfYear(); };
+      seg.appendChild(b);
+    });
+    bar.appendChild(seg);
+  }
+  const leg = mk('div', 'hv-legend');
+  leg.appendChild(mk('span', 'hv-legend-title', 'Taustaväri = toimituksia viikossa'));
+  ['0 (vapaa)', '1', '2', '3', '4+'].forEach((lab, i) => {
+    const it = mk('span', 'hv-legend-item');
+    it.appendChild(mk('span', 'hv-swatch lv' + i));
+    it.appendChild(document.createTextNode(lab));
+    leg.appendChild(it);
+  });
+  [['k-ordered', '🚚 Toimitus'], ['k-completed', '🚚 Valmis'], ['k-ms-piirustukset', '🖼️ Piirustukset'],
+   ['k-ms-ikkuna_ovi', '🪟 Ikkuna/ovi'], ['k-ms-puuosat', '🪵 Puuosat'], ['k-ms-tuotanto', '🏭 Tuotanto'],
+   ['k-inv', '💰 Lasku'], ['k-inv-over', '💰 Erääntynyt'], ['k-forest', '🌲 Puunnouto'], ['k-todo', '✅ Tehtävä']].forEach(pair => {
+    const it = mk('span', 'hv-legend-item');
+    it.appendChild(mk('span', 'hv-sw ' + pair[0]));
+    it.appendChild(document.createTextNode(pair[1]));
+    leg.appendChild(it);
+  });
+  bar.appendChild(leg);
+  wrap.appendChild(bar);
+
+  // Kuormitus viikoittain -kaavio
+  const chart = mk('div', 'hv-card hv-chartcard');
+  const head = mk('div', 'hv-chart-head');
+  head.appendChild(mk('span', 'hv-chart-title', 'Kuormitus viikoittain'));
+  head.appendChild(mk('span', 'hv-chart-note', 'toimitusta / viikko · ' + totalWeeks + ' viikkoa'));
+  const sum = mk('span', 'hv-chart-sum');
+  sum.appendChild(mk('b', '', free + ' vapaata viikkoa'));
+  if (busyKey && busyCount > 0) {
+    sum.appendChild(document.createTextNode(' · ruuhkaisin vko ' + parseInt(busyKey.split('-')[1], 10) + ' (' + busyCount + ' toimitusta)'));
+  }
+  head.appendChild(sum);
+  chart.appendChild(head);
+  const maxH = forPrint ? 52 : 88;
+  const scale = Math.max(4, busyCount);
+  const cols = mk('div', 'hv-chart-cols');
+  months.forEach(mo => {
+    const g = mk('div', 'hv-cgroup');
+    g.style.flexGrow = String(mo.weeks.length);
+    const bars = mk('div', 'hv-cbars');
+    bars.style.height = maxH + 'px';
+    mo.weeks.forEach(w => {
+      const c = w.info.del.length;
+      const b = mk('div', 'hv-cbar lv' + Math.min(c, 4) + (w.key === nowKey ? ' now' : ''));
+      b.style.height = (c === 0 ? 3 : Math.max(6, Math.round(c / scale * maxH))) + 'px';
+      b.title = 'vko ' + parseInt(w.key.split('-')[1], 10) + ': ' + c + ' toimitusta';
+      bars.appendChild(b);
+    });
+    g.appendChild(bars);
+    g.appendChild(mk('div', 'hv-clabel', MONTHS_FI[mo.m]));
+    cols.appendChild(g);
+  });
+  chart.appendChild(cols);
+  wrap.appendChild(chart);
+
+  // Kuukausikortit
+  const grid = mk('div', 'hv-grid');
+  months.forEach(mo => {
+    const card = mk('div', 'hv-card');
+    card.dataset.ym = mo.y + '-' + mo.m;
+    const mh = mk('div', 'hv-month-head');
+    mh.appendChild(mk('span', 'hv-month-title', MONTHS_FI[mo.m] + ' ' + mo.y));
+    mh.appendChild(mk('span', 'hv-month-total', mo.total === 1 ? '1 toimitus' : mo.total + ' toimitusta'));
+    card.appendChild(mh);
+    const rows = mk('div', 'hv-rows');
+    mo.weeks.forEach(w => rows.appendChild(buildHalfRow(w, mo, nowKey, sel)));
+    card.appendChild(rows);
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function buildHalfRow(w, mo, nowKey, sel) {
+  const cnt = w.info.del.length;
+  const all = w.info.all;
+  const row = mk('div', 'hv-row');
+
+  const wkNum = parseInt(w.key.split('-')[1], 10);
+  const lab = mk('button', 'hv-week');
+  lab.type = 'button';
+  lab.title = 'Avaa viikko ' + wkNum + ' kuukausinäkymässä';
+  lab.appendChild(mk('b', '', 'vko ' + wkNum));
+  lab.appendChild(document.createTextNode(' ' + fmtWeekRange(w.monday)));
+  lab.onclick = () => openMonthFromHalf(mo.y, mo.m);
+  row.appendChild(lab);
+
+  const hasSel = sel !== null && all.some(x => x.id === sel);
+  const bar = mk('div', 'hv-bar lv' + Math.min(cnt, 4));
+  if (all.length > 0) bar.title = all.map(x => x.emoji + ' ' + x.name + ' · ' + x.sub).join('\n');
+  if (sel !== null) {
+    if (hasSel) bar.classList.add('has-sel');
+    else if (!showNames) bar.classList.add('dim');
+  }
+  if (w.key === nowKey) bar.appendChild(mk('span', 'hv-now', 'nyt'));
+
+  if (showNames) {
+    // Valittu tilaus ensin, jotta se ei jää "+N"-laskurin taakse
+    const items = all.slice().sort((a, b) => (b.id === sel && sel !== null) - (a.id === sel && sel !== null));
+    const MAXC = 2;
+    const shown = items.slice(0, items.length > MAXC ? MAXC : items.length);
+    // Yksi asia viikossa: koko nimi + tarkoitus. Useita: jaetaan tila tasan ja pidetään vain nimi.
+    const multi = shown.length > 1 || items.length > MAXC;
+    bar.classList.add(multi ? 'multi' : 'single');
+    shown.forEach(x => {
+      const c = mk('button', 'hv-chip ' + x.cls);
+      c.type = 'button';
+      if (x.id !== null) c.dataset.quoteId = x.id;
+      else if (x.todo) c.onclick = () => openTodoModal(x.todo);
+      else c.style.cursor = 'default';
+      c.title = x.emoji + ' ' + x.name + ' · ' + x.sub;
+      c.appendChild(mk('span', 'hv-emo', x.emoji));
+      c.appendChild(mk('span', 'hv-name', x.name));
+      if (!multi) c.appendChild(mk('span', 'hv-sub', '· ' + x.sub));
+      if (sel !== null) c.classList.add(x.id === sel ? 'sel' : 'dim');
+      bar.appendChild(c);
+    });
+    if (items.length > MAXC) bar.appendChild(mk('span', 'hv-more', '+' + (items.length - MAXC)));
+  } else {
+    if (cnt > 0) bar.appendChild(mk('span', 'hv-count', String(cnt)));
+    const others = all.filter(x => x.kind !== 'del');
+    if (others.length > 0) {
+      const ms = mk('div', 'hv-ms');
+      ms.title = others.map(x => x.emoji + ' ' + x.name + ' · ' + x.sub).join('\n');
+      others.slice(0, 8).forEach(x => ms.appendChild(mk('span', 'hv-sq ' + x.cls)));
+      bar.appendChild(ms);
+    }
+  }
+  if (all.length === 0) bar.appendChild(mk('span', 'hv-free', 'vapaa'));
+  row.appendChild(bar);
+  return row;
+}
+
+// ── Todo modal ─────────────────────────────────────────
+function openTodoModal(t) {
+  const PRIORITY_FI = { high: 'Korkea', normal: 'Normaali', low: 'Matala' };
+
+  document.getElementById('todoModalTitle').textContent = t.title;
+  document.getElementById('todoModalNotes').textContent = t.notes || '—';
+
+  const priEl = document.getElementById('todoModalPriority');
+  priEl.textContent = PRIORITY_FI[t.priority] || t.priority || 'Normaali';
+  priEl.className = 'todo-modal-badge ' + (t.priority || 'normal');
+
+  document.getElementById('todoModalType').textContent = t.is_shared ? 'Yhteinen' : 'Oma';
+
+  const doneEl = document.getElementById('todoModalDone');
+  doneEl.textContent = t.is_done ? 'Tehty' : 'Tekemättä';
+  doneEl.className = 'todo-modal-badge ' + (t.is_done ? 'done' : 'normal');
+
+  const dueDateEl = document.getElementById('todoModalDueDate');
+  if (t.due_date) {
+    const d = new Date(t.due_date);
+    dueDateEl.textContent = d.getDate() + '.' + (d.getMonth()+1) + '.' + d.getFullYear()
+      + (t.due_week ? ' (vko ' + t.due_week.split('-')[1] + ')' : '');
+  } else if (t.due_week) {
+    dueDateEl.textContent = 'Viikko ' + t.due_week.split('-')[1] + ' / ' + t.due_week.split('-')[0];
+  } else {
+    dueDateEl.textContent = '—';
+  }
+
+  document.getElementById('todoModal').classList.add('open');
+}
+
+function closeTodoModal() {
+  document.getElementById('todoModal').classList.remove('open');
+}
+document.getElementById('todoModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('todoModal')) closeTodoModal();
+});
+
+// ── Uuden tehtävän lisäys kalenterista (2026-10-01) ────
+// Tallentaa samaan todos-tauluun kuin todo.html, samoilla kentillä (due_date + due_week + due_time),
+// joten tehtävä näkyy heti kalenterissa oikealla päivällä ja Muistilista-sivulla.
+// Avaajat: päiväruudun "+" (työpöytä) ja viikkolohkon "+ Tehtävä" (puhelin).
+// Muokkaus / "Tehty"-merkintä kalenterista on tarkoituksella myöhempi työ (ks. ROADMAP).
+const WEEKDAYS_LONG_FI = ['sunnuntai','maanantai','tiistai','keskiviikko','torstai','perjantai','lauantai'];
+let addTodoSaving = false;
+
+// Date -> "YYYY-MM-DD" paikallisena päivänä (ei toISOString, joka siirtäisi suomalaisen keskiyön UTC:hen)
+function dateToStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Puhelimen viikkonapin oletuspäivä: viikon maanantai — paitsi kuluvalla viikolla tämä päivä, jotta
+// juuri lisätty tehtävä ei näy heti myöhässä olevana (menneenä maanantaina).
+function defaultDateForWeek(wk) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const key = normalizeWeekKey(wk);
+  if (getWeekNumber(today) === key) return dateToStr(today);
+  return dateToStr(weekKeyToMonday(key));
+}
+
+function updateAddTodoHint() {
+  const v = document.getElementById('atDate').value;
+  const el = document.getElementById('atDateHint');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { el.textContent = ''; return; }
+  const d = parseDateStr(v);
+  el.textContent = WEEKDAYS_LONG_FI[d.getDay()] + ' · vko ' + getWeekNum(d);
+}
+
+function openAddTodo(dateStr) {
+  document.getElementById('atTitle').value = '';
+  document.getElementById('atNotes').value = '';
+  document.getElementById('atDate').value = dateStr || dateToStr(new Date());
+  document.getElementById('atTime').value = '';
+  document.getElementById('atPriority').value = 'normal';
+  document.getElementById('atShared').checked = true; // oletus: yhteinen; rasti pois = oma
+  updateAddTodoHint();
+  document.getElementById('addTodoModal').classList.add('open');
+  setTimeout(() => document.getElementById('atTitle').focus(), 50);
+}
+
+function closeAddTodo() {
+  document.getElementById('addTodoModal').classList.remove('open');
+}
+
+async function saveAddTodo() {
+  if (addTodoSaving) return;
+  const title = document.getElementById('atTitle').value.trim();
+  if (!title) {
+    showToast('Kirjoita tehtävä', 'error');
+    document.getElementById('atTitle').focus();
+    return;
+  }
+  const dueDate = document.getElementById('atDate').value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    showToast('Valitse päivämäärä', 'error');
+    return;
+  }
+
+  addTodoSaving = true;
+  const saveBtn = document.getElementById('atSaveBtn');
+  saveBtn.disabled = true;
+  try {
+    let uid = window._currentUser?.id;
+    if (!uid) {
+      const s = await db.auth.getSession();
+      uid = s.data?.session?.user?.id;
+    }
+    if (!uid) { showToast('Kirjautuminen puuttuu — kirjaudu sisään uudelleen', 'error'); return; }
+
+    const payload = {
+      title: title,
+      notes: document.getElementById('atNotes').value.trim() || null,
+      due_date: dueDate,
+      due_time: document.getElementById('atTime').value || null,
+      due_week: getWeekNumber(parseDateStr(dueDate)),
+      priority: document.getElementById('atPriority').value,
+      is_shared: document.getElementById('atShared').checked,
+      user_id: uid,
+      is_done: false
     };
+    const { data, error } = await db.from('todos').insert([payload]).select();
+    if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
+
+    if (data && data[0]) todos.unshift(data[0]);
+    else await loadData(); // varalta: jos insert ei palauttanut riviä, haetaan tiedot uudelleen
+
+    closeAddTodo();
+    refreshCalendarAfterTodoAdd(dueDate);
+    showToast('Tehtävä lisätty', 'success');
+  } catch (e) {
+    console.error('saveAddTodo:', e);
+    showToast('Tallennus epäonnistui', 'error');
+  } finally {
+    addTodoSaving = false;
+    saveBtn.disabled = false;
+  }
+}
+
+// Piirtää uudelleen vain ne kuukausilohkot, joihin uusi tehtävä vaikuttaa, ja pitää ruudulla
+// näkyvän kohdan paikallaan. Päiväruutu on päivän omassa kuukausilohkossa; puhelimen viikkolista
+// taas on sen kuukauden lohkossa, jossa viikon torstai on — siksi päivitetään molemmat.
+function refreshCalendarAfterTodoAdd(dateStr) {
+  if (effectiveMode() === 'half') { renderHalfYear(); return; }
+  const d = parseDateStr(dateStr);
+  const wk = getWeekNumber(d);
+  const thu = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() || 7) - 1) + 3);
+  const targets = new Map();
+  [d, thu].forEach(x => targets.set(x.getFullYear() + '-' + x.getMonth(), [x.getFullYear(), x.getMonth()]));
+
+  const wrap = document.getElementById('months');
+  // Ankkuri = näkyvissä oleva päiväruutu (työpöytä) tai viikkolohko (puhelin); piilotetun
+  // näkymän elementillä ei ole offsetParentia.
+  const findAnchor = () => Array.from(wrap.querySelectorAll(
+    '.cal-day[data-date="' + dateStr + '"], .week-block[data-wk="' + wk + '"]'
+  )).find(el => el.offsetParent !== null);
+  const before = findAnchor();
+  const beforeTop = before ? before.getBoundingClientRect().top : null;
+
+  targets.forEach(([y, m]) => {
+    const old = wrap.querySelector('.month-block[data-y="' + y + '"][data-m="' + m + '"]');
+    if (old) wrap.replaceChild(buildMonthBlock(y, m), old);
   });
-  renderChecklists();
+  markSelection(); // tilauksen korostus säilyy
+
+  if (beforeTop !== null) {
+    const after = findAnchor();
+    if (after) {
+      const diff = after.getBoundingClientRect().top - beforeTop;
+      if (Math.abs(diff) > 1) window.scrollBy(0, diff);
+    }
+  }
 }
 
-function renderChecklists() {
-  buildCLGroup("omatListat", checklists.filter(function(l) { return !l.is_shared && l.user_id === currentUserId; }));
-  buildCLGroup("yhteisListat", checklists.filter(function(l) { return l.is_shared; }));
-}
-
-function buildCLGroup(cid, lists) {
-  var container = document.getElementById(cid);
-  container.innerHTML = "";
-  lists.forEach(function(list) {
-    var done = list.items.filter(function(i) { return i.done; }).length;
-    var total = list.items.length;
-    var panel = document.createElement("div");
-    panel.className = "checklist-panel";
-    var hdr = document.createElement("div");
-    hdr.className = "checklist-header";
-    hdr.addEventListener("click", function() { toggleCL(list.id); });
-    var htitle = document.createElement("span");
-    htitle.className = "checklist-header-title";
-    htitle.textContent = list.name;
-    var hprog = document.createElement("span");
-    hprog.className = "checklist-progress";
-    hprog.textContent = done + "/" + total;
-    var hdel = document.createElement("button");
-    hdel.textContent = "X";
-    hdel.style.cssText = "background:none;border:none;cursor:pointer;color:var(--text-dim);margin-left:8px;";
-    hdel.addEventListener("click", function(e) { e.stopPropagation(); deleteCL(list.id); });
-    hdr.appendChild(htitle);
-    hdr.appendChild(hprog);
-    hdr.appendChild(hdel);
-    var body = document.createElement("div");
-    body.className = "checklist-body";
-    body.id = "cl-" + list.id;
-    list.items.forEach(function(item) {
-      var row = document.createElement("div");
-      row.className = "checklist-item" + (item.done ? " done" : "");
-      var icb = document.createElement("input");
-      icb.type = "checkbox";
-      icb.style.cssText = "accent-color:var(--accent);width:auto;cursor:pointer;";
-      icb.checked = !!item.done;
-      icb.addEventListener("change", function() { toggleCI(list.id, item.id, this.checked); });
-      var itext = document.createElement("span");
-      itext.className = "checklist-item-text";
-      itext.textContent = item.text;
-      var idel = document.createElement("button");
-      idel.className = "checklist-item-del";
-      idel.textContent = "x";
-      idel.addEventListener("click", function() { deleteCI(list.id, item.id); });
-      row.appendChild(icb);
-      row.appendChild(itext);
-      row.appendChild(idel);
-      body.appendChild(row);
-    });
-    var addRow = document.createElement("div");
-    addRow.className = "checklist-add";
-    var addInput = document.createElement("input");
-    addInput.type = "text";
-    addInput.id = "cli-" + list.id;
-    addInput.placeholder = "Lisaa kohta...";
-    addInput.addEventListener("keydown", function(e) {
-      if (e.key === "Enter") addCI(list.id);
-    });
-    var addBtn = document.createElement("button");
-    addBtn.className = "btn btn-sm btn-accent";
-    addBtn.textContent = "+";
-    addBtn.addEventListener("click", function() { addCI(list.id); });
-    addRow.appendChild(addInput);
-    addRow.appendChild(addBtn);
-    body.appendChild(addRow);
-    panel.appendChild(hdr);
-    panel.appendChild(body);
-    container.appendChild(panel);
+// Taustan klikkaus sulkee ikkunan vain jos sekä painallus että vapautus tapahtui taustalla —
+// muuten tekstin valinta kentässä, joka päättyy ikkunan ulkopuolelle, sulkisi ikkunan ja
+// kirjoitettu teksti katoaisi.
+(function () {
+  const bd = document.getElementById('addTodoModal');
+  let downOnBackdrop = false;
+  bd.addEventListener('mousedown', e => { downOnBackdrop = (e.target === bd); });
+  bd.addEventListener('click', e => { if (downOnBackdrop && e.target === bd) closeAddTodo(); downOnBackdrop = false; });
+  document.getElementById('atTitle').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); saveAddTodo(); }
   });
-}
+  document.getElementById('atDate').addEventListener('input', updateAddTodoHint);
+})();
 
-function toggleCL(id) {
-  var b = document.getElementById("cl-" + id);
-  if (b) b.style.display = b.style.display === "none" ? "" : "none";
-}
-async function toggleCI(lid, iid, done) {
-  await scl.from("checklist_items").update({ is_done: done }).eq("id", iid);
-  var l = checklists.find(function(x) { return x.id === lid; });
-  if (l) { var i = l.items.find(function(x) { return x.id === iid; }); if (i) i.done = done; }
-  renderChecklists();
-}
-async function addCI(lid) {
-  var inp = document.getElementById("cli-" + lid);
-  var text = inp ? inp.value.trim() : "";
-  if (!text) return;
-  var l = checklists.find(function(x) { return x.id === lid; });
-  if (!l) return;
-  var order = l.items.length;
-  var r = await scl.from("checklist_items").insert([{
-    checklist_id: lid, text: text, is_done: false, sort_order: order
-  }]).select();
-  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
-  l.items.push({ id: r.data[0].id, text: text, done: false });
-  renderChecklists();
-  setTimeout(function() { var n = document.getElementById("cli-" + lid); if (n) n.focus(); }, 50);
-}
-async function deleteCI(lid, iid) {
-  await scl.from("checklist_items").delete().eq("id", iid);
-  var l = checklists.find(function(x) { return x.id === lid; });
-  if (l) l.items = l.items.filter(function(i) { return i.id !== iid; });
-  renderChecklists();
-}
-async function deleteCL(id) {
-  if (!confirm("Poistetaanko lista?")) return;
-  await scl.from("checklists").delete().eq("id", id);
-  checklists = checklists.filter(function(l) { return l.id !== id; });
-  renderChecklists();
-  showToast("Lista poistettu", "success");
-}
-
-function openNewListModal(shared) {
-  newListShared = shared;
-  document.getElementById("fListName").value = "";
-  document.getElementById("listModal").classList.add("open");
-  setTimeout(function() { document.getElementById("fListName").focus(); }, 100);
-}
-function closeListModal() { document.getElementById("listModal").classList.remove("open"); }
-document.getElementById("listModal").addEventListener("click", function(e) {
-  if (e.target === document.getElementById("listModal")) closeListModal();
-});
-document.getElementById("fListName").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") saveNewList();
-});
-async function saveNewList() {
-  var name = document.getElementById("fListName").value.trim();
-  if (!name) { showToast("Anna nimi", "error"); return; }
-  var r = await scl.from("checklists").insert([{
-    name: name, is_shared: newListShared, user_id: currentUserId
-  }]).select();
-  if (r.error) { showToast("Virhe: " + r.error.message, "error"); return; }
-  checklists.push({ id: r.data[0].id, name: name, is_shared: newListShared, user_id: currentUserId, items: [] });
-  renderChecklists(); closeListModal();
-  showToast("Lista luotu!", "success");
-}
-
-function getWeekKey(date) {
-  var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  var dn = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dn);
-  var ys = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  var wk = Math.ceil((((d - ys) / 86400000) + 1) / 7);
-  return d.getUTCFullYear() + "-" + String(wk).padStart(2, "0");
-}
-function esc(s) {
-  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-var toastTimer;
-function showToast(msg, type) {
+// ── Toast ──────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
   clearTimeout(toastTimer);
-  var t = document.getElementById("toast");
-  t.textContent = msg; t.className = type || ""; t.style.display = "block";
-  toastTimer = setTimeout(function() { t.style.display = "none"; }, 3000);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = type;
+  t.style.display = 'block';
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
 }
-init();
 </script>
 </body>
 </html>
