@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-09-28 20:30 -->
+<!-- Claude-versio: 2026-10-01 18:00 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -243,6 +243,24 @@
     font-size: 10px;
     color: var(--text-dim);
     font-weight: 400;
+  }
+
+  /* ── "+ LISÄÄ TEHTÄVÄ" PÄIVÄRUUDUN KULMASSA (2026-10-01) ───
+     Nappi on päivänumeron rivillä oikeassa reunassa. Negatiiviset marginaalit estävät sitä
+     kasvattamasta riviä, joten ruutujen sisältö ei siirry. Hover-laitteilla (hiiri) nappi
+     näkyy vasta kun hiiri on ruudun päällä; kosketuslaitteilla se on aina näkyvissä. */
+  .day-number.has-add .week-num { margin: 0 auto 0 8px; }
+  .day-add {
+    width: 18px; height: 18px; margin: -2px 0; padding: 0; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--panel); border: 1px solid var(--border2); border-radius: 4px;
+    color: var(--text-mid); font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600;
+    line-height: 1; cursor: pointer; transition: all .12s;
+  }
+  .day-add:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (hover: hover) {
+    .day-add { opacity: 0; }
+    .cal-day:hover .day-add, .day-add:focus-visible { opacity: 1; }
   }
 
   /* ── TAPAHTUMAT ───────────────────────────────────────── */
@@ -524,6 +542,20 @@
   .todo-modal-badge.shared { background: var(--todo-bg); color: var(--todo-fg); }
   .todo-modal-badge.done   { background: #dcfce7; color: #15803d; }
 
+  /* ── UUDEN TEHTÄVÄN LOMAKE (2026-10-01) ───────────────────
+     Sama sisältö kuin todo.html:n lomakkeessa. Tunnisteet on prefiksoitu (#addTodoModal, at*), ettei
+     ne törmää olemassa olevaan katselu-ikkunaan (#todoModal). */
+  #addTodoModal .modal { max-height: 94vh; overflow-y: auto; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  textarea { resize: vertical; }
+  .shared-toggle {
+    display: flex; align-items: center; gap: 8px; margin-top: 4px; cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; color: var(--text-mid);
+    text-transform: none; letter-spacing: 0;
+  }
+  .shared-toggle input { width: auto; padding: 0; background: none; border: none; accent-color: var(--accent); }
+  .at-date-hint { font-size: 12px; color: var(--text-dim); margin: -6px 0 12px; font-family: 'IBM Plex Mono', monospace; }
+
   /* ── TOAST ────────────────────────────────────────────── */
   #toast {
     position: fixed;
@@ -580,10 +612,28 @@
       font-weight: 600;
       color: var(--text-mid);
       border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
+    /* "+ Tehtävä" viikkolohkon otsikossa (2026-10-01) — puhelimella ei ole päiväruudukkoa */
+    .week-add {
+      flex-shrink: 0; min-height: 30px; padding: 4px 10px;
+      background: var(--panel); border: 1px solid var(--border2); border-radius: 4px;
+      color: var(--accent-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+      cursor: pointer;
+    }
+    .week-add:active { background: var(--accent); border-color: var(--accent); color: #fff; }
     .week-block-body { padding: 8px 12px; display: flex; flex-direction: column; gap: 4px; }
     .week-block-empty { color: var(--text-dim); font-size: 12px; padding: 8px 12px; }
+    /* Uuden tehtävän lomake puhelimella: kentät allekkain ja 16 px fontti, jotta iPhone ei zoomaa
+       sisään kenttään koskettaessa */
+    #addTodoModal .modal { padding: 20px; }
+    #addTodoModal .form-row-3 { grid-template-columns: 1fr; gap: 0; }
+    #addTodoModal input, #addTodoModal select, #addTodoModal textarea { font-size: 16px; }
   }
+
 
   /* ── TULOSTA KUUKAUSI (2026-09-12) ───────────────────────
      Tulostaa näkyvän kuukauden isolla, väljällä ruudukolla — tarkoitus liimata seinälle ja
@@ -608,6 +658,8 @@
        (mobiilinäkymä muuten piilottaisi sen ja näyttäisi listaa sen sijaan) */
     .cal-wrap { display: block !important; box-shadow: none; }
     .cal-day { min-height: 28mm; page-break-inside: avoid; }
+    /* Lisäysnapit eivät kuulu paperille */
+    .day-add, .week-add { display: none !important; }
   }
 </style>
 </head>
@@ -734,6 +786,45 @@
     <div class="form-actions">
       <button class="btn" onclick="closeTodoModal()">Sulje</button>
       <a class="btn btn-accent" href="todo.html" id="todoModalLink">Avaa Muistilista →</a>
+    </div>
+  </div>
+</div>
+
+<!-- UUSI TEHTÄVÄ (lisäys kalenterista, 2026-10-01) -->
+<div class="modal-backdrop" id="addTodoModal">
+  <div class="modal">
+    <h2>Uusi tehtävä</h2>
+    <div class="form-group">
+      <label for="atTitle">Tehtävä *</label>
+      <input type="text" id="atTitle" placeholder="esim. Soita Jormalle" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label for="atNotes">Lisätiedot</label>
+      <textarea id="atNotes" rows="2" placeholder="Vapaaehtoinen..."></textarea>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label for="atDate">Päivämäärä *</label>
+        <input type="date" id="atDate">
+      </div>
+      <div class="form-group">
+        <label for="atTime">Kellonaika</label>
+        <input type="time" id="atTime">
+      </div>
+      <div class="form-group">
+        <label for="atPriority">Tärkeys</label>
+        <select id="atPriority">
+          <option value="high">Kiireellinen</option>
+          <option value="normal" selected>Normaali</option>
+          <option value="low">Ei kiireellinen</option>
+        </select>
+      </div>
+    </div>
+    <div class="at-date-hint" id="atDateHint"></div>
+    <label class="shared-toggle"><input type="checkbox" id="atShared" checked> Näkyy kaikille (poista rasti, jos tehtävä on vain sinun)</label>
+    <div class="form-actions">
+      <button class="btn" type="button" onclick="closeAddTodo()">Peruuta</button>
+      <button class="btn btn-accent" type="button" id="atSaveBtn" onclick="saveAddTodo()">Tallenna</button>
     </div>
   </div>
 </div>
@@ -1007,6 +1098,18 @@ function buildDayCell(date, otherMonth, today) {
   // päivä näkyy tapahtumineen omassa kuukausilohkossaan. Näin sama tapahtuma ei tuplaannu.
   if (otherMonth) return cell;
 
+  // "+"-nappi: lisää tehtävä tälle päivälle (kuluvan kuukauden ruuduissa, myös menneillä päivillä)
+  cell.dataset.date = dateStr;
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'day-add';
+  addBtn.textContent = '+';
+  addBtn.title = 'Lisää tehtävä tälle päivälle';
+  addBtn.setAttribute('aria-label', 'Lisää tehtävä ' + date.getDate() + '.' + (date.getMonth() + 1) + '.');
+  addBtn.onclick = () => openAddTodo(dateStr);
+  numDiv.classList.add('has-add');
+  numDiv.appendChild(addBtn);
+
   // Toimitukset tällä viikolla — näytetään maanantailla
   if (isMonday || date.getDate() === 1) {
     const weekQuotes = quotes.filter(q => normalizeWeekKey(q.delivery_week) === weekKey);
@@ -1152,11 +1255,29 @@ function buildMobileList(year, month) {
   weeks.forEach((events, wk) => {
     const block = document.createElement('div');
     block.className = 'week-block';
+    block.dataset.wk = wk;
     const wkNum = wk.split('-')[1];
-    block.innerHTML = '<div class="week-block-header">Viikko ' + wkNum + ' · ' + wk.split('-')[0] + '</div>';
+    // Otsikko rakennetaan DOM:lla (ei innerHTML +=), koska "+ Tehtävä" -napin kuuntelija katoaisi,
+    // jos lohkon sisältö jäsennettäisiin uudelleen merkkijonosta.
+    const hdr = document.createElement('div');
+    hdr.className = 'week-block-header';
+    const hdrLabel = document.createElement('span');
+    hdrLabel.textContent = 'Viikko ' + wkNum + ' · ' + wk.split('-')[0];
+    hdr.appendChild(hdrLabel);
+    const weekAdd = document.createElement('button');
+    weekAdd.type = 'button';
+    weekAdd.className = 'week-add';
+    weekAdd.textContent = '+ Tehtävä';
+    weekAdd.setAttribute('aria-label', 'Lisää tehtävä viikolle ' + parseInt(wkNum, 10));
+    weekAdd.onclick = () => openAddTodo(defaultDateForWeek(wk));
+    hdr.appendChild(weekAdd);
+    block.appendChild(hdr);
 
     if (events.length === 0) {
-      block.innerHTML += '<div class="week-block-empty">Ei tapahtumia</div>';
+      const emptyEl = document.createElement('div');
+      emptyEl.className = 'week-block-empty';
+      emptyEl.textContent = 'Ei tapahtumia';
+      block.appendChild(emptyEl);
     } else {
       const body = document.createElement('div');
       body.className = 'week-block-body';
@@ -1320,6 +1441,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+  if (document.getElementById('addTodoModal').classList.contains('open')) { closeAddTodo(); return; }
   if (document.getElementById('printModal').classList.contains('open')) { closePrintModal(); return; }
   if (selectedQuoteId && !document.getElementById('todoModal').classList.contains('open')) clearSelection();
 });
@@ -1835,6 +1957,156 @@ function closeTodoModal() {
 document.getElementById('todoModal').addEventListener('click', e => {
   if (e.target === document.getElementById('todoModal')) closeTodoModal();
 });
+
+// ── Uuden tehtävän lisäys kalenterista (2026-10-01) ────
+// Tallentaa samaan todos-tauluun kuin todo.html, samoilla kentillä (due_date + due_week + due_time),
+// joten tehtävä näkyy heti kalenterissa oikealla päivällä ja Muistilista-sivulla.
+// Avaajat: päiväruudun "+" (työpöytä) ja viikkolohkon "+ Tehtävä" (puhelin).
+// Muokkaus / "Tehty"-merkintä kalenterista on tarkoituksella myöhempi työ (ks. ROADMAP).
+const WEEKDAYS_LONG_FI = ['sunnuntai','maanantai','tiistai','keskiviikko','torstai','perjantai','lauantai'];
+let addTodoSaving = false;
+
+// Date -> "YYYY-MM-DD" paikallisena päivänä (ei toISOString, joka siirtäisi suomalaisen keskiyön UTC:hen)
+function dateToStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Puhelimen viikkonapin oletuspäivä: viikon maanantai — paitsi kuluvalla viikolla tämä päivä, jotta
+// juuri lisätty tehtävä ei näy heti myöhässä olevana (menneenä maanantaina).
+function defaultDateForWeek(wk) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const key = normalizeWeekKey(wk);
+  if (getWeekNumber(today) === key) return dateToStr(today);
+  return dateToStr(weekKeyToMonday(key));
+}
+
+function updateAddTodoHint() {
+  const v = document.getElementById('atDate').value;
+  const el = document.getElementById('atDateHint');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { el.textContent = ''; return; }
+  const d = parseDateStr(v);
+  el.textContent = WEEKDAYS_LONG_FI[d.getDay()] + ' · vko ' + getWeekNum(d);
+}
+
+function openAddTodo(dateStr) {
+  document.getElementById('atTitle').value = '';
+  document.getElementById('atNotes').value = '';
+  document.getElementById('atDate').value = dateStr || dateToStr(new Date());
+  document.getElementById('atTime').value = '';
+  document.getElementById('atPriority').value = 'normal';
+  document.getElementById('atShared').checked = true; // oletus: yhteinen; rasti pois = oma
+  updateAddTodoHint();
+  document.getElementById('addTodoModal').classList.add('open');
+  setTimeout(() => document.getElementById('atTitle').focus(), 50);
+}
+
+function closeAddTodo() {
+  document.getElementById('addTodoModal').classList.remove('open');
+}
+
+async function saveAddTodo() {
+  if (addTodoSaving) return;
+  const title = document.getElementById('atTitle').value.trim();
+  if (!title) {
+    showToast('Kirjoita tehtävä', 'error');
+    document.getElementById('atTitle').focus();
+    return;
+  }
+  const dueDate = document.getElementById('atDate').value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    showToast('Valitse päivämäärä', 'error');
+    return;
+  }
+
+  addTodoSaving = true;
+  const saveBtn = document.getElementById('atSaveBtn');
+  saveBtn.disabled = true;
+  try {
+    let uid = window._currentUser?.id;
+    if (!uid) {
+      const s = await db.auth.getSession();
+      uid = s.data?.session?.user?.id;
+    }
+    if (!uid) { showToast('Kirjautuminen puuttuu — kirjaudu sisään uudelleen', 'error'); return; }
+
+    const payload = {
+      title: title,
+      notes: document.getElementById('atNotes').value.trim() || null,
+      due_date: dueDate,
+      due_time: document.getElementById('atTime').value || null,
+      due_week: getWeekNumber(parseDateStr(dueDate)),
+      priority: document.getElementById('atPriority').value,
+      is_shared: document.getElementById('atShared').checked,
+      user_id: uid,
+      is_done: false
+    };
+    const { data, error } = await db.from('todos').insert([payload]).select();
+    if (error) { showToast('Virhe: ' + error.message, 'error'); return; }
+
+    if (data && data[0]) todos.unshift(data[0]);
+    else await loadData(); // varalta: jos insert ei palauttanut riviä, haetaan tiedot uudelleen
+
+    closeAddTodo();
+    refreshCalendarAfterTodoAdd(dueDate);
+    showToast('Tehtävä lisätty', 'success');
+  } catch (e) {
+    console.error('saveAddTodo:', e);
+    showToast('Tallennus epäonnistui', 'error');
+  } finally {
+    addTodoSaving = false;
+    saveBtn.disabled = false;
+  }
+}
+
+// Piirtää uudelleen vain ne kuukausilohkot, joihin uusi tehtävä vaikuttaa, ja pitää ruudulla
+// näkyvän kohdan paikallaan. Päiväruutu on päivän omassa kuukausilohkossa; puhelimen viikkolista
+// taas on sen kuukauden lohkossa, jossa viikon torstai on — siksi päivitetään molemmat.
+function refreshCalendarAfterTodoAdd(dateStr) {
+  if (effectiveMode() === 'half') { renderHalfYear(); return; }
+  const d = parseDateStr(dateStr);
+  const wk = getWeekNumber(d);
+  const thu = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() || 7) - 1) + 3);
+  const targets = new Map();
+  [d, thu].forEach(x => targets.set(x.getFullYear() + '-' + x.getMonth(), [x.getFullYear(), x.getMonth()]));
+
+  const wrap = document.getElementById('months');
+  // Ankkuri = näkyvissä oleva päiväruutu (työpöytä) tai viikkolohko (puhelin); piilotetun
+  // näkymän elementillä ei ole offsetParentia.
+  const findAnchor = () => Array.from(wrap.querySelectorAll(
+    '.cal-day[data-date="' + dateStr + '"], .week-block[data-wk="' + wk + '"]'
+  )).find(el => el.offsetParent !== null);
+  const before = findAnchor();
+  const beforeTop = before ? before.getBoundingClientRect().top : null;
+
+  targets.forEach(([y, m]) => {
+    const old = wrap.querySelector('.month-block[data-y="' + y + '"][data-m="' + m + '"]');
+    if (old) wrap.replaceChild(buildMonthBlock(y, m), old);
+  });
+  markSelection(); // tilauksen korostus säilyy
+
+  if (beforeTop !== null) {
+    const after = findAnchor();
+    if (after) {
+      const diff = after.getBoundingClientRect().top - beforeTop;
+      if (Math.abs(diff) > 1) window.scrollBy(0, diff);
+    }
+  }
+}
+
+// Taustan klikkaus sulkee ikkunan vain jos sekä painallus että vapautus tapahtui taustalla —
+// muuten tekstin valinta kentässä, joka päättyy ikkunan ulkopuolelle, sulkisi ikkunan ja
+// kirjoitettu teksti katoaisi.
+(function () {
+  const bd = document.getElementById('addTodoModal');
+  let downOnBackdrop = false;
+  bd.addEventListener('mousedown', e => { downOnBackdrop = (e.target === bd); });
+  bd.addEventListener('click', e => { if (downOnBackdrop && e.target === bd) closeAddTodo(); downOnBackdrop = false; });
+  document.getElementById('atTitle').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); saveAddTodo(); }
+  });
+  document.getElementById('atDate').addEventListener('input', updateAddTodoHint);
+})();
 
 // ── Toast ──────────────────────────────────────────────
 let toastTimer;
