@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-10-13 17:30 -->
+<!-- Claude-versio: 2026-10-13 17:45 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -2793,7 +2793,15 @@ async function loadQuote(id) {
   // sen silti — vain varoitusbanneri, ei estoa (Tuomon vastaus "bannerilla avautuva").
   document.getElementById('deletedBanner').style.display = q.deleted_at ? 'flex' : 'none';
   if (q.customer_id) {
-    const cust = customers.find(c => c.id === q.customer_id);
+    let cust = customers.find(c => c.id === q.customer_id);
+    if (!cust) {
+      // Asiakas ei ole aktiivisten listalla (arkistoitu) — haetaan nimi silti, jotta customerId
+      // asettuu eikä autoSave nollaa tarjouksen customer_id:tä.
+      try {
+        const r = await sbGet('customers', `?id=eq.${q.customer_id}&select=id,name`);
+        if (Array.isArray(r) && r[0]) cust = r[0];
+      } catch(e) {}
+    }
     if (cust) setCustomer(cust.id, cust.name);
   }
   if (q.sections_json) {
