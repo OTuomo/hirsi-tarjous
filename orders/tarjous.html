@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-09-28 20:15 -->
+<!-- Claude-versio: 2026-10-13 17:30 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -41,6 +41,8 @@
   .btn-warn:hover { background: #f0b030; }
   .btn-sm { padding: 5px 10px; font-size: 11px; }
   .btn-xs { padding: 3px 7px; font-size: 10px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-ghost:disabled:hover { border-color: var(--border); color: var(--text-dim); }
   .saving { font-size: 11px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
   .saving.ok { color: var(--success); }
   .saving.err { color: var(--danger); }
@@ -62,8 +64,8 @@
   textarea { resize: vertical; min-height: 100px; }
 
   /* ASIAKASHAKU */
-  .customer-row { display: flex; gap: 8px; align-items: flex-end; }
-  .customer-row .customer-search-wrap { flex: 1; }
+  .customer-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .customer-row .customer-search-wrap { flex: 1; flex-basis: 160px; }
   .customer-search-wrap { position: relative; }
   .customer-dropdown { display: none; position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: #3a3530; border: 1px solid var(--border); border-radius: 4px; z-index: 50; max-height: 240px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   .customer-dropdown.open { display: block; }
@@ -375,7 +377,8 @@
 <!-- LISÄÄ ASIAKAS MODAL -->
 <div class="modal-overlay" id="newCustModal">
   <div class="modal">
-    <h2>Uusi asiakas</h2>
+    <h2 id="custModalTitle">Uusi asiakas</h2>
+    <div id="custModalHint" style="display:none;font-size:11px;color:var(--warn);margin:6px 0 10px;">Muutos päivittyy asiakasrekisteriin ja kaikille tämän asiakkaan tarjouksille.</div>
     <div class="modal-grid">
       <div class="field" style="grid-column:1/-1">
         <label>Nimi *</label>
@@ -419,7 +422,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" onclick="closeNewCustModal()">Peruuta</button>
-      <button class="btn btn-primary btn-sm" onclick="saveNewCustomer()">Tallenna asiakas</button>
+      <button class="btn btn-primary btn-sm" id="custModalSaveBtn" onclick="saveCustomerModal()">Tallenna asiakas</button>
     </div>
   </div>
 </div>
@@ -497,6 +500,7 @@
               <div class="customer-dropdown" id="customerDropdown"></div>
             </div>
             <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="openNewCustModal()" title="Lisää uusi asiakas">+ Asiakas</button>
+            <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" id="editCustBtn" onclick="openEditCustModal()" disabled title="Muokkaa valitun asiakkaan tietoja">✎ Muokkaa</button>
           </div>
           <div class="customer-info-display" id="customerInfoDisplay"></div>
           <input type="hidden" id="customerId">
@@ -1131,6 +1135,7 @@ function setCustomer(id, name) {
   } else {
     renderCustomerInfo(null);
   }
+  updateEditCustBtn();
   autoSave();
 }
 
@@ -1640,7 +1645,23 @@ async function reloadTpl() {
 
 // UUSI ASIAKAS MODAL
 // =============================================
+let editingCustomerId = null;
+
+function updateEditCustBtn() {
+  const btn = document.getElementById('editCustBtn');
+  if (!btn) return;
+  btn.disabled = !document.getElementById('customerId').value;
+}
+
+function resetCustModalMode() {
+  editingCustomerId = null;
+  document.getElementById('custModalTitle').textContent = 'Uusi asiakas';
+  document.getElementById('custModalHint').style.display = 'none';
+  document.getElementById('custModalSaveBtn').textContent = 'Tallenna asiakas';
+}
+
 function openNewCustModal() {
+  resetCustModalMode();
   ['nc_name','nc_phone','nc_email','nc_address','nc_city','nc_billing_address','nc_billing_postal_code','nc_billing_city','nc_business_id'].forEach(id => {
     document.getElementById(id).value = '';
   });
@@ -1648,40 +1669,102 @@ function openNewCustModal() {
   setTimeout(() => document.getElementById('nc_name').focus(), 100);
 }
 
+async function openEditCustModal() {
+  const id = document.getElementById('customerId').value;
+  if (!id) return;
+  const editBtn = document.getElementById('editCustBtn');
+  editBtn.disabled = true;
+  try {
+    // customers[] sisältää vain osan sarakkeista (ei y-tunnusta) → haetaan tuoreet tiedot
+    const res = await sbGet('customers', `?id=eq.${id}&select=*`);
+    if (!Array.isArray(res) || !res[0]) { alert('Asiakkaan tietojen haku epäonnistui.'); return; }
+    const c = res[0];
+    const set = (field, val) => { document.getElementById(field).value = val || ''; };
+    set('nc_name', c.name);
+    set('nc_phone', c.phone);
+    set('nc_email', c.email);
+    set('nc_address', c.address);
+    set('nc_city', c.city);
+    set('nc_billing_address', c.billing_address);
+    set('nc_billing_postal_code', c.billing_postal_code);
+    set('nc_billing_city', c.billing_city);
+    set('nc_business_id', c.business_id);
+    editingCustomerId = c.id;
+    document.getElementById('custModalTitle').textContent = 'Muokkaa asiakasta';
+    document.getElementById('custModalHint').style.display = 'block';
+    document.getElementById('custModalSaveBtn').textContent = 'Tallenna muutokset';
+    document.getElementById('newCustModal').classList.add('open');
+    setTimeout(() => document.getElementById('nc_name').focus(), 100);
+  } catch(e) {
+    alert('Verkkovirhe.');
+  } finally {
+    updateEditCustBtn();
+  }
+}
+
 function closeNewCustModal() {
   document.getElementById('newCustModal').classList.remove('open');
 }
 
-async function saveNewCustomer() {
+async function saveCustomerModal() {
   const name = document.getElementById('nc_name').value.trim();
   if (!name) { alert('Nimi on pakollinen.'); return; }
-  const btn = document.querySelector('#newCustModal .btn-primary');
+  const btn = document.getElementById('custModalSaveBtn');
+  const idleLabel = editingCustomerId ? 'Tallenna muutokset' : 'Tallenna asiakas';
   btn.textContent = 'Tallennetaan...'; btn.disabled = true;
+  const val = id => document.getElementById(id).value.trim();
   try {
-    const result = await sbPost('customers', {
-      name,
-      phone: document.getElementById('nc_phone').value.trim() || null,
-      email: document.getElementById('nc_email').value.trim() || null,
-      address: document.getElementById('nc_address').value.trim() || null,
-      city: document.getElementById('nc_city').value.trim() || null,
-      billing_address: document.getElementById('nc_billing_address').value.trim() || null,
-      billing_postal_code: document.getElementById('nc_billing_postal_code').value.trim() || null,
-      billing_city: document.getElementById('nc_billing_city').value.trim() || null,
-      business_id: document.getElementById('nc_business_id').value.trim() || null,
-      is_active: true
-    });
-    if (Array.isArray(result) && result[0]) {
-      const c = result[0];
-      customers.push(c);
-      setCustomer(c.id, c.name);
-      closeNewCustModal();
+    if (editingCustomerId) {
+      // Muokkaus: päivitetään vain modaalin kentät (muut sarakkeet, esim. yhteyshenkilö/OVT, säilyvät).
+      // Nimi ja laskutusosoite isoilla kirjaimilla kuten asiakkaat.html:ssä.
+      const result = await sbPatch('customers', editingCustomerId, {
+        name: name.toUpperCase(),
+        phone: val('nc_phone') || null,
+        email: val('nc_email') || null,
+        address: val('nc_address') || null,
+        city: val('nc_city') || null,
+        billing_address: val('nc_billing_address').toUpperCase() || null,
+        billing_postal_code: val('nc_billing_postal_code') || null,
+        billing_city: val('nc_billing_city').toUpperCase() || null,
+        business_id: val('nc_business_id') || null
+      });
+      if (Array.isArray(result) && result[0]) {
+        const c = result[0];
+        const idx = customers.findIndex(x => x.id === c.id);
+        if (idx >= 0) customers[idx] = Object.assign(customers[idx], c);
+        // Ei setCustomer()/autoSave(): asiakastieto tallentuu vain tämän modaalin napista.
+        document.getElementById('customerSearch').value = c.name;
+        renderCustomerInfo(c);
+        closeNewCustModal();
+      } else {
+        alert('Tallentaminen epäonnistui.');
+      }
     } else {
-      alert('Tallentaminen epäonnistui.');
+      const result = await sbPost('customers', {
+        name,
+        phone: val('nc_phone') || null,
+        email: val('nc_email') || null,
+        address: val('nc_address') || null,
+        city: val('nc_city') || null,
+        billing_address: val('nc_billing_address') || null,
+        billing_postal_code: val('nc_billing_postal_code') || null,
+        billing_city: val('nc_billing_city') || null,
+        business_id: val('nc_business_id') || null,
+        is_active: true
+      });
+      if (Array.isArray(result) && result[0]) {
+        const c = result[0];
+        customers.push(c);
+        setCustomer(c.id, c.name);
+        closeNewCustModal();
+      } else {
+        alert('Tallentaminen epäonnistui.');
+      }
     }
   } catch(e) {
     alert('Verkkovirhe.');
   }
-  btn.textContent = 'Tallenna asiakas'; btn.disabled = false;
+  btn.textContent = idleLabel; btn.disabled = false;
 }
 
 // =============================================
