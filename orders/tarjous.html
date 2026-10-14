@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-10-13 17:45 -->
+<!-- Claude-versio: 2026-10-14 17:50 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -1770,9 +1770,16 @@ async function saveCustomerModal() {
 // =============================================
 // PAKKAUSLISTA — avautuu omana sivuna, voidaan vetää toiselle näytölle
 // =============================================
-function openPackingPage() {
+async function openPackingPage() {
   if (!currentQuoteId) { alert('Tallenna tarjous ensin, niin pakkauslista voidaan yhdistää siihen.'); return; }
-  window.open(`pakkauslista.html?id=${currentQuoteId}`, '_blank');
+  // Pakkauslista lukee rivit (myös piilotetut) kannasta -> tallennetaan lomakkeen tila ensin, ettei
+  // alle 2 s sitten tehty muutos (esim. rivin piilotus) jää autosave-debouncen taakse. Ikkuna avataan
+  // heti klikkauksessa, ettei selaimen ponnahdusikkunaesto estä sitä tallennuksen jälkeen.
+  const w = window.open('', '_blank');
+  clearTimeout(_autoSaveTimer);
+  try { await saveDraft(); } catch(e) {}
+  const url = `pakkauslista.html?id=${currentQuoteId}`;
+  if (w) w.location.href = url; else window.open(url, '_blank');
 }
 
 // =============================================
