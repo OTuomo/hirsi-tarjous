@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Claude-versio: 2026-10-14 17:50 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -43,6 +44,7 @@
   .pl-row-note.excluded { opacity: 0.45; text-decoration: line-through; }
   .pl-row-restore { background: transparent; border: none; color: var(--pl-accent); cursor: pointer; font-size: 13px; padding: 2px; white-space: nowrap; }
   .pl-row-restore:hover { text-decoration: underline; }
+  .pl-hidden-tag { font-size: 10px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-style: normal; text-decoration: none; display: inline-block; }
   .pl-expand-link { font-size: 10px; color: #5b9bd5; cursor: pointer; font-family: 'IBM Plex Mono', monospace; }
   .pl-expand-link:hover { text-decoration: underline; }
   .pl-nimike-cell { display: flex; flex-direction: column; gap: 3px; }
@@ -164,8 +166,76 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { packingSections = []; }
   }
 
+  // Tarjouksella piilotetut rivit -> himmennetty (poistettu tulosteesta) myös pakkauslistalla
+  const syncChanged = linkLegacyPackingRows() + syncHiddenFromQuote();
+
   renderPage();
+  if (syncChanged) saveDraftPacking(); // tallennetaan heti, jotta tuloste (print_supply.html) näkee muutoksen
 });
+
+// =============================================
+// TARJOUKSEN PIILOTETUT RIVIT (row.hidden, tarjous.html/myymala.html) -> PAKKAUSLISTA
+// Pakkauslista on tarjouksesta erillinen kopio. Kopioitaessa jokaiselle riville tallennetaan
+// srcRowId (tarjouksen rivin id) ja srcHidden (piilotustila viimeksi synkattaessa). Avattaessa
+// verrataan: jos piilotustila on muuttunut, rivi merkitään excluded (piilotus) tai palautetaan
+// (piilotuksen purku). Synkataan vain MUUTOKSESTA, joten käsin tehty palautus/poisto pakkauslistalla
+// säilyy eikä piilotus ylikirjoita sitä joka avauksella.
+// =============================================
+function quoteRowsById() {
+  const map = {};
+  quoteSections.forEach(sec => (sec.rows || []).forEach(r => { map[r.id] = r; }));
+  return map;
+}
+
+function syncHiddenFromQuote() {
+  const byId = quoteRowsById();
+  let changed = 0;
+  packingSections.forEach(sec => (sec.rows || []).forEach(row => {
+    if (row.srcRowId === undefined || row.srcRowId === null) return;
+    const qr = byId[row.srcRowId];
+    if (!qr) return; // rivi poistettu tarjoukselta pysyvästi -> pakkauslistan rivi jätetään ennalleen
+    const hiddenNow = !!qr.hidden;
+    if (!!row.srcHidden === hiddenNow) return;
+    row.srcHidden = hiddenNow;
+    if (hiddenNow) {
+      if (!row.excluded) { row.excluded = true; row.autoExcluded = true; }
+    } else if (row.autoExcluded) {
+      row.excluded = false;
+    }
+    if (!hiddenNow) delete row.autoExcluded;
+    changed++;
+  }));
+  return changed;
+}
+
+// Ennen linkitystä tehdyt pakkauslistat: yhdistetään rivi tarjouksen riviin sisällön perusteella,
+// mutta VAIN kun osuma on yksiselitteinen (täsmälleen yksi tarjouksen rivi ja yksi pakkauslistan rivi
+// samalla tuote/nimike/kuvaus/määrä/yksikkö-yhdistelmällä). Käsin muokattuja tai epäselviä rivejä ei arvata.
+function rowSignature(r) {
+  const q = parseFloat(r.qty);
+  return [r.productId || '', r.nimikeTeksti || '', r.desc || '', isNaN(q) ? '' : String(q), r.unit || ''].join('|');
+}
+
+function linkLegacyPackingRows() {
+  const quoteBySig = {}, packBySig = {};
+  quoteSections.forEach(sec => (sec.rows || []).forEach(r => {
+    if (!r.nimikeTeksti && !r.desc) return;
+    (quoteBySig[rowSignature(r)] = quoteBySig[rowSignature(r)] || []).push(r);
+  }));
+  packingSections.forEach(sec => (sec.rows || []).forEach(row => {
+    if (row.isNote || (row.srcRowId !== undefined && row.srcRowId !== null)) return;
+    (packBySig[rowSignature(row)] = packBySig[rowSignature(row)] || []).push(row);
+  }));
+  let linked = 0;
+  Object.keys(packBySig).forEach(sig => {
+    const qs = quoteBySig[sig], ps = packBySig[sig];
+    if (!qs || qs.length !== 1 || ps.length !== 1) return;
+    ps[0].srcRowId = qs[0].id;
+    ps[0].srcHidden = false; // lähtötila "ei piilotettu" -> piilotus tarjouksella havaitaan muutoksena
+    linked++;
+  });
+  return linked;
+}
 
 function renderPage() {
   const root = document.getElementById('root');
@@ -203,7 +273,7 @@ function renderPackingBody() {
       </div>
       ${sec.rows.map(row => row.isNote ? `
         <div class="pl-row-note${row.excluded ? ' excluded' : ''}" data-row="${row.id}">
-          <span>${esc(row.nimikeTeksti||'')}</span>
+          <span>${esc(row.nimikeTeksti||'')}${row.excluded && row.srcHidden ? ' <span class="pl-hidden-tag">piilotettu tarjouksella</span>' : ''}</span>
           <button class="${row.excluded ? 'pl-row-restore' : 'pl-row-del'}" onclick="toggleRowExcluded(${sec.id},${row.id})" title="${row.excluded ? 'Palauta rivi listalle' : 'Poista rivi tulosteesta'}">${row.excluded ? '↺ palauta' : '✕'}</button>
         </div>
       ` : `
@@ -211,6 +281,7 @@ function renderPackingBody() {
           <div class="pl-nimike-cell">
             <input type="text" value="${esc(row.nimikeTeksti||'')}" oninput="onPackingRowInput(${sec.id},${row.id},'nimikeTeksti',this.value)" placeholder="Kohde" ${row.excluded ? 'readonly' : ''}>
             ${row.isAssembly && row.productId && !row.excluded ? `<span class="pl-expand-link" onclick="expandPackingRow(${sec.id},${row.id})">⚙ ▾ avaa komponentit</span>` : ''}
+            ${row.excluded && row.srcHidden ? '<span class="pl-hidden-tag">piilotettu tarjouksella</span>' : ''}
           </div>
           <input type="text" value="${esc(row.desc||'')}" oninput="onPackingRowInput(${sec.id},${row.id},'desc',this.value)" placeholder="Kuvaus / lisätiedot" ${row.excluded ? 'readonly' : ''}>
           <input type="number" value="${row.qty||''}" oninput="onPackingRowInput(${sec.id},${row.id},'qty',this.value)" placeholder="Määrä" step="0.01" style="text-align:right;" ${row.excluded ? 'readonly' : ''}>
@@ -240,12 +311,14 @@ function expandPackingRow(secId, rowId) {
   const noteRow = {
     id: ++packingRowIdCounter,
     isNote: true,
+    srcRowId: row.srcRowId, srcHidden: row.srcHidden,
     nimikeTeksti: `↳ ${row.nimikeTeksti || row.desc || ''} (${row.qty || ''} kpl) — sisältää:`
   };
   const newRows = comps.map(c => {
     const prod = productsById[c.component_product_id];
     return {
       id: ++packingRowIdCounter,
+      srcRowId: row.srcRowId, srcHidden: row.srcHidden,
       nimikeTeksti: prod ? prod.name : '(tuote puuttuu)',
       desc: '',
       qty: (parseFloat(row.qty) || 0) * (parseFloat(c.quantity) || 0),
@@ -295,6 +368,7 @@ function toggleRowExcluded(secId, rowId) {
   const row = sec && sec.rows.find(r => r.id === rowId);
   if (!row) return;
   row.excluded = !row.excluded;
+  delete row.autoExcluded; // käsin tehty valinta voittaa tarjouksen piilotuksen automatiikan
   renderPackingBody();
   autoSavePacking();
 }
@@ -336,6 +410,10 @@ function copyQuoteRowsToPacking() {
       if (!row.nimikeTeksti && !row.desc) return;
       newSec.rows.push({
         id: ++packingRowIdCounter,
+        srcRowId: row.id,          // linkki tarjouksen riviin (piilotuksen synkka)
+        srcHidden: !!row.hidden,
+        excluded: !!row.hidden,    // tarjouksella piilotettu rivi tulee mukaan himmennettynä
+        autoExcluded: !!row.hidden,
         nimikeTeksti: row.nimikeTeksti || '',
         desc: row.desc || '',
         qty: row.qty || '',
@@ -350,8 +428,14 @@ function copyQuoteRowsToPacking() {
   autoSavePacking();
 }
 
-function printPackingList() {
-  window.open(`print_supply.html?id=${currentQuoteId}`, '_blank');
+async function printPackingList() {
+  // Tuloste lukee pakkauslistan kannasta -> tallennetaan odottava muutos ensin (autosave-debounce 1,2 s).
+  // Ikkuna avataan heti klikkauksessa, ettei selaimen ponnahdusikkunaesto estä sitä tallennuksen jälkeen.
+  const w = window.open('', '_blank');
+  clearTimeout(_packingSaveTimer);
+  await saveDraftPacking();
+  const url = `print_supply.html?id=${currentQuoteId}`;
+  if (w) w.location.href = url; else window.open(url, '_blank');
 }
 
 // Sulkee pakkauslistan ja tuo tarjous.html-ikkunan (josta tämä avattiin) takaisin näkyviin.
