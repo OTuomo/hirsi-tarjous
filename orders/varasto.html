@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-02 19:40 -->
+<!-- Claude-versio: 2026-11-02 19:05 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -86,6 +86,7 @@
   .tr:last-child { border-bottom:0; }
   .cols-lots { grid-template-columns:140px 160px 110px minmax(260px,1fr) 90px 80px 100px; }
   .cols-items { grid-template-columns:minmax(200px,1fr) 140px 160px 110px 220px; }
+  .cols-import { grid-template-columns:36px 64px minmax(200px,1fr) 150px 110px 200px; }
   .cols-pieces { grid-template-columns:minmax(200px,1fr) 90px 120px 230px; }
   .cols-grades { grid-template-columns:minmax(160px,1fr) 110px 150px; }
   .r { text-align:right; }
@@ -198,6 +199,11 @@
 
   <!-- ═══ NIMIKKEET JA LAADUT ═══ -->
   <section id="paneItems" role="tabpanel" aria-labelledby="tabItems" style="display:none;flex-direction:column;gap:16px">
+    <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px">
+      <div><div class="card-title" style="margin:0">Tuo nimikkeet hinnastosta</div>
+        <div class="hint">Valitse hinnaston tuotteita (sahatavara, kattotarvikkeet, pienrauta…), niin ei tarvitse kirjoittaa käsin.</div></div>
+      <button class="btn btn-primary" id="importBtn" type="button">Tuo hinnastosta…</button>
+    </div>
     <div class="card">
       <div class="card-title" id="itemFormTitle">Lisää nimike</div>
       <form id="itemForm" novalidate>
@@ -886,6 +892,124 @@ function renderGrades() {
   $('#gradeList').replaceChildren(head, ...grades.map((g) => h('div', { class: 'tr cols-grades' }, h('div', { style: 'font-weight:500' }, g.name), h('div', { class: g.active ? '' : 'muted' }, g.active ? 'Käytössä' : 'Ei käytössä'),
     h('div', { style: 'text-align:right' }, h('button', { type: 'button', class: 'btn btn-small', onclick: () => setGradeActive(g, !g.active) }, g.active ? 'Poista käytöstä' : 'Ota käyttöön')))));
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// TUO HINNASTOSTA
+// ═══════════════════════════════════════════════════════════════════════
+const NIPPU_CAT_RE = /sahatavara|höylätty|hirret/i;      // oletuksena nippuja (pituuksia)
+const SKIP_CAT_RE = /^(työ|vakiomallit)/i;               // palvelut ja kokoonpanot eivät ole varastotavaraa
+const dimStr = (x) => { const n = Math.round(Number(x)); return Number.isFinite(n) && n > 0 ? String(n) : ''; };
+
+async function openImport() {
+  const { data, error } = await db.from('products').select('id,code,name,unit,category,active,pricing_model,aihio_leveys,aihio_paksuus').order('code').limit(1000);
+  if (error) { console.error(error); showToast('Hinnaston haku epäonnistui', 'error'); return; }
+  const linked = new Set(items.map((i) => i.product_id).filter(Boolean));
+  const names = new Set(items.map((i) => i.name.trim().toLowerCase()));
+  const prods = (data || []).filter((p) => p.active !== false && p.name && !SKIP_CAT_RE.test(p.category || '') && p.pricing_model !== 'assembly');
+  if (!prods.length) { showToast('Hinnastossa ei ole tuotavia tuotteita', 'error'); return; }
+
+  const rows = prods.map((p) => {
+    const w = dimStr(p.aihio_leveys), t = dimStr(p.aihio_paksuus);
+    const exists = linked.has(p.id) || names.has(String(p.name).trim().toLowerCase());
+    const kind = NIPPU_CAT_RE.test(p.category || '') && w && t ? 'lot_length' : 'piece';
+    const cb = h('input', { type: 'checkbox', 'aria-label': 'Valitse ' + p.name, disabled: exists, style: 'width:22px;height:22px' });
+    const sKind = h('select', { 'aria-label': 'Tyyppi: ' + p.name, disabled: exists }, h('option', { value: 'lot_length' }, 'Nippu'), h('option', { value: 'piece' }, 'Kappale'));
+    sKind.value = kind;
+    const iW = h('input', { type: 'text', class: 'mono', inputmode: 'numeric', maxlength: '4', value: w, placeholder: 'lev.', 'aria-label': 'Leveys mm: ' + p.name, style: 'min-height:36px;width:68px' });
+    const iT = h('input', { type: 'text', class: 'mono', inputmode: 'numeric', maxlength: '4', value: t, placeholder: 'pak.', 'aria-label': 'Paksuus mm: ' + p.name, style: 'min-height:36px;width:68px' });
+    const iU = h('input', { type: 'text', maxlength: '10', value: String(p.unit || 'kpl').trim().slice(0, 10) || 'kpl', 'aria-label': 'Yksikkö: ' + p.name, style: 'min-height:36px;width:84px' });
+    const dimBox = h('div', { style: 'display:flex;gap:6px;align-items:center' }, iT, h('span', { 'aria-hidden': 'true' }, '×'), iW, h('span', { class: 'hint' }, 'mm'));
+    const unitBox = h('div', null, iU);
+    const sync = () => { const lot = sKind.value === 'lot_length'; dimBox.style.display = lot ? 'flex' : 'none'; unitBox.style.display = lot ? 'none' : ''; };
+    sKind.addEventListener('change', sync); sync();
+    if (exists) { dimBox.style.display = 'none'; unitBox.style.display = 'none'; }
+    const el = h('div', { class: 'tr cols-import' + (exists ? ' muted' : '') },
+      h('div', null, cb), h('div', { class: 'mono' }, p.code || ''), h('div', null, p.name, exists ? h('div', { class: 'hint' }, 'on jo varaston nimikkeissä') : null),
+      h('div', null, p.category || ''), h('div', null, sKind), h('div', null, dimBox, unitBox));
+    return { p, el, cb, sKind, iW, iT, iU, exists };
+  });
+
+  const cats = [...new Set(prods.map((p) => p.category || '(ei kategoriaa)'))].sort((a, b) => a.localeCompare(b, 'fi'));
+  const sCat = h('select', { id: 'imCat' }, h('option', { value: '' }, 'Kaikki kategoriat'), ...cats.map((c) => h('option', { value: c }, c)));
+  const iSearch = h('input', { type: 'text', id: 'imQ', maxlength: '60', autocomplete: 'off', placeholder: 'haku (nimi tai koodi)…' });
+  const cntEl = h('div', { class: 'hint' });
+  const errBox = h('div', { class: 'banner err', style: 'display:none', role: 'alert' });
+  const btnGo = h('button', { type: 'button', class: 'btn btn-primary' }, 'Tuo valitut');
+  const listBox = h('div', { class: 'tablewrap', style: 'max-height:52vh;overflow:auto' }, h('div', { class: 'tbl', style: 'min-width:760px' },
+    h('div', { class: 'tr head cols-import' }, h('div', null, ''), h('div', null, 'Koodi'), h('div', null, 'Tuote'), h('div', null, 'Kategoria'), h('div', null, 'Tyyppi'), h('div', null, 'Mitat / yksikkö')),
+    ...rows.map((r) => r.el)));
+
+  const visible = (r) => {
+    const c = r.p.category || '(ei kategoriaa)';
+    if (sCat.value && c !== sCat.value) return false;
+    const q = iSearch.value.trim().toLowerCase();
+    return !q || String(r.p.name).toLowerCase().includes(q) || String(r.p.code || '').toLowerCase().includes(q);
+  };
+  const refresh = () => {
+    for (const r of rows) r.el.style.display = visible(r) ? '' : 'none';
+    const n = rows.filter((r) => r.cb.checked).length;
+    cntEl.textContent = 'Valittu ' + n + ' tuotetta';
+    btnGo.disabled = n === 0;
+  };
+  sCat.addEventListener('change', refresh); iSearch.addEventListener('input', refresh);
+  for (const r of rows) r.cb.addEventListener('change', refresh);
+  const btnAll = h('button', { type: 'button', class: 'btn btn-small' }, 'Valitse kaikki näkyvät');
+  btnAll.addEventListener('click', () => { for (const r of rows) if (!r.exists && visible(r)) r.cb.checked = true; refresh(); });
+  const btnNone = h('button', { type: 'button', class: 'btn btn-small' }, 'Tyhjennä valinnat');
+  btnNone.addEventListener('click', () => { for (const r of rows) r.cb.checked = false; refresh(); });
+
+  let busy = false;
+  btnGo.addEventListener('click', async () => {
+    if (busy) return;
+    errBox.style.display = 'none';
+    const fail = (m) => { errBox.textContent = m; errBox.style.display = 'block'; errBox.scrollIntoView({ block: 'nearest' }); };
+    const payload = [];
+    for (const r of rows) {
+      if (!r.cb.checked) continue;
+      const name = String(r.p.name).trim();
+      if (name.length < 1 || name.length > 80) return fail('Tuotteen nimi on liian pitkä (max 80 merkkiä): ' + name.slice(0, 40) + '…');
+      const row = { name, kind: r.sKind.value, product_id: r.p.id };
+      if (!UUID_RE.test(String(r.p.id))) return fail('Virheellinen tuotetunniste.');
+      if (row.kind === 'lot_length') {
+        const w = parseDim(r.iW.value), t = parseDim(r.iT.value);
+        if (w === null || t === null) return fail('Anna leveys ja paksuus (mm) tuotteelle: ' + name + ' — tai vaihda tyypiksi Kappale.');
+        row.width_mm = w; row.thickness_mm = t;
+      } else {
+        const u = r.iU.value.trim();
+        if (u.length < 1 || u.length > 10) return fail('Anna yksikkö (max 10 merkkiä) tuotteelle: ' + name);
+        row.unit = u;
+      }
+      payload.push(row);
+    }
+    if (!payload.length) return;
+    if (new Set(payload.map((x) => x.name.toLowerCase())).size !== payload.length) return fail('Valinnoissa on kaksi samannimistä tuotetta. Tuo toinen niistä erikseen.');
+    busy = true; btnGo.disabled = true;
+    try {
+      let { data: ins, error: e1 } = await db.from('stock_items').insert(payload).select();
+      let done = ins ? ins.length : 0, failed = 0;
+      if (e1) {
+        // Yksi rivi kaatoi koko erän (esim. nimi on jo olemassa) → kokeillaan rivi kerrallaan
+        done = 0;
+        for (const row of payload) {
+          const { data: one, error: e2 } = await db.from('stock_items').insert([row]).select();
+          if (e2 || !one || !one[0]) { failed++; console.error('import', row.name, e2); } else done++;
+        }
+        if (!done) return fail(dbErrorMsg(e1, 'item'));
+      } else if (done !== payload.length) { return fail('Kaikkia nimikkeitä ei tallennettu (oikeusongelma?). Lataa sivu ja tarkista.'); }
+      showToast(done + ' nimikettä tuotu' + (failed ? ', ' + failed + ' epäonnistui' : ''), failed ? 'error' : 'success');
+      closeModal(); await reloadAndRender();
+    } catch (e) { console.error(e); fail('Tuonti epäonnistui. Yritä uudelleen.'); }
+    finally { busy = false; btnGo.disabled = false; }
+  });
+
+  openModal([dlgHead('Tuo nimikkeet hinnastosta', 'Valitse tuotteet ja tarkista tyyppi. Nippu = sahatavara jolla on pituuksia (tarvitsee mitat). Kappale = tavara jolla on vain määrä.'),
+    h('div', { class: 'row' }, h('div', { class: 'field', style: 'flex:1 1 220px' }, h('label', { class: 'label', for: 'imCat' }, 'Kategoria'), sCat),
+      h('div', { class: 'field', style: 'flex:1 1 220px' }, h('label', { class: 'label', for: 'imQ' }, 'Haku'), iSearch), btnAll, btnNone),
+    listBox, errBox, h('div', { style: 'display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px' }, cntEl,
+      h('div', { class: 'actions' }, h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'Peruuta'), btnGo))]);
+  refresh();
+}
+$('#importBtn').addEventListener('click', openImport);
 
 // ── Piirto ja käynnistys ──────────────────────────────────────────────
 function renderAll() { renderFilters(); renderLots(); renderPieces(); renderItems(); renderGrades(); }
