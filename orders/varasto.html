@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 18:10 -->
+<!-- Claude-versio: 2026-11-03 19:40 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -87,8 +87,16 @@
   .cols-lots { grid-template-columns:140px 160px 110px minmax(260px,1fr) 90px 80px 100px; }
   .cols-items { grid-template-columns:minmax(200px,1fr) 140px 160px 110px 220px; }
   .cols-import { grid-template-columns:36px 64px minmax(200px,1fr) 150px 110px 200px; }
-  .cols-pieces { grid-template-columns:minmax(200px,1fr) 90px 120px 230px; }
+  .cols-pieces { grid-template-columns:minmax(200px,1fr) 90px 120px 330px; }
   .cols-lenrows { grid-template-columns:minmax(90px,1fr) minmax(90px,1fr) minmax(90px,1fr); }
+  .combo { position:relative; }
+  .combo input { padding-right:40px; }
+  .combo-x { position:absolute; right:2px; top:2px; width:40px; height:40px; background:none; border:0; font-size:22px; line-height:1; color:var(--text-dim); cursor:pointer; }
+  .combo-list { position:absolute; left:0; right:0; top:calc(100% + 2px); z-index:80; background:var(--panel); border:1px solid var(--border2); border-radius:var(--radius); box-shadow:0 6px 20px rgba(0,0,0,.15); max-height:min(40vh,320px); overflow:auto; }
+  .combo-opt { min-height:44px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer; border-bottom:1px solid var(--border); }
+  .combo-opt:last-child { border-bottom:0; }
+  .combo-opt[aria-selected="true"] { background:var(--accent-bg); }
+  .combo-empty { padding:12px; color:var(--text-mid); }
   .cols-grades { grid-template-columns:minmax(160px,1fr) 110px 150px; }
   .r { text-align:right; }
   .linkbtn { background:none; border:0; padding:0; font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--accent-dim); cursor:pointer; text-align:left; text-decoration:underline; text-underline-offset:2px; }
@@ -175,10 +183,11 @@
   <section id="paneLots" role="tabpanel" aria-labelledby="tabLots" style="display:flex;flex-direction:column;gap:16px">
     <div class="card">
       <div class="row">
-        <div class="field" style="flex:1 1 220px"><label class="label" for="fItem">Nimike</label><select id="fItem"></select></div>
+        <div class="field" style="flex:1 1 220px"><label class="label" for="fItem">Nimike</label><div id="fItemBox"></div></div>
         <div class="field"><div class="label">Laatu</div><div class="seg" id="fGrades"></div></div>
         <div class="field" style="flex:1 1 180px"><label class="label" for="fSearch">Nippunumero</label><input type="text" id="fSearch" maxlength="40" autocomplete="off" placeholder="haku…"></div>
         <button class="btn" id="printBtn" type="button">🖨 Tulosta raportti…</button>
+        <button class="btn" id="bulkBtn" type="button">+ Pikasyöttö (monta nippua)</button>
         <button class="btn btn-primary" id="newLotBtn" type="button">+ Uusi nippu</button>
       </div>
     </div>
@@ -195,8 +204,9 @@
 
   <!-- ═══ KAPPALETAVARA ═══ -->
   <section id="panePieces" role="tabpanel" aria-labelledby="tabPieces" style="display:none;flex-direction:column;gap:16px">
+    <div class="field" style="max-width:420px"><label class="label" for="pieceSearch">Hae nimikettä</label><input type="text" id="pieceSearch" maxlength="60" autocomplete="off" placeholder="kirjoita nimen osa…"></div>
     <div class="hint">Kappaletavara = tavara jolla on vain määrä (ei pituuksia). Uuden nimikkeen voi lisätä välilehdellä "Nimikkeet ja laadut".</div>
-    <div class="tablewrap"><div class="tbl" style="min-width:640px" id="pieceList"></div></div>
+    <div class="tablewrap"><div class="tbl" style="min-width:740px" id="pieceList"></div></div>
     <div id="lengthWrap" style="display:none;flex-direction:column;gap:12px">
       <div class="card-title" style="margin:0">Pituustavara (mitta + kpl)</div>
       <div class="hint">Pituustavara = tavara jota myydään pituuksittain, esim. räystäspelti. Jokaiselle mitalle oma kappalemäärä; juoksumetrit (jm) lasketaan mitoittain ja yhteensä. Uuden nimikkeen voi lisätä välilehdellä "Nimikkeet ja laadut" (tyyppi: Pituustavara).</div>
@@ -235,6 +245,7 @@
         <div class="hint" style="margin-top:8px">Mitat tarvitaan kuutioiden laskentaan (jm × leveys × paksuus). Nippu-nimikkeen mittoja voi korjata myöhemmin, tyyppiä ei. Kappale- ja pituustavaran tyypin voi vaihtaa vain jos nimikkeellä ei ole vielä kirjauksia.</div>
       </form>
     </div>
+    <div class="field" style="max-width:420px"><label class="label" for="itemSearch">Hae nimikettä</label><input type="text" id="itemSearch" maxlength="60" autocomplete="off" placeholder="kirjoita nimen osa…"></div>
     <label id="itemInactiveWrap" style="display:none;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="itemShowInactive" style="width:22px;height:22px"><span id="itemInactiveLbl"></span></label>
     <div class="tablewrap"><div class="tbl" style="min-width:720px" id="itemList"></div></div>
 
@@ -385,15 +396,63 @@ const itemById = (id) => items.find((i) => i.id === id);
 const lotItems = () => items.filter((i) => i.kind === 'lot_length' && i.active);
 const gradeName = (id) => { const g = grades.find((x) => x.id === id); return g ? g.name : ''; };
 
+// ── Haku: ääkkösistä ja isoista kirjaimista välittämätön, kaikkien sanojen on löydyttävä ─────────
+const normTxt = (s) => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/×/g, 'x');
+const matchesQuery = (text, q) => { const t = normTxt(text); return normTxt(q).split(/\s+/).filter(Boolean).every((w) => t.includes(w)); };
+
+// Hakuvalinta: kirjoita → lista suodattuu joka näppäilyllä. Nuolet + Enter, Esc; ×-nappi tyhjentää (kun emptyLabel).
+function makeCombo({ id, placeholder, emptyLabel }) {
+  let opts = [], val = '', typing = false, active = -1, shown = [];
+  const listeners = [];
+  const input = h('input', { type: 'text', id, 'data-combo': '1', autocomplete: 'off', role: 'combobox', 'aria-autocomplete': 'list', 'aria-expanded': 'false', placeholder: placeholder || '', maxlength: '80' });
+  const list = h('div', { class: 'combo-list', role: 'listbox', style: 'display:none' });
+  const clr = h('button', { type: 'button', class: 'combo-x', 'aria-label': 'Tyhjennä valinta', style: 'display:none', onmousedown: (e) => e.preventDefault(), onclick: () => pick('') }, '×');
+  const all = () => (emptyLabel ? [{ id: '', label: emptyLabel }] : []).concat(opts);
+  const labelOf = (v) => { const o = opts.find((x) => x.id === v); return o ? o.label : ''; };
+  const syncInput = () => { input.value = labelOf(val); clr.style.display = emptyLabel && val ? '' : 'none'; };
+  const isOpen = () => list.style.display !== 'none';
+  function close() { list.style.display = 'none'; input.setAttribute('aria-expanded', 'false'); }
+  function render() {
+    const q = typing ? input.value : '';
+    shown = all().filter((o) => (o.id === '' ? !q : matchesQuery(o.label + ' ' + (o.hint || ''), q)));
+    if (active < 0 || active >= shown.length) active = Math.max(0, shown.findIndex((o) => o.id === val));
+    list.replaceChildren(...(shown.length ? shown.map((o, i) => h('div', { class: 'combo-opt', role: 'option', 'aria-selected': i === active ? 'true' : 'false',
+      onmousedown: (e) => { e.preventDefault(); pick(o.id); } }, h('span', null, o.label), o.hint ? h('span', { class: 'hint' }, o.hint) : null)) : [h('div', { class: 'combo-empty' }, 'Ei hakutuloksia')]));
+  }
+  function openList() { render(); list.style.display = ''; input.setAttribute('aria-expanded', 'true'); const a = list.querySelector('[aria-selected="true"]'); if (a && a.scrollIntoView) a.scrollIntoView({ block: 'nearest' }); }
+  function pick(v) { const changed = v !== val; val = v; typing = false; syncInput(); close(); if (changed) for (const fn of listeners) fn(v); }
+  function move(d) { if (!shown.length) return; active = (active + d + shown.length) % shown.length; render(); const a = list.querySelector('[aria-selected="true"]'); if (a && a.scrollIntoView) a.scrollIntoView({ block: 'nearest' }); }
+  input.addEventListener('focus', () => { typing = false; active = -1; input.select(); openList(); });
+  input.addEventListener('click', () => { if (!isOpen()) { typing = false; active = -1; openList(); } });
+  input.addEventListener('input', () => { typing = true; active = 0; openList(); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (!isOpen()) openList(); else move(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (!isOpen()) openList(); else move(-1); }
+    else if (e.key === 'Enter') { if (isOpen() && shown[active]) { e.preventDefault(); pick(shown[active].id); } }
+    else if (e.key === 'Escape') { if (isOpen()) { e.stopPropagation(); typing = false; syncInput(); close(); } }
+  });
+  input.addEventListener('blur', () => {
+    if (typing && shown.length === 1) pick(shown[0].id); // yksi osuma → valitaan se
+    else { typing = false; syncInput(); close(); }
+  });
+  return {
+    el: h('div', { class: 'combo' }, input, clr, list), input,
+    setOptions(o) { opts = o; if (val && !opts.some((x) => x.id === val)) val = ''; syncInput(); },
+    get value() { return val; },
+    set value(v) { val = opts.some((x) => x.id === v) ? v : ''; syncInput(); },
+    onchange(fn) { listeners.push(fn); },
+    addEventListener(type, fn) { if (type === 'change') listeners.push(() => fn()); }
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // NIPUT — lista, suodattimet, haku
 // ═══════════════════════════════════════════════════════════════════════
 function renderFilters() {
-  const sel = $('#fItem'); const cur = flt.item;
-  sel.replaceChildren(h('option', { value: '' }, 'Kaikki nimikkeet'),
-    ...items.filter((i) => i.kind === 'lot_length').map((i) => h('option', { value: i.id }, i.name + (i.active ? '' : ' (ei käytössä)'))));
-  sel.value = items.some((i) => i.id === cur) ? cur : '';
-  flt.item = sel.value;
+  const cur = flt.item;
+  fItemCombo.setOptions(items.filter((i) => i.kind === 'lot_length').map((i) => ({ id: i.id, label: i.name + (i.active ? '' : ' (ei käytössä)') })));
+  fItemCombo.value = items.some((i) => i.id === cur) ? cur : '';
+  flt.item = fItemCombo.value;
 
   const box = $('#fGrades');
   const mk = (id, label) => h('button', { type: 'button', class: 'chipbtn', 'aria-pressed': flt.grade === id ? 'true' : 'false', onclick: () => { flt.grade = id; renderLots(); renderFilters(); } }, label);
@@ -450,7 +509,9 @@ function renderLots() {
       h('div', { class: 'chips' }, ...all.map((x) => h('span', { class: 'chip' + (flt.len === null ? '' : x.length_mm === flt.len ? ' hit' : ' dim') }, fLen(x.length_mm) + ' m × ' + x.qty_now))),
       h('div', { class: 'r mono' }, f1.format(jm)), h('div', { class: 'r mono' }, f2.format(m3)), h('div', null, fDate(l.arrived_on)))));
 }
-$('#fItem').addEventListener('change', (e) => { flt.item = e.target.value; flt.len = null; renderLots(); });
+const fItemCombo = makeCombo({ id: 'fItem', placeholder: 'Kaikki nimikkeet', emptyLabel: 'Kaikki nimikkeet' });
+$('#fItemBox').append(fItemCombo.el);
+fItemCombo.onchange((v) => { flt.item = v; flt.len = null; renderLots(); });
 $('#fSearch').addEventListener('input', (e) => { flt.q = e.target.value.trim(); renderLots(); });
 $('#newLotBtn').addEventListener('click', () => openNewLot());
 
@@ -467,7 +528,7 @@ function openModal(content, { narrow } = {}) {
   $('#modalRoot').append(ov);
   document.body.classList.add('modal-open');
   modalStack.push(ov);
-  const first = dlg.querySelector('input:not([type=hidden]), select, textarea');
+  const first = dlg.querySelector('input:not([type=hidden]):not([data-combo]), select, textarea');
   (first || dlg).focus();
   return ov;
 }
@@ -491,7 +552,8 @@ function openNewLot(preset) {
   if (!avail.length) { showToast('Lisää ensin nippu-nimike välilehdellä "Nimikkeet ja laadut"', 'error'); setTab('items'); return; }
   const st = { saving: false, rows: [] }; // rows: {len: string, qty: string}
   const p = preset || {};
-  const iItem = h('select', { id: 'nlItem' }, ...avail.map((i) => h('option', { value: i.id }, i.name)));
+  const iItem = makeCombo({ id: 'nlItem', placeholder: 'Hae nimikettä…' });
+  iItem.setOptions(avail.map((i) => ({ id: i.id, label: i.name })));
   iItem.value = p.itemId && avail.some((i) => i.id === p.itemId) ? p.itemId : (flt.item && avail.some((i) => i.id === flt.item) ? flt.item : avail[0].id);
   const iNo = h('input', { type: 'text', id: 'nlNo', class: 'mono', maxlength: '40', autocomplete: 'off', placeholder: 'esim. 7710934' });
   const iGrade = h('select', { id: 'nlGrade' }, h('option', { value: '' }, '(ei laatua)'), ...grades.filter((g) => g.active).map((g) => h('option', { value: g.id }, g.name)));
@@ -609,7 +671,7 @@ function openNewLot(preset) {
     dlgHead('Uusi nippu'),
     h('div', { class: 'cols2' },
       h('div', { class: 'main', style: 'flex:1 1 300px;max-width:400px' },
-        field('Nimike', 'nlItem', iItem), field('Nippunumero (toimittajan)', 'nlNo', iNo), field('Laatu', 'nlGrade', iGrade),
+        field('Nimike', 'nlItem', iItem.el), field('Nippunumero (toimittajan)', 'nlNo', iNo), field('Laatu', 'nlGrade', iGrade),
         field('Saapumispäivä', 'nlDate', iDate), field('Huomio (valinnainen)', 'nlNote', iNote)),
       h('div', { class: 'main', style: 'flex:2 1 460px' },
         h('div', { style: 'display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px' }, h('div', { class: 'card-title', style: 'margin:0' }, 'Pituudet ja kappalemäärät'), btnCopy),
@@ -621,6 +683,147 @@ function openNewLot(preset) {
   openModal(content);
   renderRows();
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// PIKASYÖTTÖ — monta nippua kerralla (jokaisessa yksi pituus; esim. toimittajan lista "1309088–1309096, 4,2 m, 242 kpl")
+// Jokainen nippu tallennetaan omalla stock_receive_lot-kutsulla → yksi virhe ei kaada muita; epäonnistuneet jäävät listalle.
+// ═══════════════════════════════════════════════════════════════════════
+const BULK_MAX = 150;
+// Nippunumerot: rivinvaihto / väli / pilkku / puolipiste erottaa; väli kirjoitetaan 1309088..1309096 (myös – tai " - ").
+// Pelkkä yhdysmerkki ei ole väli, koska se voi kuulua numeroon (esim. A-2).
+function parsePackageList(text) {
+  const out = [], errors = [], seen = new Set();
+  const norm = String(text || '').replace(/\s+[-–—]\s+/g, '..').replace(/[–—]/g, '..');
+  const add = (no) => { const k = no.toLowerCase(); if (seen.has(k)) return; seen.add(k); out.push(no); };
+  for (const tok of norm.split(/[\s,;]+/).filter(Boolean)) {
+    if (tok.includes('..')) {
+      const [a, b, ...rest] = tok.split('..');
+      if (rest.length || !/^\d{1,12}$/.test(a) || !/^\d{1,12}$/.test(b)) { errors.push('Virheellinen väli: ' + tok.slice(0, 30)); continue; }
+      const na = Number(a), nb = Number(b);
+      if (nb < na) { errors.push('Välin loppu on pienempi kuin alku: ' + tok); continue; }
+      if (nb - na + 1 > BULK_MAX) { errors.push('Väli on liian pitkä (max ' + BULK_MAX + ' nippua): ' + tok); continue; }
+      for (let n = na; n <= nb; n++) add(String(n).padStart(a.length, '0'));
+    } else if (PKG_RE.test(tok)) add(tok);
+    else errors.push('Virheellinen nippunumero: ' + tok.slice(0, 30));
+  }
+  if (out.length > BULK_MAX) errors.push('Liikaa nippuja (' + out.length + '), enintään ' + BULK_MAX + ' kerralla.');
+  return { list: out, errors };
+}
+
+function openBulkLots() {
+  const avail = lotItems();
+  if (!avail.length) { showToast('Lisää ensin nippu-nimike välilehdellä "Nimikkeet ja laadut"', 'error'); setTab('items'); return; }
+  const st = { saving: false, rows: [] }; // rows: {no, qty: string, touched, err}
+  const iItem = makeCombo({ id: 'bkItem', placeholder: 'Hae nimikettä…' });
+  iItem.setOptions(avail.map((i) => ({ id: i.id, label: i.name })));
+  iItem.value = flt.item && avail.some((i) => i.id === flt.item) ? flt.item : avail[0].id;
+  const iGrade = h('select', { id: 'bkGrade' }, h('option', { value: '' }, '(ei laatua)'), ...grades.filter((g) => g.active).map((g) => h('option', { value: g.id }, g.name)));
+  const iDate = h('input', { type: 'date', id: 'bkDate', value: todayLocal() });
+  const iNote = h('textarea', { id: 'bkNote', maxlength: '500', rows: '2' });
+  const iLen = h('input', { type: 'text', id: 'bkLen', class: 'mono', inputmode: 'decimal', maxlength: '6', placeholder: 'esim. 4,2' });
+  const iQty = h('input', { type: 'text', id: 'bkQty', class: 'mono', inputmode: 'numeric', maxlength: '6', placeholder: 'esim. 242' });
+  const iNos = h('textarea', { id: 'bkNos', rows: '3', maxlength: '4000', placeholder: 'esim. 1309088..1309096\n1309100, 1309105' });
+  const parseMsg = h('div', { class: 'hint' });
+  const rowsBox = h('div', null), sumBox = h('div', { class: 'sumbox' });
+  const errBox = h('div', { class: 'banner err', style: 'display:none', role: 'alert' });
+  const quick = h('div', { class: 'seg' }, ...QUICK_LENS.map((x) => h('button', { type: 'button', class: 'chipbtn', style: 'font-family:IBM Plex Mono,monospace;min-width:56px', onclick: () => { iLen.value = x.toFixed(1).replace('.', ','); upd(); } }, x.toFixed(1).replace('.', ','))));
+  const btnSave = h('button', { type: 'button', class: 'btn btn-primary' }, 'Tallenna nippuja');
+  const curItem = () => itemById(iItem.value);
+  const perJm = () => { const it = curItem(); return it ? (it.width_mm * it.thickness_mm) / 1e6 : 0; };
+  const existsAlready = (no) => lotRows.some((l) => l.item_id === iItem.value && String(l.package_no).toLowerCase() === no.toLowerCase());
+
+  function showErr(m) { errBox.textContent = m; errBox.style.display = m ? 'block' : 'none'; if (m) errBox.scrollIntoView({ block: 'nearest' }); }
+  function syncRowsFromList() { // nippulista muuttui: säilytetään jo käsin muutetut kappalemäärät
+    const { list, errors } = parsePackageList(iNos.value);
+    const old = new Map(st.rows.map((r) => [r.no.toLowerCase(), r]));
+    st.rows = list.map((no) => old.get(no.toLowerCase()) || { no, qty: iQty.value.trim(), touched: false, err: '' });
+    parseMsg.textContent = errors.length ? errors.join(' · ') : (list.length ? list.length + ' nippua tunnistettu' : '');
+    parseMsg.style.color = errors.length ? 'var(--err)' : '';
+    renderRows();
+  }
+  function renderRows() {
+    const head = h('div', { class: 'lenrow head' }, h('div', null, 'Nippu'), h('div', null, 'Kpl'), h('div', { class: 'r' }, 'Jm'), h('div', { class: 'r m3c' }, 'm³'), h('div', null));
+    const data = st.rows.map((r, idx) => {
+      const iQ = h('input', { type: 'text', class: 'mono', inputmode: 'numeric', maxlength: '6', value: r.qty, 'aria-label': 'Kappaleet, nippu ' + r.no, placeholder: 'kpl', oninput: (e) => { r.qty = e.target.value; r.touched = true; upd(); } });
+      const jC = h('div', { class: 'r mono' }), mC = h('div', { class: 'r mono m3c' });
+      const noC = h('div', { class: 'mono', style: 'font-weight:600' }, r.no, existsAlready(r.no) ? h('div', { class: 'hint', style: 'color:var(--err)' }, 'on jo varastossa') : null, r.err ? h('div', { class: 'hint', style: 'color:var(--err)' }, r.err) : null);
+      r.el = { iQ, jC, mC };
+      return h('div', { class: 'lenrow' }, noC, iQ, jC, mC, h('button', { type: 'button', class: 'x', style: 'font-size:22px', 'aria-label': 'Poista nippu ' + r.no + ' listalta', onclick: () => { st.rows.splice(idx, 1); renderRows(); } }, '×'));
+    });
+    rowsBox.replaceChildren(...(st.rows.length ? [head, ...data] : []));
+    upd();
+  }
+  function upd() {
+    const mm = parseLenMm(iLen.value);
+    // oletuskappalemäärä päivittyy riveille joita ei ole muutettu käsin
+    for (const r of st.rows) if (!r.touched) { r.qty = iQty.value.trim(); if (r.el) r.el.iQ.value = r.qty; }
+    let pcs = 0, jm = 0;
+    for (const r of st.rows) {
+      const q = parseQty(r.qty);
+      if (r.el) {
+        r.el.iQ.classList.toggle('invalid', !!r.qty && q === null);
+        r.el.jC.textContent = mm && q ? f1.format((mm * q) / 1000) : '–';
+        r.el.mC.textContent = mm && q ? f2.format(((mm * q) / 1000) * perJm()) : '–';
+      }
+      if (mm && q) { pcs += q; jm += (mm * q) / 1000; }
+    }
+    iLen.classList.toggle('invalid', !!iLen.value.trim() && mm === null);
+    sumBox.replaceChildren(h('div', { class: 'hint' }, st.rows.length + ' nippua · ' + fint.format(pcs) + ' kpl' + (mm ? ' · pituus ' + fLen(mm) + ' m' : '')),
+      h('div', { style: 'display:flex;gap:28px;flex-wrap:wrap' },
+        h('div', { class: 'r' }, h('div', { class: 'label' }, 'Juoksumetrit'), h('div', { class: 'mono', style: 'font-size:22px;font-weight:600;color:var(--accent-dim)' }, f1.format(jm) + ' jm')),
+        h('div', { class: 'r' }, h('div', { class: 'label' }, 'Kuutiot'), h('div', { class: 'mono', style: 'font-size:22px;font-weight:600;color:var(--accent-dim)' }, f2.format(jm * perJm()) + ' m³'))));
+  }
+  iNos.addEventListener('input', syncRowsFromList);
+  iLen.addEventListener('input', upd); iQty.addEventListener('input', upd); iItem.addEventListener('change', renderRows);
+
+  btnSave.addEventListener('click', async () => {
+    if (st.saving) return;
+    showErr('');
+    const mm = parseLenMm(iLen.value);
+    if (!iItem.value || !UUID_RE.test(iItem.value)) return showErr('Valitse nimike.');
+    if (iGrade.value && !UUID_RE.test(iGrade.value)) return showErr('Virheellinen laatu.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iDate.value)) return showErr('Anna saapumispäivä.');
+    if (mm === null) return showErr('Anna pituus metreinä (0,1–20 m, esim. 4,2).');
+    if (!st.rows.length) return showErr('Anna nippunumerot (esim. 1309088..1309096).');
+    if (st.rows.length > BULK_MAX) return showErr('Liikaa nippuja kerralla (max ' + BULK_MAX + ').');
+    for (const r of st.rows) { if (parseQty(r.qty) === null) return showErr('Anna kappalemäärä (kokonaisluku) nipulle ' + r.no + '.'); if (existsAlready(r.no)) return showErr('Nippu ' + r.no + ' on jo varastossa — poista se listalta.'); }
+    st.saving = true; btnSave.disabled = true;
+    const work = st.rows.slice(); let saved = 0, failed = 0, stop = false;
+    try {
+      for (let k = 0; k < work.length && !stop; k++) {
+        const r = work[k];
+        btnSave.textContent = 'Tallennetaan ' + (k + 1) + ' / ' + work.length + '…';
+        const { data, error } = await db.rpc('stock_receive_lot', { p_item_id: iItem.value, p_package_no: r.no, p_grade_id: iGrade.value || null, p_arrived_on: iDate.value, p_note: iNote.value.trim() || null, p_lines: [{ length_mm: mm, qty: parseQty(r.qty) }] });
+        if (error) {
+          failed++; r.err = dbErrorMsg(error, 'lot');
+          if (error.code === '42501' || error.code === 'PGRST301') stop = true; // oikeusvirhe: ei jatketa turhaan
+        } else if (!data) { failed++; r.err = 'Ei tallennettu'; }
+        else { saved++; r.done = true; }
+      }
+      st.rows = st.rows.filter((r) => !r.done);
+      await reloadAndRender();
+      if (!failed) { showToast(saved + ' nippua tallennettu', 'success'); closeModal(); return; }
+      showErr(saved + ' nippua tallennettu, ' + failed + ' epäonnistui' + (stop ? ' (oikeusvirhe — kirjaudu ulos ja sisään)' : '') + '. Epäonnistuneet ovat edelleen listalla — korjaa ja tallenna uudelleen.');
+      renderRows();
+    } catch (e) { console.error(e); st.rows = st.rows.filter((r) => !r.done); await reloadAndRender(); showErr('Tallennus keskeytyi (' + saved + ' nippua ehti tallentua). Tarkista nippulista ennen uutta yritystä.'); renderRows(); }
+    finally { st.saving = false; btnSave.disabled = false; btnSave.textContent = 'Tallenna nippuja'; }
+  });
+
+  openModal([
+    dlgHead('Pikasyöttö — monta nippua kerralla', 'Kaikilla nipuilla sama nimike, laatu, saapumispäivä ja pituus. Kappalemäärää voi muuttaa nippukohtaisesti. Nipuissa joissa on monta pituutta: käytä "+ Uusi nippu".'),
+    h('div', { class: 'cols2' },
+      h('div', { class: 'main', style: 'flex:1 1 300px;max-width:400px' },
+        field('Nimike', 'bkItem', iItem.el), field('Laatu', 'bkGrade', iGrade), field('Saapumispäivä', 'bkDate', iDate), field('Huomio (valinnainen, sama kaikille)', 'bkNote', iNote)),
+      h('div', { class: 'main', style: 'flex:2 1 460px' },
+        field('Nippunumerot', 'bkNos', iNos, 'Väli: 1309088..1309096. Useita: erota rivinvaihdolla, pilkulla tai välilyönnillä.'), parseMsg,
+        h('div', { class: 'row' }, field('Pituus (m)', 'bkLen', iLen), field('Kpl / nippu (oletus)', 'bkQty', iQty)),
+        h('div', { class: 'field' }, h('div', { class: 'label' }, 'Pikavalinta pituudelle'), quick),
+        h('div', { class: 'sdl', style: 'max-height:40vh;overflow:auto' }, rowsBox), sumBox)),
+    errBox,
+    h('div', { class: 'actions' }, h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'Peruuta'), btnSave)]);
+  renderRows();
+}
+$('#bulkBtn').addEventListener('click', openBulkLots);
 
 // ═══════════════════════════════════════════════════════════════════════
 // NIPUN TIEDOT, NOSTO, HISTORIA
@@ -880,14 +1083,16 @@ async function openLot(lotId) {
 // ═══════════════════════════════════════════════════════════════════════
 function renderPieces() {
   const bal = new Map(pieceRows.map((p) => [p.item_id, p.qty_now]));
-  const list = items.filter((i) => i.kind === 'piece' && (i.active || num(bal.get(i.id)) > 0));
+  const pq = $('#pieceSearch').value;
+  const list = items.filter((i) => i.kind === 'piece' && (i.active || num(bal.get(i.id)) > 0) && matchesQuery(i.name, pq));
   const head = h('div', { class: 'tr head cols-pieces' }, h('div', null, 'Nimike'), h('div', null, 'Yksikkö'), h('div', { class: 'r' }, 'Saldo'), h('div', null, ''));
-  if (!list.length) { $('#pieceList').replaceChildren(head, h('div', { class: 'empty' }, 'Ei kappaletavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Kappaletavara).')); return; }
+  if (!list.length) { $('#pieceList').replaceChildren(head, h('div', { class: 'empty' }, pq.trim() ? 'Ei hakutuloksia.' : 'Ei kappaletavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Kappaletavara).')); return; }
   $('#pieceList').replaceChildren(head, ...list.map((i) => h('div', { class: 'tr cols-pieces' },
     h('div', null, i.name + (i.active ? '' : ' (ei käytössä)')), h('div', null, i.unit), h('div', { class: 'r mono', style: 'font-weight:600' }, fint.format(num(bal.get(i.id)))),
     h('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
       h('button', { type: 'button', class: 'btn btn-small btn-ghost', disabled: !i.active, onclick: () => openPieceMove(i.id, 'saapuminen') }, '+ Saapuminen'),
-      h('button', { type: 'button', class: 'btn btn-small', onclick: () => openPieceMove(i.id, 'myynti') }, '− Nosto')))));
+      h('button', { type: 'button', class: 'btn btn-small', onclick: () => openPieceMove(i.id, 'myynti') }, '− Nosto'),
+      h('button', { type: 'button', class: 'btn btn-small btn-danger', onclick: () => retireItem(i) }, 'Poista')))));
 }
 function openPieceMove(itemId, startKey) {
   const item = itemById(itemId); if (!item) return;
@@ -936,10 +1141,12 @@ function renderLengthItems() {
   const wrap = $('#lengthWrap');
   wrap.style.display = lengthEnabled ? 'flex' : 'none';
   if (!lengthEnabled) return;
-  const all = items.filter((i) => i.kind === 'length_piece' && (i.active || lensOf(i.id).length));
+  const lq = $('#pieceSearch').value;
+  const base = items.filter((i) => i.kind === 'length_piece' && (i.active || lensOf(i.id).length));
+  const all = base.filter((i) => matchesQuery(i.name, lq));
   if (!all.length) {
     $('#lenPieceCard').style.display = 'none'; $('#lenPieceTiles').style.display = 'none';
-    $('#lengthList').replaceChildren(h('div', { class: 'empty card' }, 'Ei pituustavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Pituustavara).')); return;
+    $('#lengthList').replaceChildren(h('div', { class: 'empty card' }, base.length && lq.trim() ? 'Ei hakutuloksia.' : 'Ei pituustavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Pituustavara).')); return;
   }
   // Mitat yli kaikkien pituustavara-nimikkeiden (kuten "Pituudet varastossa" nipuissa)
   const lens = new Map();
@@ -969,7 +1176,8 @@ function renderLengthItems() {
         ls.length ? h('div', { class: 'chips', style: 'margin-top:6px' }, ...ls.map((r) => h('span', { class: 'chip' + (lenFlt === null ? '' : r.length_mm === lenFlt ? ' hit' : ' dim') }, fLen(r.length_mm) + ' m × ' + fint.format(num(r.qty_now))))) : null),
       h('div', { style: 'display:flex;gap:8px' },
         h('button', { type: 'button', class: 'btn btn-small btn-ghost', disabled: !i.active, onclick: () => openLengthMove(i.id, 'saapuminen') }, '+ Saapuminen'),
-        h('button', { type: 'button', class: 'btn btn-small', onclick: () => openLengthMove(i.id, 'myynti') }, '− Nosto')));
+        h('button', { type: 'button', class: 'btn btn-small', onclick: () => openLengthMove(i.id, 'myynti') }, '− Nosto'),
+        h('button', { type: 'button', class: 'btn btn-small btn-danger', onclick: () => retireItem(i) }, 'Poista')));
     const rows = ls.length ? [
       h('div', { class: 'tr head cols-lenrows' }, h('div', null, 'Pituus'), h('div', { class: 'r' }, 'Kpl'), h('div', { class: 'r' }, 'Jm')),
       ...ls.map((r) => h('div', { class: 'tr cols-lenrows mono', style: lenFlt !== null && r.length_mm !== lenFlt ? 'color:var(--text-dim)' : (lenFlt !== null ? 'background:var(--accent-bg);font-weight:600' : '') }, h('div', null, fLen(r.length_mm) + ' m'), h('div', { class: 'r' }, fint.format(num(r.qty_now))), h('div', { class: 'r' }, f1.format(num(r.jm_now))))),
@@ -1062,6 +1270,39 @@ function openLengthMove(itemId, startKey) {
   renderRows();
 }
 
+// ── Nimikkeen poisto (kappale- ja pituustavara) ───────────────────────────
+// Kirjanpitoa ei voi poistaa, joten "Poista" = jäljellä oleva saldo kirjataan pois (korjaus −, viite
+// "Nimikkeen poisto") ja nimike poistetaan käytöstä. Historia säilyy; nimikkeen saa takaisin
+// Nimikkeet-välilehdeltä ("Näytä myös käytöstä poistetut" → "Ota käyttöön").
+let retiring = false;
+async function retireItem(item) {
+  if (retiring || !item || !UUID_RE.test(String(item.id))) return;
+  const rows = [];
+  if (item.kind === 'piece') {
+    const q = num((pieceRows.find((p) => p.item_id === item.id) || {}).qty_now);
+    if (q > 0) rows.push({ item_id: item.id, qty: -q, reason: 'korjaus', ref: 'Nimikkeen poisto' });
+  } else if (item.kind === 'length_piece') {
+    for (const r of lensOf(item.id)) rows.push({ item_id: item.id, length_mm: r.length_mm, qty: -num(r.qty_now), reason: 'korjaus', ref: 'Nimikkeen poisto' });
+  } else return;
+  const pcs = rows.reduce((a, r) => a - r.qty, 0);
+  const msg = pcs > 0 ? `Nimikkeellä "${item.name}" on vielä saldoa ${fint.format(pcs)} kpl. Poistetaanko nimike ja kirjataanko saldo pois?\n\nKirjaushistoria säilyy tietokannassa.` : `Poistetaanko nimike "${item.name}"?\n\nKirjaushistoria säilyy tietokannassa.`;
+  if (!confirm(msg)) return;
+  retiring = true;
+  try {
+    if (rows.length) {
+      const { data, error } = await db.from('stock_movements').insert(rows).select();
+      if (error) return showToast(dbErrorMsg(error, 'move'), 'error');
+      if (!data || data.length !== rows.length) { await reloadAndRender(); return showToast('Saldon kirjaus ei onnistunut kokonaan. Tarkista saldo ja yritä uudelleen.', 'error'); }
+    }
+    const { data: up, error: e2 } = await db.from('stock_items').update({ active: false }).eq('id', item.id).select();
+    if (e2) { await reloadAndRender(); return showToast(dbErrorMsg(e2, 'item'), 'error'); }
+    if (!up || !up[0]) { await reloadAndRender(); return showToast('Nimikkeen poisto ei onnistunut (oikeusongelma?)', 'error'); }
+    showToast('Nimike poistettu', 'success');
+    await reloadAndRender();
+  } catch (e) { console.error(e); showToast('Poisto epäonnistui. Tarkista saldo ja yritä uudelleen.', 'error'); }
+  finally { retiring = false; }
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // NIMIKKEET JA LAADUT
 // ═══════════════════════════════════════════════════════════════════════
@@ -1132,6 +1373,8 @@ async function setItemActive(i, active) {
   await reloadAndRender();
 }
 $('#itemShowInactive').addEventListener('change', () => renderItems());
+$('#itemSearch').addEventListener('input', () => renderItems());
+$('#pieceSearch').addEventListener('input', () => { renderPieces(); renderLengthItems(); });
 function renderItems() {
   const head = h('div', { class: 'tr head cols-items' }, h('div', null, 'Nimike'), h('div', null, 'Tyyppi'), h('div', null, 'Mitat / yksikkö'), h('div', null, 'Tila'), h('div', null, ''));
   // Käytöstä poistetut piilotetaan oletuksena (siisti lista); kirjanpito säilyy, ja ne saa esiin ruksista
@@ -1139,8 +1382,9 @@ function renderItems() {
   $('#itemInactiveWrap').style.display = inactiveN ? 'flex' : 'none';
   $('#itemInactiveLbl').textContent = 'Näytä myös käytöstä poistetut (' + inactiveN + ')';
   const showAll = $('#itemShowInactive').checked;
-  const shownItems = items.filter((i) => i.active || showAll || i.id === editingItemId);
-  if (!shownItems.length) { $('#itemList').replaceChildren(head, h('div', { class: 'empty' }, 'Ei nimikkeitä.')); return; }
+  const iq = $('#itemSearch').value;
+  const shownItems = items.filter((i) => (i.active || showAll || i.id === editingItemId) && (i.id === editingItemId || matchesQuery(i.name, iq)));
+  if (!shownItems.length) { $('#itemList').replaceChildren(head, h('div', { class: 'empty' }, iq.trim() ? 'Ei hakutuloksia.' : 'Ei nimikkeitä.')); return; }
   $('#itemList').replaceChildren(head, ...shownItems.map((i) => h('div', { class: 'tr cols-items' },
     h('div', { style: 'font-weight:500' }, i.name), h('div', null, KIND_LABEL[i.kind] || i.kind),
     h('div', { class: 'mono' }, i.kind === 'lot_length' ? i.thickness_mm + ' × ' + i.width_mm + ' mm' : i.kind === 'length_piece' ? 'mitta + kpl' : i.unit),
@@ -1348,12 +1592,18 @@ async function openPrintDialog() {
   const mkRow = (i) => {
     const cb = h('input', { type: 'checkbox', checked: true, style: 'width:22px;height:22px', 'aria-label': i.name });
     boxes.set(i.id, cb);
-    return h('label', { style: 'display:flex;align-items:center;gap:10px;padding:6px 4px;cursor:pointer;border-bottom:1px solid var(--border)' }, cb,
+    const lab = h('label', { style: 'display:flex;align-items:center;gap:10px;padding:6px 4px;cursor:pointer;border-bottom:1px solid var(--border)' }, cb,
       h('span', { style: 'flex:1' }, i.name), h('span', { class: 'hint' }, [KIND_LABEL[i.kind], catOfItem.get(i.id)].filter(Boolean).join(' · ')));
+    rowEls.set(i.id, lab);
+    return lab;
   };
+  const iSrch = h('input', { type: 'text', id: 'prSearch', maxlength: '60', autocomplete: 'off', placeholder: 'Hae nimikettä…', 'aria-label': 'Hae nimikettä' });
+  const rowEls = new Map();
   const listBox = h('div', { style: 'max-height:42vh;overflow:auto;border:1px solid var(--border);border-radius:var(--radius);padding:2px 10px' },
     ...KIND_ORDER.flatMap((k) => list.filter((i) => i.kind === k).map(mkRow)));
-  const setAll = (v, pred) => { for (const i of list) if (!pred || pred(i)) boxes.get(i.id).checked = v; upd(); };
+  const vis = (i) => matchesQuery(i.name + ' ' + (catOfItem.get(i.id) || ''), iSrch.value);
+  const setAll = (v, pred) => { for (const i of list) if (vis(i) && (!pred || pred(i))) boxes.get(i.id).checked = v; upd(); };
+  iSrch.addEventListener('input', () => { for (const i of list) rowEls.get(i.id).style.display = vis(i) ? 'flex' : 'none'; });
   const cats = [...new Set(catOfItem.values())].sort((a, b) => a.localeCompare(b, 'fi'));
   const catBox = cats.length ? h('div', { class: 'field' }, h('div', { class: 'label' }, 'Valitse kategorialla (hinnaston kategoria)'),
     h('div', { class: 'seg' }, ...cats.map((c) => h('button', { type: 'button', class: 'chipbtn', onclick: () => { setAll(false); setAll(true, (i) => catOfItem.get(i.id) === c); } }, c)))) : null;
@@ -1381,9 +1631,9 @@ async function openPrintDialog() {
   });
   openModal([dlgHead('Tulosta varastoraportti', 'Valitse mitä raporttiin tulee. Raportti avautuu uuteen välilehteen, josta sen voi tulostaa tai tallentaa PDF:ksi (A4 vaaka).'),
     catBox,
-    h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin:6px 0' }, h('button', { type: 'button', class: 'btn btn-small', onclick: () => setAll(true) }, 'Valitse kaikki'), h('button', { type: 'button', class: 'btn btn-small', onclick: () => setAll(false) }, 'Tyhjennä valinnat'),
+    h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin:6px 0' }, h('button', { type: 'button', class: 'btn btn-small', onclick: () => setAll(true) }, 'Valitse kaikki näkyvät'), h('button', { type: 'button', class: 'btn btn-small', onclick: () => setAll(false) }, 'Tyhjennä valinnat'),
       h('button', { type: 'button', class: 'btn btn-small', onclick: () => { setAll(false); setAll(true, (i) => i.kind === 'lot_length'); } }, 'Vain niput')),
-    listBox, cntEl,
+    iSrch, listBox, cntEl,
     h('div', { class: 'row', style: 'margin-top:10px' }, field('Laatu', 'prGrade', sGrade)),
     h('label', { style: 'display:flex;align-items:center;gap:10px;cursor:pointer' }, cbOther, 'Mukaan kappale- ja pituustavara (Muu varasto)'),
     h('label', { style: 'display:flex;align-items:center;gap:10px;cursor:pointer' }, cbPage, 'Jokainen nimike omalle sivulle'),
