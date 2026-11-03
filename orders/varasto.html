@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 21:00 -->
+<!-- Claude-versio: 2026-11-03 21:50 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -84,7 +84,9 @@
   .tr.click { cursor:pointer; }
   .tr.click:hover { background:var(--accent-bg); }
   .tr:last-child { border-bottom:0; }
-  .cols-lots { grid-template-columns:140px 160px 110px minmax(260px,1fr) 90px 80px 100px; }
+  .cols-lots { grid-template-columns:120px 150px 90px minmax(170px,1.3fr) 80px 70px 90px minmax(150px,1fr); }
+  #lotList { min-width:980px; }
+  .notecell { font-size:13px; color:var(--text-mid); overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word; }
   .cols-items { grid-template-columns:minmax(200px,1fr) 140px 160px 110px 220px; }
   .cols-import { grid-template-columns:36px 64px minmax(200px,1fr) 150px 110px 200px; }
   .cols-pieces { grid-template-columns:minmax(200px,1fr) 90px 120px 330px; }
@@ -187,7 +189,7 @@
       <div class="row">
         <div class="field" style="flex:1 1 220px"><label class="label" for="fItem">Nimike</label><div id="fItemBox"></div></div>
         <div class="field"><div class="label">Laatu</div><div class="seg" id="fGrades"></div></div>
-        <div class="field" style="flex:1 1 180px"><label class="label" for="fSearch">Nippunumero</label><input type="text" id="fSearch" maxlength="40" autocomplete="off" placeholder="haku…"></div>
+        <div class="field" style="flex:1 1 180px"><label class="label" for="fSearch">Nippunumero tai huomio</label><input type="text" id="fSearch" maxlength="40" autocomplete="off" placeholder="haku…"></div>
         <button class="btn" id="printBtn" type="button">🖨 Tulosta nippuraportti…</button>
         <button class="btn" id="bulkBtn" type="button">+ Pikasyöttö (monta nippua)</button>
         <button class="btn btn-primary" id="newLotBtn" type="button">+ Uusi nippu</button>
@@ -466,7 +468,7 @@ function renderFilters() {
 function lotMatches(l, ignoreLen) {
   if (flt.item && l.item_id !== flt.item) return false;
   if (flt.grade && l.grade_id !== flt.grade) return false;
-  if (flt.q && !String(l.package_no).toLowerCase().includes(flt.q.toLowerCase())) return false;
+  if (flt.q && !(String(l.package_no) + ' ' + String(l.note || '')).toLowerCase().includes(flt.q.toLowerCase())) return false;
   if (!ignoreLen && flt.len !== null && !(linesByLot.get(l.lot_id) || []).some((x) => x.length_mm === flt.len)) return false;
   return true;
 }
@@ -504,7 +506,7 @@ function renderLots() {
 
   const list = $('#lotList');
   const head = h('div', { class: 'tr head cols-lots' }, h('div', null, 'Nippu (toimittajan nro)'), h('div', null, 'Nimike'), h('div', null, 'Laatu'), h('div', null, 'Pituudet ja kappaleet'),
-    h('div', { class: 'r' }, flt.len === null ? 'Jm' : 'Jm · ' + fLen(flt.len) + ' m'), h('div', { class: 'r' }, 'm³'), h('div', null, 'Saapui'));
+    h('div', { class: 'r' }, flt.len === null ? 'Jm' : 'Jm · ' + fLen(flt.len) + ' m'), h('div', { class: 'r' }, 'm³'), h('div', null, 'Saapui'), h('div', null, 'Huomio'));
   if (!rows.length) { list.replaceChildren(head, h('div', { class: 'empty' }, lotRows.length ? 'Ei nippuja valituilla suodattimilla.' : 'Varastossa ei ole vielä nippuja. Lisää ensimmäinen painamalla "+ Uusi nippu".')); return; }
   list.replaceChildren(head, ...rows.map(({ l, all, jm, m3 }) =>
     h('div', { class: 'tr click cols-lots', onclick: () => openLot(l.lot_id) },
@@ -512,7 +514,8 @@ function renderLots() {
       h('div', null, l.item_name),
       h('div', null, l.grade_name || h('span', { class: 'muted' }, '–')),
       h('div', { class: 'chips' }, ...all.map((x) => h('span', { class: 'chip' + (flt.len === null ? '' : x.length_mm === flt.len ? ' hit' : ' dim') }, fLen(x.length_mm) + ' m × ' + x.qty_now))),
-      h('div', { class: 'r mono' }, f1.format(jm)), h('div', { class: 'r mono' }, f2.format(m3)), h('div', null, fDate(l.arrived_on)))));
+      h('div', { class: 'r mono' }, f1.format(jm)), h('div', { class: 'r mono' }, f2.format(m3)), h('div', null, fDate(l.arrived_on)),
+      h('div', { class: 'notecell', title: l.note || '' }, l.note || ''))));
 }
 const fItemCombo = makeCombo({ id: 'fItem', placeholder: 'Kaikki nimikkeet', emptyLabel: 'Kaikki nimikkeet' });
 $('#fItemBox').append(fItemCombo.el);
