@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 20:10 -->
+<!-- Claude-versio: 2026-11-03 20:35 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -1097,8 +1097,7 @@ function renderPieces() {
     h('div', null, i.name + (i.active ? '' : ' (ei käytössä)')), h('div', null, i.unit), h('div', { class: 'r mono', style: 'font-weight:600' }, fint.format(num(bal.get(i.id)))),
     h('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
       h('button', { type: 'button', class: 'btn btn-small btn-ghost', disabled: !i.active, onclick: () => openPieceMove(i.id, 'saapuminen') }, '+ Saapuminen'),
-      h('button', { type: 'button', class: 'btn btn-small', onclick: () => openPieceMove(i.id, 'myynti') }, '− Nosto'),
-      h('button', { type: 'button', class: 'btn btn-small btn-danger', onclick: () => retireItem(i) }, 'Poista')))));
+      h('button', { type: 'button', class: 'btn btn-small', onclick: () => openPieceMove(i.id, 'myynti') }, '− Nosto')))));
 }
 function openPieceMove(itemId, startKey) {
   const item = itemById(itemId); if (!item) return;
@@ -1182,8 +1181,7 @@ function renderLengthItems() {
         ls.length ? h('div', { class: 'chips', style: 'margin-top:6px' }, ...ls.map((r) => h('span', { class: 'chip' + (lenFlt === null ? '' : r.length_mm === lenFlt ? ' hit' : ' dim') }, fLen(r.length_mm) + ' m × ' + fint.format(num(r.qty_now))))) : null),
       h('div', { style: 'display:flex;gap:8px' },
         h('button', { type: 'button', class: 'btn btn-small btn-ghost', disabled: !i.active, onclick: () => openLengthMove(i.id, 'saapuminen') }, '+ Saapuminen'),
-        h('button', { type: 'button', class: 'btn btn-small', onclick: () => openLengthMove(i.id, 'myynti') }, '− Nosto'),
-        h('button', { type: 'button', class: 'btn btn-small btn-danger', onclick: () => retireItem(i) }, 'Poista')));
+        h('button', { type: 'button', class: 'btn btn-small', onclick: () => openLengthMove(i.id, 'myynti') }, '− Nosto')));
     const rows = ls.length ? [
       h('div', { class: 'tr head cols-lenrows' }, h('div', null, 'Pituus'), h('div', { class: 'r' }, 'Kpl'), h('div', { class: 'r' }, 'Jm')),
       ...ls.map((r) => h('div', { class: 'tr cols-lenrows mono', style: lenFlt !== null && r.length_mm !== lenFlt ? 'color:var(--text-dim)' : (lenFlt !== null ? 'background:var(--accent-bg);font-weight:600' : '') }, h('div', null, fLen(r.length_mm) + ' m'), h('div', { class: 'r' }, fint.format(num(r.qty_now))), h('div', { class: 'r' }, f1.format(num(r.jm_now))))),
@@ -1397,7 +1395,10 @@ function renderItems() {
     h('div', { class: i.active ? '' : 'muted' }, i.active ? 'Käytössä' : 'Ei käytössä'),
     h('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
       h('button', { type: 'button', class: 'btn btn-small', onclick: () => startEditItem(i) }, 'Muokkaa'),
-      h('button', { type: 'button', class: 'btn btn-small', onclick: () => setItemActive(i, !i.active) }, i.active ? 'Poista käytöstä' : 'Ota käyttöön')))));
+      // kappale- ja pituustavara: "Poista" kirjaa jäljellä olevan saldon pois ja poistaa nimikkeen käytöstä (vahvistus kysytään)
+      i.active && (i.kind === 'piece' || i.kind === 'length_piece')
+        ? h('button', { type: 'button', class: 'btn btn-small btn-danger', onclick: () => retireItem(i) }, 'Poista')
+        : h('button', { type: 'button', class: 'btn btn-small', onclick: () => setItemActive(i, !i.active) }, i.active ? 'Poista käytöstä' : 'Ota käyttöön')))));
 }
 let gradeSaving = false;
 $('#gradeForm').addEventListener('submit', async (e) => {
