@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<!-- Claude-versio: 2026-11-03 18:10 -->
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pakettivarastoraportti — Okkosen Puutuote</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 9pt; color: #111; background: #fff; }
+
+  @page {
+    size: A4 landscape;
+    margin: 10mm 12mm 10mm 12mm;
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 7.5pt;
+      color: #444;
+    }
+  }
+  .page-wrap { max-width: 273mm; margin: 0 auto; }
+
+  /* Ylätunniste: sama kuin tarjous-/tarvikelistatulosteissa */
+  .doc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 5mm; border-bottom: 1px solid #ccc; padding-bottom: 4mm; }
+  .logo-area { display: flex; align-items: center; gap: 10px; }
+  .logo-area img { height: 34px; width: auto; }
+  .logo-area .company-name { font-size: 13pt; font-weight: 700; line-height: 1.15; }
+  .doc-title { font-size: 12pt; font-weight: 700; letter-spacing: 0.08em; text-align: center; flex: 1; padding-top: 6px; }
+  .doc-meta { text-align: right; font-size: 9pt; min-width: 60mm; }
+  .doc-meta table { margin-left: auto; border-collapse: collapse; }
+  .doc-meta td { padding: 1px 4px; }
+  .doc-meta td:first-child { color: #555; white-space: nowrap; }
+  .doc-meta td:last-child { font-weight: 600; }
+
+  /* Nimikeosio */
+  .sec { margin-bottom: 8mm; }
+  .sec.newpage { break-before: page; page-break-before: always; }
+  .sec:first-of-type { break-before: auto; page-break-before: auto; }
+  .sec-title { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 11pt; font-weight: 700; margin-bottom: 2mm; break-after: avoid; page-break-after: avoid; }
+  .sec-title .sub { font-size: 9pt; font-weight: 400; color: #444; }
+
+  table.rep { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  table.rep th { border-bottom: 1.5px solid #222; padding: 3px 4px; font-weight: 600; font-size: 8pt; text-align: right; white-space: nowrap; }
+  table.rep th.l, table.rep td.l { text-align: left; }
+  table.rep td { padding: 3px 4px; border-bottom: 1px solid #ddd; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 8.3pt; white-space: nowrap; }
+  table.rep td.pk { font-family: 'IBM Plex Sans', Arial, sans-serif; font-weight: 700; font-size: 9pt; text-align: left; }
+  table.rep td.l { font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 8.3pt; }
+  table.rep td.note { font-family: 'IBM Plex Sans', Arial, sans-serif; text-align: left; white-space: normal; max-width: 60mm; }
+  table.rep td.len { border-left: 1px solid #eee; }
+  table.rep td.zero { background: #f7f7f7; }
+  table.rep tr { break-inside: avoid; page-break-inside: avoid; }
+  table.rep thead { display: table-header-group; }
+  table.rep tr.tot td { border-top: 1.5px solid #222; border-bottom: none; font-weight: 600; padding-top: 4px; }
+  table.rep tr.tot td.pk { font-size: 8.5pt; }
+
+  table.simple { width: auto; min-width: 120mm; }
+  .grand { margin-top: 3mm; }
+  h2.sectionhead { font-size: 11pt; margin: 0 0 3mm; border-bottom: 1px solid #bbb; padding-bottom: 1mm; break-after: avoid; page-break-after: avoid; }
+  .empty { color: #666; padding: 8mm 0; font-size: 10pt; }
+
+  /* Alatunniste: taulukon tfoot toistuu joka sivulla (sama tapa kuin muissa tulosteissa) */
+  .doc-footer { display: flex; justify-content: space-between; align-items: center; padding: 3mm 0 1mm; border-top: 1px solid #bbb; font-size: 7.5pt; color: #444; }
+  .doc-footer .col { display: flex; flex-direction: column; gap: 1px; line-height: 1.45; }
+  .doc-footer .col.center { text-align: center; }
+  .doc-footer .col.right { text-align: right; }
+  .frame { width: 100%; border-collapse: collapse; }
+  .frame > tfoot > tr > td { padding: 0; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  @media screen {
+    body { background: #eee; padding: 20px; }
+    .page-wrap { background: #fff; padding: 12mm 12mm 16mm; box-shadow: 0 2px 16px rgba(0,0,0,0.15); }
+  }
+  .btn-print { position: fixed; top: 12px; right: 12px; background: #d97706; color: #fff; border: none; border-radius: 4px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; z-index: 99; }
+  .btn-print:hover { background: #b45309; }
+  .loading { text-align: center; padding: 40px; font-size: 14px; color: #888; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-guard.js"></script>
+</head>
+<body>
+
+<button class="btn-print no-print" onclick="window.print()">🖨 Tulosta</button>
+<div id="root" class="loading">Ladataan varastoraporttia...</div>
+
+<script>
+const SUPABASE_URL = 'https://iofjnoxvksbaqorqaydh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvZmpub3h2a3NiYXFvcnFheWRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjYzNjcsImV4cCI6MjA5MTQwMjM2N30.7aYtakimbUHcxyv6Jco2ggt4VdS2F68xydTbi9suAPo';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const fi = (n, d) => Number(n || 0).toLocaleString('fi-FI', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fLenM = (mm) => (mm / 1000).toLocaleString('fi-FI', { minimumFractionDigits: 1, maximumFractionDigits: 3 });
+const fDate = (s) => (s ? String(s).slice(0, 10).split('-').reverse().join('.') : '');
+const natCmp = (a, b) => String(a).localeCompare(String(b), 'fi', { numeric: true });
+
+// Haku sivuittain (Supabase palauttaa kerralla max 1000 riviä)
+async function fetchAll(table, cols, build) {
+  const out = [], PAGE = 1000;
+  for (let from = 0; from < 100000; from += PAGE) {
+    let q = db.from(table).select(cols);
+    if (build) q = build(q);
+    const { data, error } = await q.range(from, from + PAGE - 1);
+    if (error) return { error };
+    out.push(...(data || []));
+    if (!data || data.length < PAGE) break;
+  }
+  return { data: out };
+}
+
+function lotSection(item, lines, opts) {
+  // lines: stock_lot_lines-rivit tälle nimikkeelle (qty_now > 0)
+  const lots = new Map();
+  for (const x of lines) {
+    if (!lots.has(x.lot_id)) lots.set(x.lot_id, { no: x.package_no, grade: x.grade_name || '', arrived: x.arrived_on, note: x.note || '', byLen: new Map(), pcs: 0, jm: 0, m3: 0 });
+    const l = lots.get(x.lot_id);
+    l.byLen.set(x.length_mm, (l.byLen.get(x.length_mm) || 0) + x.qty_now);
+    l.pcs += x.qty_now; l.jm += Number(x.jm_now) || 0; l.m3 += Number(x.m3_now) || 0;
+  }
+  const rows = [...lots.values()].sort((a, b) => natCmp(a.no, b.no));
+  const lens = [...new Set(lines.map((x) => x.length_mm))].sort((a, b) => a - b);
+  const tot = { pcs: 0, jm: 0, m3: 0, byLen: new Map() };
+  for (const r of rows) { tot.pcs += r.pcs; tot.jm += r.jm; tot.m3 += r.m3; for (const [mm, q] of r.byLen) tot.byLen.set(mm, (tot.byLen.get(mm) || 0) + q); }
+  // Leveät pituustaulukot pienemmällä fontilla
+  const dense = lens.length > 14 ? ' style="font-size:' + (lens.length > 20 ? '7' : '7.6') + 'pt"' : '';
+  const head = `<tr><th class="l">Paketti</th><th class="l">Laatu</th><th class="l">Saapui</th><th>kpl</th><th>jm</th><th>m³</th>${lens.map((mm) => `<th>${esc(fLenM(mm))}</th>`).join('')}<th class="l">Huomio</th></tr>`;
+  const body = rows.map((r) => `<tr><td class="pk">${esc(r.no)}</td><td class="l">${esc(r.grade)}</td><td class="l">${esc(fDate(r.arrived))}</td><td>${fi(r.pcs, 0)}</td><td>${fi(r.jm, 2)}</td><td>${fi(r.m3, 3)}</td>${lens.map((mm) => { const q = r.byLen.get(mm); return q ? `<td class="len">${fi(q, 0)}</td>` : '<td class="len zero"></td>'; }).join('')}<td class="note">${esc(r.note)}</td></tr>`).join('');
+  const foot = `<tr class="tot"><td class="pk">${rows.length} nippua</td><td></td><td></td><td>${fi(tot.pcs, 0)}</td><td>${fi(tot.jm, 2)}</td><td>${fi(tot.m3, 3)}</td>${lens.map((mm) => `<td class="len">${fi(tot.byLen.get(mm) || 0, 0)}</td>`).join('')}<td></td></tr>`;
+  const dim = item.thickness_mm && item.width_mm ? `${item.thickness_mm} × ${item.width_mm} mm` : '';
+  return { tot, count: rows.length, html: `<div class="sec${opts.newpage ? ' newpage' : ''}"><div class="sec-title"><span>Tuote: ${esc(item.name)}</span><span class="sub">${esc(dim)}${opts.gradeName ? ' · Laatu: ' + esc(opts.gradeName) : ''}</span></div>
+    <table class="rep"${dense}><thead>${head}</thead><tbody>${body}${foot}</tbody></table></div>` };
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const root = document.getElementById('root');
+  try {
+    if (window._authReady) await window._authReady;
+    const params = new URLSearchParams(location.search);
+    const wantedItems = (params.get('items') || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+    if (wantedItems.some((x) => !UUID_RE.test(x))) { root.textContent = 'Virheellinen nimiketunniste osoitteessa.'; return; }
+    const gradeId = params.get('grade') || '';
+    if (gradeId && !UUID_RE.test(gradeId)) { root.textContent = 'Virheellinen laatutunniste osoitteessa.'; return; }
+    const withOther = params.get('other') === '1';          // kappale- ja pituustavara mukaan
+    const newpage = params.get('pb') !== '0';                 // jokainen nimike omalle sivulle (oletus kyllä)
+
+    const [rItems, rLines, rGrades, rPieces, rLens] = await Promise.all([
+      fetchAll('stock_items', 'id,name,kind,unit,width_mm,thickness_mm,active', (q) => q.order('name').order('id')),
+      fetchAll('stock_lot_lines', 'lot_id,item_id,package_no,grade_id,grade_name,arrived_on,note,length_mm,qty_now,jm_now,m3_now', (q) => q.gt('qty_now', 0).order('package_no').order('length_mm')),
+      db.from('stock_grades').select('id,name'),
+      withOther ? db.from('stock_piece_balances').select('*') : Promise.resolve({ data: [] }),
+      withOther ? db.from('stock_length_balances').select('*') : Promise.resolve({ data: [] })
+    ]);
+    if (rItems.error || rLines.error || rGrades.error || rPieces.error) { console.error(rItems.error || rLines.error || rGrades.error || rPieces.error); root.textContent = 'Tietojen lataus epäonnistui. Kirjaudu sisään ja yritä uudelleen.'; return; }
+    const lensData = rLens.error ? [] : (rLens.data || []);  // v3 puuttuu → pituustavara jää pois, muu raportti toimii
+
+    const items = rItems.data;
+    const pick = (i) => !wantedItems.length || wantedItems.includes(i.id);
+    const gradeName = gradeId ? ((rGrades.data || []).find((g) => g.id === gradeId) || {}).name || '' : '';
+    let lines = rLines.data;
+    if (gradeId) lines = lines.filter((x) => x.grade_id === gradeId);
+
+    const lotItems = items.filter((i) => i.kind === 'lot_length' && pick(i)).sort((a, b) => natCmp(a.name, b.name));
+    let html = '';
+    const grand = { pcs: 0, jm: 0, m3: 0, lots: 0 };
+    const summary = [];
+    lotItems.forEach((it) => {
+      const ls = lines.filter((x) => x.item_id === it.id);
+      if (!ls.length) return;
+      const sec = lotSection(it, ls, { newpage: newpage && html !== '', gradeName });
+      html += sec.html;
+      grand.pcs += sec.tot.pcs; grand.jm += sec.tot.jm; grand.m3 += sec.tot.m3; grand.lots += sec.count;
+      summary.push({ name: it.name, lots: sec.count, pcs: sec.tot.pcs, jm: sec.tot.jm, m3: sec.tot.m3 });
+    });
+
+    if (summary.length > 1) {
+      html += `<div class="sec grand${newpage ? ' newpage' : ''}"><h2 class="sectionhead">Yhteenveto${gradeName ? ' · Laatu: ' + esc(gradeName) : ''}</h2>
+        <table class="rep simple"><thead><tr><th class="l">Nimike</th><th>Nippuja</th><th>kpl</th><th>jm</th><th>m³</th></tr></thead><tbody>
+        ${summary.map((s) => `<tr><td class="l">${esc(s.name)}</td><td>${fi(s.lots, 0)}</td><td>${fi(s.pcs, 0)}</td><td>${fi(s.jm, 2)}</td><td>${fi(s.m3, 3)}</td></tr>`).join('')}
+        <tr class="tot"><td class="l">Yhteensä</td><td>${fi(grand.lots, 0)}</td><td>${fi(grand.pcs, 0)}</td><td>${fi(grand.jm, 2)}</td><td>${fi(grand.m3, 3)}</td></tr></tbody></table></div>`;
+    }
+
+    if (withOther) {
+      const pieces = items.filter((i) => i.kind === 'piece' && pick(i)).map((i) => ({ i, q: Number(((rPieces.data || []).find((p) => p.item_id === i.id) || {}).qty_now) || 0 })).filter((x) => x.q !== 0).sort((a, b) => natCmp(a.i.name, b.i.name));
+      const lenItems = items.filter((i) => i.kind === 'length_piece' && pick(i)).sort((a, b) => natCmp(a.name, b.name));
+      let other = '';
+      if (pieces.length) {
+        other += `<div class="sec"><div class="sec-title"><span>Kappaletavara</span></div><table class="rep simple"><thead><tr><th class="l">Nimike</th><th class="l">Yksikkö</th><th>Saldo</th></tr></thead><tbody>
+          ${pieces.map((p) => `<tr><td class="l">${esc(p.i.name)}</td><td class="l">${esc(p.i.unit)}</td><td>${fi(p.q, 0)}</td></tr>`).join('')}</tbody></table></div>`;
+      }
+      for (const it of lenItems) {
+        const ls = lensData.filter((r) => r.item_id === it.id && Number(r.qty_now) > 0).sort((a, b) => a.length_mm - b.length_mm);
+        if (!ls.length) continue;
+        const pcs = ls.reduce((a, r) => a + Number(r.qty_now), 0), jm = ls.reduce((a, r) => a + Number(r.jm_now), 0);
+        other += `<div class="sec"><div class="sec-title"><span>Pituustavara: ${esc(it.name)}</span></div><table class="rep simple"><thead><tr><th class="l">Pituus (m)</th><th>kpl</th><th>jm</th></tr></thead><tbody>
+          ${ls.map((r) => `<tr><td class="l">${esc(fLenM(r.length_mm))}</td><td>${fi(r.qty_now, 0)}</td><td>${fi(r.jm_now, 1)}</td></tr>`).join('')}
+          <tr class="tot"><td class="l">Yhteensä</td><td>${fi(pcs, 0)}</td><td>${fi(jm, 1)}</td></tr></tbody></table></div>`;
+      }
+      if (other) html += `<div class="${newpage && html ? 'sec newpage' : 'sec'}"><h2 class="sectionhead">Muu varasto</h2>${other}</div>`;
+    }
+
+    if (!html) html = '<div class="empty">Valituilla rajauksilla ei ole varastosaldoa.</div>';
+
+    const now = new Date();
+    const printed = `${now.getDate()}.${now.getMonth() + 1}.${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
+    root.className = '';
+    root.innerHTML = `
+    <div class="page-wrap">
+      <table class="frame">
+        <tbody><tr><td>
+          <div class="doc-header">
+            <div class="logo-area">
+              <img src="https://otuomo.github.io/hirsi-tarjous/orders/okkonenlogopuu.svg" alt="Logo">
+              <div class="company-name">OKKOSEN<br>PUUTUOTE</div>
+            </div>
+            <div class="doc-title">PAKETTIVARASTORAPORTTI</div>
+            <div class="doc-meta"><table>
+              <tr><td>Tulostettu</td><td>${esc(printed)}</td></tr>
+              ${gradeName ? `<tr><td>Laatu</td><td>${esc(gradeName)}</td></tr>` : ''}
+              <tr><td>Saldo</td><td>tulostushetkellä</td></tr>
+            </table></div>
+          </div>
+          ${html}
+        </td></tr></tbody>
+        <tfoot><tr><td>
+          <div class="doc-footer">
+            <div class="col"><span>Okkosen Puutuote Oy</span><span>Sievintie 149</span><span>85160 Rautio</span></div>
+            <div class="col center"><span>Puhelin: 0500-360 741</span><span>myynti@okkosenpuutuote.com</span><span>www.okkosenpuutuote.com</span></div>
+            <div class="col right"><span>Y-Tunnus: 3579911-5</span></div>
+          </div>
+        </td></tr></tfoot>
+      </table>
+    </div>`;
+  } catch (e) {
+    console.error(e);
+    root.textContent = 'Raportin luonti epäonnistui. Lataa sivu uudelleen.';
+  }
+});
+</script>
+</body>
+</html>
