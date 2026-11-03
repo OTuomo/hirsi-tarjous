@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 19:40 -->
+<!-- Claude-versio: 2026-11-03 20:10 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -121,6 +121,7 @@
   .cols2 > .main { flex:2 1 460px; min-width:0; display:flex; flex-direction:column; gap:16px; }
   .cols2 > .side { flex:1 1 300px; max-width:420px; display:flex; flex-direction:column; gap:14px; border:1px solid var(--accent); border-radius:var(--radius); padding:16px; }
   .lenrow { display:grid; grid-template-columns:110px 110px 1fr 1fr 44px; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid var(--bg3); }
+  .lenrow.bulk { grid-template-columns:110px 84px 84px 1fr 1fr 44px; }
   .lenrow.head { font-size:12px; color:var(--text-mid); text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--border); }
   .sumbox { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; }
   .actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; }
@@ -140,6 +141,7 @@
     .page { padding:14px 12px 60px; }
     .dialog { padding:14px 14px 18px; }
     .lenrow { grid-template-columns:90px 90px 1fr 36px; }
+    .lenrow.bulk { grid-template-columns:90px 70px 70px 1fr 36px; }
     .lenrow .m3c, .lenrow.head .m3c { display:none; }
   }
 </style>
@@ -713,7 +715,7 @@ function parsePackageList(text) {
 function openBulkLots() {
   const avail = lotItems();
   if (!avail.length) { showToast('Lisää ensin nippu-nimike välilehdellä "Nimikkeet ja laadut"', 'error'); setTab('items'); return; }
-  const st = { saving: false, rows: [] }; // rows: {no, qty: string, touched, err}
+  const st = { saving: false, rows: [] }; // rows: {no, qty: string, touched, len: string, lenTouched, err}
   const iItem = makeCombo({ id: 'bkItem', placeholder: 'Hae nimikettä…' });
   iItem.setOptions(avail.map((i) => ({ id: i.id, label: i.name })));
   iItem.value = flt.item && avail.some((i) => i.id === flt.item) ? flt.item : avail[0].id;
@@ -736,42 +738,48 @@ function openBulkLots() {
   function syncRowsFromList() { // nippulista muuttui: säilytetään jo käsin muutetut kappalemäärät
     const { list, errors } = parsePackageList(iNos.value);
     const old = new Map(st.rows.map((r) => [r.no.toLowerCase(), r]));
-    st.rows = list.map((no) => old.get(no.toLowerCase()) || { no, qty: iQty.value.trim(), touched: false, err: '' });
+    st.rows = list.map((no) => old.get(no.toLowerCase()) || { no, qty: iQty.value.trim(), touched: false, len: iLen.value.trim(), lenTouched: false, err: '' });
     parseMsg.textContent = errors.length ? errors.join(' · ') : (list.length ? list.length + ' nippua tunnistettu' : '');
     parseMsg.style.color = errors.length ? 'var(--err)' : '';
     renderRows();
   }
   function renderRows() {
-    const head = h('div', { class: 'lenrow head' }, h('div', null, 'Nippu'), h('div', null, 'Kpl'), h('div', { class: 'r' }, 'Jm'), h('div', { class: 'r m3c' }, 'm³'), h('div', null));
+    const head = h('div', { class: 'lenrow bulk head' }, h('div', null, 'Nippu'), h('div', null, 'Pituus (m)'), h('div', null, 'Kpl'), h('div', { class: 'r' }, 'Jm'), h('div', { class: 'r m3c' }, 'm³'), h('div', null));
     const data = st.rows.map((r, idx) => {
+      const iL = h('input', { type: 'text', class: 'mono', inputmode: 'decimal', maxlength: '6', value: r.len, 'aria-label': 'Pituus, nippu ' + r.no, placeholder: 'm', oninput: (e) => { r.len = e.target.value; r.lenTouched = true; upd(); } });
       const iQ = h('input', { type: 'text', class: 'mono', inputmode: 'numeric', maxlength: '6', value: r.qty, 'aria-label': 'Kappaleet, nippu ' + r.no, placeholder: 'kpl', oninput: (e) => { r.qty = e.target.value; r.touched = true; upd(); } });
       const jC = h('div', { class: 'r mono' }), mC = h('div', { class: 'r mono m3c' });
       const noC = h('div', { class: 'mono', style: 'font-weight:600' }, r.no, existsAlready(r.no) ? h('div', { class: 'hint', style: 'color:var(--err)' }, 'on jo varastossa') : null, r.err ? h('div', { class: 'hint', style: 'color:var(--err)' }, r.err) : null);
-      r.el = { iQ, jC, mC };
-      return h('div', { class: 'lenrow' }, noC, iQ, jC, mC, h('button', { type: 'button', class: 'x', style: 'font-size:22px', 'aria-label': 'Poista nippu ' + r.no + ' listalta', onclick: () => { st.rows.splice(idx, 1); renderRows(); } }, '×'));
+      r.el = { iQ, iL, jC, mC };
+      return h('div', { class: 'lenrow bulk' }, noC, iL, iQ, jC, mC, h('button', { type: 'button', class: 'x', style: 'font-size:22px', 'aria-label': 'Poista nippu ' + r.no + ' listalta', onclick: () => { st.rows.splice(idx, 1); renderRows(); } }, '×'));
     });
     rowsBox.replaceChildren(...(st.rows.length ? [head, ...data] : []));
     upd();
   }
   function upd() {
-    const mm = parseLenMm(iLen.value);
-    // oletuskappalemäärä päivittyy riveille joita ei ole muutettu käsin
-    for (const r of st.rows) if (!r.touched) { r.qty = iQty.value.trim(); if (r.el) r.el.iQ.value = r.qty; }
-    let pcs = 0, jm = 0;
+    const defMm = parseLenMm(iLen.value);
+    // oletuspituus ja -kappalemäärä päivittyvät riveille joita ei ole muutettu käsin
     for (const r of st.rows) {
-      const q = parseQty(r.qty);
+      if (!r.touched) { r.qty = iQty.value.trim(); if (r.el) r.el.iQ.value = r.qty; }
+      if (!r.lenTouched) { r.len = iLen.value.trim(); if (r.el) r.el.iL.value = r.len; }
+    }
+    let pcs = 0, jm = 0, m3 = 0; const lens = new Set();
+    for (const r of st.rows) {
+      const q = parseQty(r.qty), mm = parseLenMm(r.len);
       if (r.el) {
         r.el.iQ.classList.toggle('invalid', !!r.qty && q === null);
+        r.el.iL.classList.toggle('invalid', !!r.len && mm === null);
         r.el.jC.textContent = mm && q ? f1.format((mm * q) / 1000) : '–';
         r.el.mC.textContent = mm && q ? f2.format(((mm * q) / 1000) * perJm()) : '–';
       }
-      if (mm && q) { pcs += q; jm += (mm * q) / 1000; }
+      if (mm && q) { pcs += q; jm += (mm * q) / 1000; m3 += ((mm * q) / 1000) * perJm(); lens.add(mm); }
     }
-    iLen.classList.toggle('invalid', !!iLen.value.trim() && mm === null);
-    sumBox.replaceChildren(h('div', { class: 'hint' }, st.rows.length + ' nippua · ' + fint.format(pcs) + ' kpl' + (mm ? ' · pituus ' + fLen(mm) + ' m' : '')),
+    iLen.classList.toggle('invalid', !!iLen.value.trim() && defMm === null);
+    const lenTxt = lens.size === 1 ? ' · pituus ' + fLen([...lens][0]) + ' m' : (lens.size > 1 ? ' · ' + lens.size + ' eri pituutta' : '');
+    sumBox.replaceChildren(h('div', { class: 'hint' }, st.rows.length + ' nippua · ' + fint.format(pcs) + ' kpl' + lenTxt),
       h('div', { style: 'display:flex;gap:28px;flex-wrap:wrap' },
         h('div', { class: 'r' }, h('div', { class: 'label' }, 'Juoksumetrit'), h('div', { class: 'mono', style: 'font-size:22px;font-weight:600;color:var(--accent-dim)' }, f1.format(jm) + ' jm')),
-        h('div', { class: 'r' }, h('div', { class: 'label' }, 'Kuutiot'), h('div', { class: 'mono', style: 'font-size:22px;font-weight:600;color:var(--accent-dim)' }, f2.format(jm * perJm()) + ' m³'))));
+        h('div', { class: 'r' }, h('div', { class: 'label' }, 'Kuutiot'), h('div', { class: 'mono', style: 'font-size:22px;font-weight:600;color:var(--accent-dim)' }, f2.format(m3) + ' m³'))));
   }
   iNos.addEventListener('input', syncRowsFromList);
   iLen.addEventListener('input', upd); iQty.addEventListener('input', upd); iItem.addEventListener('change', renderRows);
@@ -779,21 +787,19 @@ function openBulkLots() {
   btnSave.addEventListener('click', async () => {
     if (st.saving) return;
     showErr('');
-    const mm = parseLenMm(iLen.value);
     if (!iItem.value || !UUID_RE.test(iItem.value)) return showErr('Valitse nimike.');
     if (iGrade.value && !UUID_RE.test(iGrade.value)) return showErr('Virheellinen laatu.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iDate.value)) return showErr('Anna saapumispäivä.');
-    if (mm === null) return showErr('Anna pituus metreinä (0,1–20 m, esim. 4,2).');
     if (!st.rows.length) return showErr('Anna nippunumerot (esim. 1309088..1309096).');
     if (st.rows.length > BULK_MAX) return showErr('Liikaa nippuja kerralla (max ' + BULK_MAX + ').');
-    for (const r of st.rows) { if (parseQty(r.qty) === null) return showErr('Anna kappalemäärä (kokonaisluku) nipulle ' + r.no + '.'); if (existsAlready(r.no)) return showErr('Nippu ' + r.no + ' on jo varastossa — poista se listalta.'); }
+    for (const r of st.rows) { if (parseLenMm(r.len) === null) return showErr('Anna pituus metreinä (0,1–20 m, esim. 4,2) nipulle ' + r.no + '.'); if (parseQty(r.qty) === null) return showErr('Anna kappalemäärä (kokonaisluku) nipulle ' + r.no + '.'); if (existsAlready(r.no)) return showErr('Nippu ' + r.no + ' on jo varastossa — poista se listalta.'); }
     st.saving = true; btnSave.disabled = true;
     const work = st.rows.slice(); let saved = 0, failed = 0, stop = false;
     try {
       for (let k = 0; k < work.length && !stop; k++) {
         const r = work[k];
         btnSave.textContent = 'Tallennetaan ' + (k + 1) + ' / ' + work.length + '…';
-        const { data, error } = await db.rpc('stock_receive_lot', { p_item_id: iItem.value, p_package_no: r.no, p_grade_id: iGrade.value || null, p_arrived_on: iDate.value, p_note: iNote.value.trim() || null, p_lines: [{ length_mm: mm, qty: parseQty(r.qty) }] });
+        const { data, error } = await db.rpc('stock_receive_lot', { p_item_id: iItem.value, p_package_no: r.no, p_grade_id: iGrade.value || null, p_arrived_on: iDate.value, p_note: iNote.value.trim() || null, p_lines: [{ length_mm: parseLenMm(r.len), qty: parseQty(r.qty) }] });
         if (error) {
           failed++; r.err = dbErrorMsg(error, 'lot');
           if (error.code === '42501' || error.code === 'PGRST301') stop = true; // oikeusvirhe: ei jatketa turhaan
@@ -810,14 +816,14 @@ function openBulkLots() {
   });
 
   openModal([
-    dlgHead('Pikasyöttö — monta nippua kerralla', 'Kaikilla nipuilla sama nimike, laatu, saapumispäivä ja pituus. Kappalemäärää voi muuttaa nippukohtaisesti. Nipuissa joissa on monta pituutta: käytä "+ Uusi nippu".'),
+    dlgHead('Pikasyöttö — monta nippua kerralla', 'Kaikilla nipuilla sama nimike, laatu ja saapumispäivä. Pituuden ja kappalemäärän voi muuttaa nippukohtaisesti riviltä. Nipuissa joissa on monta pituutta: käytä "+ Uusi nippu".'),
     h('div', { class: 'cols2' },
       h('div', { class: 'main', style: 'flex:1 1 300px;max-width:400px' },
         field('Nimike', 'bkItem', iItem.el), field('Laatu', 'bkGrade', iGrade), field('Saapumispäivä', 'bkDate', iDate), field('Huomio (valinnainen, sama kaikille)', 'bkNote', iNote)),
       h('div', { class: 'main', style: 'flex:2 1 460px' },
         field('Nippunumerot', 'bkNos', iNos, 'Väli: 1309088..1309096. Useita: erota rivinvaihdolla, pilkulla tai välilyönnillä.'), parseMsg,
-        h('div', { class: 'row' }, field('Pituus (m)', 'bkLen', iLen), field('Kpl / nippu (oletus)', 'bkQty', iQty)),
-        h('div', { class: 'field' }, h('div', { class: 'label' }, 'Pikavalinta pituudelle'), quick),
+        h('div', { class: 'row' }, field('Pituus (m) — oletus', 'bkLen', iLen), field('Kpl / nippu — oletus', 'bkQty', iQty)),
+        h('div', { class: 'field' }, h('div', { class: 'label' }, 'Pikavalinta oletuspituudelle'), quick, h('div', { class: 'hint' }, 'Oletus koskee rivejä joiden pituutta ei ole muutettu käsin. Vaihda yksittäisen nipun pituus riviltä.')),
         h('div', { class: 'sdl', style: 'max-height:40vh;overflow:auto' }, rowsBox), sumBox)),
     errBox,
     h('div', { class: 'actions' }, h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'Peruuta'), btnSave)]);
