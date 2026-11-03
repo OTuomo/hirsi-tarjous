@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 17:30 -->
+<!-- Claude-versio: 2026-11-03 17:45 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -234,6 +234,7 @@
         <div class="hint" style="margin-top:8px">Mitat tarvitaan kuutioiden laskentaan (jm × leveys × paksuus). Nippu-nimikkeen mittoja voi korjata myöhemmin, tyyppiä ei. Kappale- ja pituustavaran tyypin voi vaihtaa vain jos nimikkeellä ei ole vielä kirjauksia.</div>
       </form>
     </div>
+    <label id="itemInactiveWrap" style="display:none;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="itemShowInactive" style="width:22px;height:22px"><span id="itemInactiveLbl"></span></label>
     <div class="tablewrap"><div class="tbl" style="min-width:720px" id="itemList"></div></div>
 
     <div class="card">
@@ -1129,10 +1130,17 @@ async function setItemActive(i, active) {
   if (!data || !data[0]) return showToast('Muutos ei onnistunut (oikeusongelma?)', 'error');
   await reloadAndRender();
 }
+$('#itemShowInactive').addEventListener('change', () => renderItems());
 function renderItems() {
   const head = h('div', { class: 'tr head cols-items' }, h('div', null, 'Nimike'), h('div', null, 'Tyyppi'), h('div', null, 'Mitat / yksikkö'), h('div', null, 'Tila'), h('div', null, ''));
-  if (!items.length) { $('#itemList').replaceChildren(head, h('div', { class: 'empty' }, 'Ei nimikkeitä.')); return; }
-  $('#itemList').replaceChildren(head, ...items.map((i) => h('div', { class: 'tr cols-items' },
+  // Käytöstä poistetut piilotetaan oletuksena (siisti lista); kirjanpito säilyy, ja ne saa esiin ruksista
+  const inactiveN = items.filter((i) => !i.active).length;
+  $('#itemInactiveWrap').style.display = inactiveN ? 'flex' : 'none';
+  $('#itemInactiveLbl').textContent = 'Näytä myös käytöstä poistetut (' + inactiveN + ')';
+  const showAll = $('#itemShowInactive').checked;
+  const shownItems = items.filter((i) => i.active || showAll || i.id === editingItemId);
+  if (!shownItems.length) { $('#itemList').replaceChildren(head, h('div', { class: 'empty' }, 'Ei nimikkeitä.')); return; }
+  $('#itemList').replaceChildren(head, ...shownItems.map((i) => h('div', { class: 'tr cols-items' },
     h('div', { style: 'font-weight:500' }, i.name), h('div', null, KIND_LABEL[i.kind] || i.kind),
     h('div', { class: 'mono' }, i.kind === 'lot_length' ? i.thickness_mm + ' × ' + i.width_mm + ' mm' : i.kind === 'length_piece' ? 'mitta + kpl' : i.unit),
     h('div', { class: i.active ? '' : 'muted' }, i.active ? 'Käytössä' : 'Ei käytössä'),
