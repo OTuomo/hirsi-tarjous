@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 17:20 -->
+<!-- Claude-versio: 2026-11-03 17:30 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -1174,12 +1174,25 @@ const NIPPU_CAT_RE = /sahatavara|höylätty|hirret/i;      // oletuksena nippuja
 const SKIP_CAT_RE = /^(työ|vakiomallit)/i;               // palvelut ja kokoonpanot eivät ole varastotavaraa
 const dimStr = (x) => { const n = Math.round(Number(x)); return Number.isFinite(n) && n > 0 ? String(n) : ''; };
 
+// Hinnaston haku sivutettuna (Supabase palauttaa kerralla max 1000 riviä) — muuten isossa hinnastossa osa tuotteista ja kategorioista puuttuisi
+async function fetchAllProducts() {
+  const out = [], PAGE = 1000;
+  for (let from = 0; from < 50000; from += PAGE) {
+    const { data, error } = await db.from('products').select('id,code,name,unit,category,active,pricing_model,aihio_leveys,aihio_paksuus').order('code').order('id').range(from, from + PAGE - 1);
+    if (error) return { error };
+    out.push(...(data || []));
+    if (!data || data.length < PAGE) break;
+  }
+  return { data: out };
+}
 async function openImport() {
-  const { data, error } = await db.from('products').select('id,code,name,unit,category,active,pricing_model,aihio_leveys,aihio_paksuus').order('code').limit(1000);
+  const { data, error } = await fetchAllProducts();
   if (error) { console.error(error); showToast('Hinnaston haku epäonnistui', 'error'); return; }
   const linked = new Set(items.map((i) => i.product_id).filter(Boolean));
   const names = new Set(items.map((i) => i.name.trim().toLowerCase()));
-  const prods = (data || []).filter((p) => p.active !== false && p.name && !SKIP_CAT_RE.test(p.category || '') && p.pricing_model !== 'assembly');
+  // Piilotetut (active=false) tuotteet mukaan: ne voivat silti olla varastotavaraa. Pois jäävät vain palvelut (Työ), kokoonpanot ja nimettömät.
+  const prods = (data || []).filter((p) => p.name && !SKIP_CAT_RE.test(p.category || '') && p.pricing_model !== 'assembly');
+  const skipped = (data || []).length - prods.length;
   if (!prods.length) { showToast('Hinnastossa ei ole tuotavia tuotteita', 'error'); return; }
 
   const rows = prods.map((p) => {
@@ -1198,13 +1211,24 @@ async function openImport() {
     sKind.addEventListener('change', sync); sync();
     if (exists) { dimBox.style.display = 'none'; unitBox.style.display = 'none'; }
     const el = h('div', { class: 'tr cols-import' + (exists ? ' muted' : '') },
-      h('div', null, cb), h('div', { class: 'mono' }, p.code || ''), h('div', null, p.name, exists ? h('div', { class: 'hint' }, 'on jo varaston nimikkeissä') : null),
+      h('div', null, cb), h('div', { class: 'mono' }, p.code || ''), h('div', null, p.name, exists ? h('div', { class: 'hint' }, 'on jo varaston nimikkeissä') : null, p.active === false ? h('div', { class: 'hint' }, 'piilotettu hinnastossa') : null),
       h('div', null, p.category || ''), h('div', null, sKind), h('div', null, dimBox, unitBox));
     return { p, el, cb, sKind, iW, iT, iU, exists };
   });
 
-  const cats = [...new Set(prods.map((p) => p.category || '(ei kategoriaa)'))].sort((a, b) => a.localeCompare(b, 'fi'));
-  const sCat = h('select', { id: 'imCat' }, h('option', { value: '' }, 'Kaikki kategoriat'), ...cats.map((c) => h('option', { value: c }, c)));
+  const catOf = (p) => p.category || '(ei kategoriaa)';
+  const sCat = h('select', { id: 'imCat' });
+  const cbHidden = h('input', { type: 'checkbox', id: 'imHidden', checked: true, style: 'width:22px;height:22px' });
+  const hiddenN = prods.filter((p) => p.active === false).length;
+  function buildCats() { // kategorialista + tuotemäärät nykyisen "näytä piilotetut" -valinnan mukaan
+    const cur = sCat.value;
+    const shown = prods.filter((p) => cbHidden.checked || p.active !== false);
+    const cnt = new Map(); for (const p of shown) cnt.set(catOf(p), (cnt.get(catOf(p)) || 0) + 1);
+    const cats = [...cnt.keys()].sort((a, b) => a.localeCompare(b, 'fi'));
+    sCat.replaceChildren(h('option', { value: '' }, 'Kaikki kategoriat (' + shown.length + ')'), ...cats.map((c) => h('option', { value: c }, c + ' (' + cnt.get(c) + ')')));
+    sCat.value = cnt.has(cur) ? cur : '';
+  }
+  buildCats();
   const iSearch = h('input', { type: 'text', id: 'imQ', maxlength: '60', autocomplete: 'off', placeholder: 'haku (nimi tai koodi)…' });
   const cntEl = h('div', { class: 'hint' });
   const errBox = h('div', { class: 'banner err', style: 'display:none', role: 'alert' });
@@ -1214,6 +1238,7 @@ async function openImport() {
     ...rows.map((r) => r.el)));
 
   const visible = (r) => {
+    if (!cbHidden.checked && r.p.active === false) return false;
     const c = r.p.category || '(ei kategoriaa)';
     if (sCat.value && c !== sCat.value) return false;
     const q = iSearch.value.trim().toLowerCase();
@@ -1226,6 +1251,7 @@ async function openImport() {
     btnGo.disabled = n === 0;
   };
   sCat.addEventListener('change', refresh); iSearch.addEventListener('input', refresh);
+  cbHidden.addEventListener('change', () => { buildCats(); refresh(); });
   for (const r of rows) r.cb.addEventListener('change', refresh);
   const btnAll = h('button', { type: 'button', class: 'btn btn-small' }, 'Valitse kaikki näkyvät');
   btnAll.addEventListener('click', () => { for (const r of rows) if (!r.exists && visible(r)) r.cb.checked = true; refresh(); });
@@ -1279,6 +1305,9 @@ async function openImport() {
   openModal([dlgHead('Tuo nimikkeet hinnastosta', 'Valitse tuotteet ja tarkista tyyppi. Nippu = sahatavara jolla on pituuksia (tarvitsee mitat). Kappale = tavara jolla on vain määrä.' + (lengthEnabled ? ' Pituustavara = myydään pituuksittain (esim. räystäspelti): mitta + kpl.' : '')),
     h('div', { class: 'row' }, h('div', { class: 'field', style: 'flex:1 1 220px' }, h('label', { class: 'label', for: 'imCat' }, 'Kategoria'), sCat),
       h('div', { class: 'field', style: 'flex:1 1 220px' }, h('label', { class: 'label', for: 'imQ' }, 'Haku'), iSearch), btnAll, btnNone),
+    h('div', { style: 'display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center' },
+      hiddenN ? h('label', { style: 'display:flex;align-items:center;gap:8px;cursor:pointer' }, cbHidden, 'Näytä myös hinnastossa piilotetut (' + hiddenN + ')') : null,
+      skipped ? h('span', { class: 'hint' }, skipped + ' tuotetta jätetty pois listasta (Työ- ja Vakiomallit-kategoriat sekä kokoonpanotuotteet — ei varastotavaraa)') : null),
     listBox, errBox, h('div', { style: 'display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px' }, cntEl,
       h('div', { class: 'actions' }, h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'Peruuta'), btnGo))]);
   refresh();
