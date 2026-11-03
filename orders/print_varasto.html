@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 18:10 -->
+<!-- Claude-versio: 2026-11-03 22:10 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -60,17 +60,21 @@
   h2.sectionhead { font-size: 11pt; margin: 0 0 3mm; border-bottom: 1px solid #bbb; padding-bottom: 1mm; break-after: avoid; page-break-after: avoid; }
   .empty { color: #666; padding: 8mm 0; font-size: 10pt; }
 
-  /* Alatunniste: taulukon tfoot toistuu joka sivulla (sama tapa kuin muissa tulosteissa) */
+  /* Alatunniste: tulosteessa kiinni sivun alareunassa joka sivulla (position:fixed); tfoot-välikappale varaa sille tilan niin ettei sisältö mene sen alle.
+     Ruudulla alatunniste on tavallisesti sisällön perässä. */
   .doc-footer { display: flex; justify-content: space-between; align-items: center; padding: 3mm 0 1mm; border-top: 1px solid #bbb; font-size: 7.5pt; color: #444; }
   .doc-footer .col { display: flex; flex-direction: column; gap: 1px; line-height: 1.45; }
   .doc-footer .col.center { text-align: center; }
   .doc-footer .col.right { text-align: right; }
   .frame { width: 100%; border-collapse: collapse; }
   .frame > tfoot > tr > td { padding: 0; }
+  .foot-spacer { display: none; }
 
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
+    .foot-spacer { display: block; height: 19mm; }
+    .doc-footer.fixed { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; }
   }
   @media screen {
     body { background: #eee; padding: 20px; }
@@ -229,7 +233,8 @@ window.addEventListener('DOMContentLoaded', async () => {
           ${html}
         </td></tr></tbody>
         <tfoot><tr><td>
-          <div class="doc-footer">
+          <div class="foot-spacer"></div>
+          <div class="doc-footer fixed">
             <div class="col"><span>Okkosen Puutuote Oy</span><span>Sievintie 149</span><span>85160 Rautio</span></div>
             <div class="col center"><span>Puhelin: 0500-360 741</span><span>myynti@okkosenpuutuote.com</span><span>www.okkosenpuutuote.com</span></div>
             <div class="col right"><span>Y-Tunnus: 3579911-5</span></div>
