@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-02 19:05 -->
+<!-- Claude-versio: 2026-11-03 17:10 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -148,7 +148,7 @@
       <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
       <a class="nav-item" href="tarjous.html">✏️ Uusi tarjous</a>
       <a class="nav-item" href="myymala.html">🏪 Myymälä</a>
-      <a class="nav-item current" href="varasto.html">🏗️ Varasto</a>
+      <a class="nav-item current" href="varasto.html">🪵 Varasto</a>
       <a class="nav-item" href="kalenteri.html">📅 Kalenteri</a>
       <a class="nav-item" href="todo.html">✅ Muistilista</a>
       <a class="nav-item" href="laskutus.html">💰 Laskutus</a>
@@ -458,7 +458,8 @@ const field = (label, id, control, hint) => h('div', { class: 'field' }, h('labe
 // ═══════════════════════════════════════════════════════════════════════
 // UUSI NIPPU
 // ═══════════════════════════════════════════════════════════════════════
-const QUICK_LENS = [3.0, 3.3, 3.5, 3.6, 3.9, 4.0, 4.2, 4.5, 4.8, 5.1, 5.4, 6.0];
+// Pikapituudet: toimittajan vakiosarja 1,8–6,0 m (0,3 m välein) + yleiset 3,5 ja 4,0. Muut pituudet: "+ oma pituus".
+const QUICK_LENS = (() => { const a = []; for (let mm = 1800; mm <= 6000; mm += 300) a.push(mm / 1000); a.push(3.5, 4.0); return a.sort((x, y) => x - y); })();
 function openNewLot(preset) {
   const avail = lotItems();
   if (!avail.length) { showToast('Lisää ensin nippu-nimike välilehdellä "Nimikkeet ja laadut"', 'error'); setTab('items'); return; }
@@ -614,6 +615,108 @@ async function insertMovement(row) {
   return { ok: true };
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// NIPUN TÄYDENNYS — lisää pituuksia / kappaleita jo tallennettuun nippuun
+// (kirjataan 'saapuminen'-liikkeinä samalle nipulle; olemassa olevan pituuden saldo kasvaa,
+//  uusi pituus syntyy; kaikki rivit yhdessä insertissä → joko kaikki tai ei mitään)
+// ═══════════════════════════════════════════════════════════════════════
+function openLotTopup(lotId, lines, meta) {
+  const st = { saving: false, rows: [] }; // rows: {len, qty}
+  const perJm = num(meta.m3_per_jm);
+  const curQty = (mm) => { const x = lines.find((l) => l.length_mm === mm); return x ? x.qty_now : 0; };
+  const rowsBox = h('div', null);
+  const sumBox = h('div', { class: 'sumbox' });
+  const quick = h('div', { class: 'seg' });
+  const errBox = h('div', { class: 'banner err', style: 'display:none', role: 'alert' });
+  const iRef = h('input', { type: 'text', id: 'tuRef', maxlength: '100', autocomplete: 'off', value: 'Täydennys' });
+  const btnSave = h('button', { type: 'button', class: 'btn btn-primary' }, 'Lisää nippuun');
+
+  function renderRows() {
+    const head = h('div', { class: 'lenrow head' }, h('div', null, 'Pituus (m)'), h('div', null, 'Lisätään kpl'), h('div', { class: 'r' }, 'Nyt → jälkeen'), h('div', { class: 'r m3c' }, 'Jm'), h('div', null));
+    const dataRows = st.rows.map((r, idx) => {
+      const iL = h('input', { type: 'text', class: 'mono', inputmode: 'decimal', maxlength: '6', value: r.len, 'aria-label': 'Pituus, rivi ' + (idx + 1), placeholder: 'esim. 3,0', oninput: (e) => { r.len = e.target.value; updateComputed(); } });
+      const iQ = h('input', { type: 'text', class: 'mono', inputmode: 'numeric', maxlength: '6', value: r.qty, 'aria-label': 'Lisättävät kappaleet, rivi ' + (idx + 1), placeholder: 'kpl', oninput: (e) => { r.qty = e.target.value; updateComputed(); } });
+      const afterC = h('div', { class: 'r mono' }); const jmC = h('div', { class: 'r mono m3c' });
+      r.el = { iL, iQ, afterC, jmC };
+      return h('div', { class: 'lenrow' }, iL, iQ, afterC, jmC,
+        h('button', { type: 'button', class: 'x', style: 'font-size:22px', 'aria-label': 'Poista rivi ' + (idx + 1), onclick: () => { st.rows.splice(idx, 1); renderRows(); } }, '×'));
+    });
+    rowsBox.replaceChildren(...(st.rows.length ? [head, ...dataRows] : [h('div', { class: 'empty' }, 'Valitse pituus yltä tai paina "+ oma pituus".')]));
+    updateComputed();
+  }
+  function updateComputed() {
+    let pcs = 0, jmT = 0;
+    for (const r of st.rows) {
+      const mm = parseLenMm(r.len), q = parseQty(r.qty);
+      if (r.el) {
+        r.el.iL.classList.toggle('invalid', !!r.len && mm === null);
+        r.el.iQ.classList.toggle('invalid', !!r.qty && q === null);
+        const now = mm ? curQty(mm) : null;
+        r.el.afterC.textContent = mm === null ? '–' : (now + (q ? ' → ' + (now + q) : ' → …')) + (now === 0 ? ' (uusi)' : '');
+        r.el.jmC.textContent = mm && q ? f1.format((mm * q) / 1000) : '–';
+      }
+      if (mm && q) { pcs += q; jmT += (mm * q) / 1000; }
+    }
+    sumBox.replaceChildren(
+      h('div', { class: 'hint' }, 'Lisätään nippuun · ' + fint.format(pcs) + ' kpl'),
+      h('div', { style: 'display:flex;gap:28px;flex-wrap:wrap' },
+        h('div', { class: 'r' }, h('div', { class: 'label' }, 'Juoksumetrit'), h('div', { class: 'mono', style: 'font-size:22px;font-weight:600;color:var(--accent-dim)' }, '+' + f1.format(jmT) + ' jm')),
+        h('div', { class: 'r' }, h('div', { class: 'label' }, 'Kuutiot'), h('div', { class: 'mono', style: 'font-size:22px;font-weight:600;color:var(--accent-dim)' }, '+' + f2.format(jmT * perJm) + ' m³'))));
+  }
+  function addLen(mmStr, focusQty) {
+    const key = String(mmStr).replace('.', ',');
+    let ex = st.rows.find((r) => parseLenMm(r.len) === parseLenMm(key));
+    if (!ex) { ex = { len: key, qty: '' }; st.rows.push(ex); renderRows(); }
+    if (ex.el) (focusQty ? ex.el.iQ : ex.el.iL).focus();
+  }
+  // Nipun jo olemassa olevat pituudet ensin (tuttu tapaus: "tähän nippuun jäi vielä 3 m × 80 kpl"), sitten vakiosarja
+  const existing = lines.map((l) => l.length_mm / 1000);
+  const chipOf = (x, ex) => h('button', { type: 'button', class: 'chipbtn', style: 'font-family:IBM Plex Mono,monospace;min-width:56px', onclick: () => addLen(x.toFixed(1), true) }, x.toFixed(1).replace('.', ','));
+  const stdOnly = QUICK_LENS.filter((x) => !existing.some((e) => Math.abs(e - x) < 0.0005));
+  quick.replaceChildren(...stdOnly.map((x) => chipOf(x, false)),
+    h('button', { type: 'button', class: 'chipbtn', style: 'border-style:dashed;color:var(--accent-dim)', onclick: () => { st.rows.push({ len: '', qty: '' }); renderRows(); const last = st.rows[st.rows.length - 1]; if (last.el) last.el.iL.focus(); } }, '+ oma pituus'));
+  const existBox = existing.length ? h('div', { class: 'field' }, h('div', { class: 'label' }, 'Nipun nykyiset pituudet'),
+    h('div', { class: 'seg' }, ...lines.map((l) => h('button', { type: 'button', class: 'chipbtn', style: 'font-family:IBM Plex Mono,monospace', title: l.qty_now + ' kpl nyt', onclick: () => addLen(fLen(l.length_mm), true) }, fLen(l.length_mm) + ' · ' + l.qty_now)))) : null;
+
+  function showErr(msg) { errBox.textContent = msg; errBox.style.display = msg ? 'block' : 'none'; if (msg) errBox.scrollIntoView({ block: 'nearest' }); }
+  btnSave.addEventListener('click', async () => {
+    if (st.saving) return;
+    showErr('');
+    if (!st.rows.length) return showErr('Lisää vähintään yksi pituus.');
+    const seen = new Set(); const rows = [];
+    for (const r of st.rows) {
+      const mm = parseLenMm(r.len), q = parseQty(r.qty);
+      if (mm === null) return showErr('Tarkista pituudet (0,1–20 m, esim. 3,0).');
+      if (q === null) return showErr('Anna lisättävä kappalemäärä (kokonaisluku, 1 tai enemmän) jokaiselle pituudelle.');
+      if (seen.has(mm)) return showErr('Sama pituus (' + fLen(mm) + ' m) on kahdesti.');
+      seen.add(mm);
+      rows.push({ item_id: meta.item_id, lot_id: lotId, length_mm: mm, qty: q, reason: 'saapuminen', ref: iRef.value.trim() || null });
+    }
+    st.saving = true; btnSave.disabled = true;
+    try {
+      const { data, error } = await db.from('stock_movements').insert(rows).select();
+      if (error) return showErr(dbErrorMsg(error, 'move'));
+      if (!data || data.length !== rows.length) return showErr('Täydennystä ei tallennettu kokonaan (oikeusongelma?). Tarkista nipun saldo ja yritä uudelleen.');
+      showToast('Nippuun lisätty ' + rows.length + ' pituutta', 'success');
+      await reloadAndRender();
+      closeModal(); closeModal(); openLot(lotId);
+    } catch (e) { console.error(e); showErr('Tallennus epäonnistui. Tarkista nipun saldo ja yritä uudelleen.'); }
+    finally { st.saving = false; btnSave.disabled = false; }
+  });
+
+  openModal([
+    dlgHead('Täydennä nippua ' + meta.package_no),
+    h('div', { class: 'hint', style: 'margin-bottom:10px' }, 'Lisää nippuun pituuksia tai kappaleita, jotka jäivät alun perin kirjaamatta. Olemassa olevan pituuden saldo kasvaa; uusi pituus lisätään nippuun. Muutos jää historiaan.'),
+    existBox,
+    h('div', { class: 'field' }, h('div', { class: 'label' }, 'Muu pituus'), quick),
+    h('div', { class: 'sdl' }, rowsBox), sumBox,
+    field('Huomio (valinnainen)', 'tuRef', iRef),
+    errBox,
+    h('div', { class: 'actions' }, h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'Peruuta'), btnSave)
+  ]);
+  renderRows();
+}
+
 async function openLot(lotId) {
   if (!UUID_RE.test(String(lotId))) return;
   const sum = lotRows.find((l) => l.lot_id === lotId);
@@ -737,7 +840,9 @@ async function openLot(lotId) {
 
   openModal([head, tiles,
     h('div', { class: 'cols2' },
-      h('div', { class: 'main' }, lenTable, h('div', { class: 'card-title', style: 'margin:0' }, 'Historia'), histTable,
+      h('div', { class: 'main' }, lenTable,
+        h('div', null, h('button', { type: 'button', class: 'btn btn-small', id: 'btnTopup', onclick: () => openLotTopup(lotId, lines, meta) }, '+ Täydennä nippua (lisää pituuksia / kappaleita)')),
+        h('div', { class: 'card-title', style: 'margin:0' }, 'Historia'), histTable,
         h('div', { style: 'display:flex;gap:10px;flex-wrap:wrap' }, btnToggleEdit, btnDel), editBox),
       h('div', { class: 'side' }, h('div', { style: 'font-weight:600;font-size:16px' }, 'Ota nipusta / korjaa saldoa'),
         field('Pituus', 'wdLen', sLen), field('Kappaletta', 'wdQty', iQty), field('Syy', 'wdReason', sReason),
