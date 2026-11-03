@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 16:45 -->
+<!-- Claude-versio: 2026-11-03 17:20 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -199,6 +199,14 @@
     <div id="lengthWrap" style="display:none;flex-direction:column;gap:12px">
       <div class="card-title" style="margin:0">Pituustavara (mitta + kpl)</div>
       <div class="hint">Pituustavara = tavara jota myydään pituuksittain, esim. räystäspelti. Jokaiselle mitalle oma kappalemäärä; juoksumetrit (jm) lasketaan mitoittain ja yhteensä. Uuden nimikkeen voi lisätä välilehdellä "Nimikkeet ja laadut" (tyyppi: Pituustavara).</div>
+      <div class="card" id="lenPieceCard" style="display:none">
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-bottom:10px">
+          <div class="card-title" style="margin:0">Mitat varastossa</div>
+          <div class="hint">Klikkaa mittaa nähdäksesi missä nimikkeissä sitä on</div>
+        </div>
+        <div class="seg" id="lenPieceBtns"></div>
+      </div>
+      <div class="tiles" id="lenPieceTiles" style="display:none"></div>
       <div id="lengthList" style="display:flex;flex-direction:column;gap:14px"></div>
     </div>
   </section>
@@ -317,6 +325,7 @@ function dbErrorMsg(error, ctx) {
 
 // ── Tila ──────────────────────────────────────────────────────────────
 let items = [], grades = [], lotRows = [], lineRows = [], pieceRows = [], lengthRows = [];
+let lenFlt = null; // valittu mitta (mm) pituustavara-osion suodattimena
 let lengthEnabled = false; // pituustavara (varasto_migraatio_v3) käytössä vain jos näkymä stock_length_balances löytyy
 let linesByLot = new Map();
 let flt = { item: '', grade: '', len: null, q: '' };
@@ -925,20 +934,43 @@ function renderLengthItems() {
   const wrap = $('#lengthWrap');
   wrap.style.display = lengthEnabled ? 'flex' : 'none';
   if (!lengthEnabled) return;
-  const list = items.filter((i) => i.kind === 'length_piece' && (i.active || lensOf(i.id).length));
-  if (!list.length) { $('#lengthList').replaceChildren(h('div', { class: 'empty card' }, 'Ei pituustavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Pituustavara).')); return; }
+  const all = items.filter((i) => i.kind === 'length_piece' && (i.active || lensOf(i.id).length));
+  if (!all.length) {
+    $('#lenPieceCard').style.display = 'none'; $('#lenPieceTiles').style.display = 'none';
+    $('#lengthList').replaceChildren(h('div', { class: 'empty card' }, 'Ei pituustavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Pituustavara).')); return;
+  }
+  // Mitat yli kaikkien pituustavara-nimikkeiden (kuten "Pituudet varastossa" nipuissa)
+  const lens = new Map();
+  for (const i of all) for (const r of lensOf(i.id)) { const e = lens.get(r.length_mm) || { pcs: 0, n: 0 }; e.pcs += num(r.qty_now); e.n += 1; lens.set(r.length_mm, e); }
+  if (lenFlt !== null && !lens.has(lenFlt)) lenFlt = null;
+  $('#lenPieceCard').style.display = lens.size ? '' : 'none';
+  $('#lenPieceBtns').replaceChildren(...[...lens.keys()].sort((a, b) => a - b).map((mm) => {
+    const e = lens.get(mm);
+    return h('button', { type: 'button', class: 'lenbtn', 'aria-pressed': lenFlt === mm ? 'true' : 'false', onclick: () => { lenFlt = lenFlt === mm ? null : mm; renderLengthItems(); } },
+      h('span', { class: 'l' }, fLen(mm) + ' m'), h('small', null, fint.format(e.pcs) + ' kpl'), h('small', null, e.n + (e.n === 1 ? ' nimike' : ' nimikettä')));
+  }));
+  const list = lenFlt === null ? all : all.filter((i) => lensOf(i.id).some((r) => r.length_mm === lenFlt));
+  let totPcs = 0, totJm = 0;
+  for (const i of list) for (const r of lensOf(i.id)) if (lenFlt === null || r.length_mm === lenFlt) { totPcs += num(r.qty_now); totJm += num(r.jm_now); }
+  $('#lenPieceTiles').style.display = '';
+  $('#lenPieceTiles').replaceChildren(
+    h('div', { class: 'tile' }, h('div', { class: 'label' }, lenFlt === null ? 'Nimikkeitä' : 'Nimikkeitä joissa ' + fLen(lenFlt) + ' m'), h('div', { class: 'v' }, String(list.filter((i) => lensOf(i.id).length).length)), h('div', { class: 's' }, 'nimikettä')),
+    h('div', { class: 'tile' }, h('div', { class: 'label' }, 'Juoksumetrit'), h('div', { class: 'v acc' }, f1.format(totJm)), h('div', { class: 's' }, 'jm')),
+    h('div', { class: 'tile' }, h('div', { class: 'label' }, 'Kappaleita'), h('div', { class: 'v acc' }, fint.format(totPcs)), h('div', { class: 's' }, 'kpl')));
+  if (!list.length) { $('#lengthList').replaceChildren(h('div', { class: 'empty card' }, 'Ei nimikkeitä valitulla mitalla.')); return; }
   $('#lengthList').replaceChildren(...list.map((i) => {
     const ls = lensOf(i.id);
     const pcs = ls.reduce((a, r) => a + num(r.qty_now), 0), jm = ls.reduce((a, r) => a + num(r.jm_now), 0);
     const head = h('div', { style: 'display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)' },
       h('div', null, h('div', { style: 'font-weight:600;font-size:16px' }, i.name + (i.active ? '' : ' (ei käytössä)')),
-        h('div', { class: 'mono', style: 'color:var(--accent-dim);font-weight:600' }, fint.format(pcs) + ' kpl · ' + f1.format(jm) + ' jm yhteensä')),
+        h('div', { class: 'mono', style: 'color:var(--accent-dim);font-weight:600' }, fint.format(pcs) + ' kpl · ' + f1.format(jm) + ' jm yhteensä'),
+        ls.length ? h('div', { class: 'chips', style: 'margin-top:6px' }, ...ls.map((r) => h('span', { class: 'chip' + (lenFlt === null ? '' : r.length_mm === lenFlt ? ' hit' : ' dim') }, fLen(r.length_mm) + ' m × ' + fint.format(num(r.qty_now))))) : null),
       h('div', { style: 'display:flex;gap:8px' },
         h('button', { type: 'button', class: 'btn btn-small btn-ghost', disabled: !i.active, onclick: () => openLengthMove(i.id, 'saapuminen') }, '+ Saapuminen'),
         h('button', { type: 'button', class: 'btn btn-small', onclick: () => openLengthMove(i.id, 'myynti') }, '− Nosto')));
     const rows = ls.length ? [
       h('div', { class: 'tr head cols-lenrows' }, h('div', null, 'Pituus'), h('div', { class: 'r' }, 'Kpl'), h('div', { class: 'r' }, 'Jm')),
-      ...ls.map((r) => h('div', { class: 'tr cols-lenrows mono' }, h('div', null, fLen(r.length_mm) + ' m'), h('div', { class: 'r' }, fint.format(num(r.qty_now))), h('div', { class: 'r' }, f1.format(num(r.jm_now))))),
+      ...ls.map((r) => h('div', { class: 'tr cols-lenrows mono', style: lenFlt !== null && r.length_mm !== lenFlt ? 'color:var(--text-dim)' : (lenFlt !== null ? 'background:var(--accent-bg);font-weight:600' : '') }, h('div', null, fLen(r.length_mm) + ' m'), h('div', { class: 'r' }, fint.format(num(r.qty_now))), h('div', { class: 'r' }, f1.format(num(r.jm_now))))),
       h('div', { class: 'tr cols-lenrows mono', style: 'font-weight:600;background:var(--accent-bg)' }, h('div', null, 'Yhteensä'), h('div', { class: 'r' }, fint.format(pcs)), h('div', { class: 'r' }, f1.format(jm)))
     ] : [h('div', { class: 'empty' }, 'Ei saldoa. Kirjaa saapuminen napista "+ Saapuminen".')];
     return h('div', { class: 'tablewrap' }, head, h('div', { class: 'tbl' }, ...rows));
