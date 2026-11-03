@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 20:35 -->
+<!-- Claude-versio: 2026-11-03 21:00 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -188,7 +188,7 @@
         <div class="field" style="flex:1 1 220px"><label class="label" for="fItem">Nimike</label><div id="fItemBox"></div></div>
         <div class="field"><div class="label">Laatu</div><div class="seg" id="fGrades"></div></div>
         <div class="field" style="flex:1 1 180px"><label class="label" for="fSearch">Nippunumero</label><input type="text" id="fSearch" maxlength="40" autocomplete="off" placeholder="haku…"></div>
-        <button class="btn" id="printBtn" type="button">🖨 Tulosta raportti…</button>
+        <button class="btn" id="printBtn" type="button">🖨 Tulosta nippuraportti…</button>
         <button class="btn" id="bulkBtn" type="button">+ Pikasyöttö (monta nippua)</button>
         <button class="btn btn-primary" id="newLotBtn" type="button">+ Uusi nippu</button>
       </div>
@@ -206,7 +206,10 @@
 
   <!-- ═══ KAPPALETAVARA ═══ -->
   <section id="panePieces" role="tabpanel" aria-labelledby="tabPieces" style="display:none;flex-direction:column;gap:16px">
-    <div class="field" style="max-width:420px"><label class="label" for="pieceSearch">Hae nimikettä</label><input type="text" id="pieceSearch" maxlength="60" autocomplete="off" placeholder="kirjoita nimen osa…"></div>
+    <div class="row" style="align-items:flex-end">
+      <div class="field" style="max-width:420px;flex:1 1 260px"><label class="label" for="pieceSearch">Hae nimikettä</label><input type="text" id="pieceSearch" maxlength="60" autocomplete="off" placeholder="kirjoita nimen osa…"></div>
+      <button class="btn" id="printBtnOther" type="button">🖨 Tulosta kappaletavara…</button>
+    </div>
     <div class="hint">Kappaletavara = tavara jolla on vain määrä (ei pituuksia). Uuden nimikkeen voi lisätä välilehdellä "Nimikkeet ja laadut".</div>
     <div class="tablewrap"><div class="tbl" style="min-width:740px" id="pieceList"></div></div>
     <div id="lengthWrap" style="display:none;flex-direction:column;gap:12px">
@@ -1577,7 +1580,7 @@ $('#importBtn').addEventListener('click', openImport);
 // ═══════════════════════════════════════════════════════════════════════
 // TULOSTA RAPORTTI — valitse nimikkeet / kategoriat, avaa print_varasto.html
 // ═══════════════════════════════════════════════════════════════════════
-async function openPrintDialog() {
+async function openPrintDialog(mode) { // mode: 'lots' (Niput-välilehti, oletus vain niput) | 'other' (Kappaletavara-välilehti, oletus vain kappale- ja pituustavara)
   const hasStock = (i) => {
     if (i.kind === 'lot_length') return lotRows.some((l) => l.item_id === i.id);
     if (i.kind === 'piece') return num((pieceRows.find((p) => p.item_id === i.id) || {}).qty_now) !== 0;
@@ -1594,10 +1597,12 @@ async function openPrintDialog() {
     if (!r.error) { const pc = new Map((r.data || []).map((p) => [p.id, p.category || ''])); for (const i of list) if (i.product_id && pc.get(i.product_id)) catOfItem.set(i.id, pc.get(i.product_id)); }
   } catch (e) { console.warn('kategorioita ei saatu', e); }
 
-  const KIND_ORDER = ['lot_length', 'piece', 'length_piece'];
+  const isLot = (i) => i.kind === 'lot_length';
+  const KIND_ORDER = mode === 'other' ? ['piece', 'length_piece', 'lot_length'] : ['lot_length', 'piece', 'length_piece'];
+  const initial = list.some((i) => (mode === 'other' ? !isLot(i) : isLot(i))); // jos oletusryhmä on tyhjä, valitaan kaikki
   const boxes = new Map(); // item.id → checkbox
   const mkRow = (i) => {
-    const cb = h('input', { type: 'checkbox', checked: true, style: 'width:22px;height:22px', 'aria-label': i.name });
+    const cb = h('input', { type: 'checkbox', checked: !initial || (mode === 'other' ? !isLot(i) : isLot(i)), style: 'width:22px;height:22px', 'aria-label': i.name });
     boxes.set(i.id, cb);
     const lab = h('label', { style: 'display:flex;align-items:center;gap:10px;padding:6px 4px;cursor:pointer;border-bottom:1px solid var(--border)' }, cb,
       h('span', { style: 'flex:1' }, i.name), h('span', { class: 'hint' }, [KIND_LABEL[i.kind], catOfItem.get(i.id)].filter(Boolean).join(' · ')));
@@ -1615,8 +1620,9 @@ async function openPrintDialog() {
   const catBox = cats.length ? h('div', { class: 'field' }, h('div', { class: 'label' }, 'Valitse kategorialla (hinnaston kategoria)'),
     h('div', { class: 'seg' }, ...cats.map((c) => h('button', { type: 'button', class: 'chipbtn', onclick: () => { setAll(false); setAll(true, (i) => catOfItem.get(i.id) === c); } }, c)))) : null;
   const sGrade = h('select', { id: 'prGrade' }, h('option', { value: '' }, 'Kaikki laadut'), ...grades.filter((g) => g.active).map((g) => h('option', { value: g.id }, g.name)));
-  const cbOther = h('input', { type: 'checkbox', id: 'prOther', checked: true, style: 'width:22px;height:22px' });
-  const cbPage = h('input', { type: 'checkbox', id: 'prPage', checked: true, style: 'width:22px;height:22px' });
+  // Oletus: nimikkeet peräkkäin (säästää paperia); viimeksi tehty valinta muistetaan tässä selaimessa
+  let pbStored = null; try { pbStored = localStorage.getItem('varasto_print_pagebreak'); } catch (e) { /* ei tallennusta */ }
+  const cbPage = h('input', { type: 'checkbox', id: 'prPage', checked: pbStored === '1', style: 'width:22px;height:22px' });
   const cntEl = h('div', { class: 'hint' });
   const errBox = h('div', { class: 'banner err', style: 'display:none', role: 'alert' });
   function upd() { const n = [...boxes.values()].filter((b) => b.checked).length; cntEl.textContent = 'Valittu ' + n + ' / ' + list.length + ' nimikettä'; }
@@ -1629,25 +1635,26 @@ async function openPrintDialog() {
     const q = new URLSearchParams();
     if (chosen.length !== list.length) q.set('items', chosen.map((i) => i.id).join(','));
     if (sGrade.value) { if (!UUID_RE.test(sGrade.value)) return; q.set('grade', sGrade.value); }
-    const onlyOtherKinds = chosen.every((i) => i.kind !== 'lot_length');
-    if (cbOther.checked || onlyOtherKinds) q.set('other', '1');
+    if (chosen.some((i) => !isLot(i))) q.set('other', '1'); // kappale- ja pituustavara mukaan vain jos niitä on valittu
     if (!cbPage.checked) q.set('pb', '0');
+    try { localStorage.setItem('varasto_print_pagebreak', cbPage.checked ? '1' : '0'); } catch (e) { /* ei tallennusta */ }
     const qs = q.toString();
     window.open('print_varasto.html' + (qs ? '?' + qs : ''), '_blank', 'noopener');
     closeModal();
   });
-  openModal([dlgHead('Tulosta varastoraportti', 'Valitse mitä raporttiin tulee. Raportti avautuu uuteen välilehteen, josta sen voi tulostaa tai tallentaa PDF:ksi (A4 vaaka).'),
+  openModal([dlgHead(mode === 'other' ? 'Tulosta kappaletavara' : 'Tulosta nippuraportti', (mode === 'other' ? 'Oletuksena mukana vain kappale- ja pituustavara. Nippuja saat mukaan valitsemalla ne listasta.' : 'Oletuksena mukana vain niput. Kappale- ja pituustavaran saat mukaan valitsemalla ne listasta.') + ' Raportti avautuu uuteen välilehteen, josta sen voi tulostaa tai tallentaa PDF:ksi (A4 vaaka).'),
     catBox,
     h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin:6px 0' }, h('button', { type: 'button', class: 'btn btn-small', onclick: () => setAll(true) }, 'Valitse kaikki näkyvät'), h('button', { type: 'button', class: 'btn btn-small', onclick: () => setAll(false) }, 'Tyhjennä valinnat'),
-      h('button', { type: 'button', class: 'btn btn-small', onclick: () => { setAll(false); setAll(true, (i) => i.kind === 'lot_length'); } }, 'Vain niput')),
+      h('button', { type: 'button', class: 'btn btn-small', onclick: () => { setAll(false); setAll(true, isLot); } }, 'Vain niput'),
+      h('button', { type: 'button', class: 'btn btn-small', onclick: () => { setAll(false); setAll(true, (i) => !isLot(i)); } }, 'Vain kappale- ja pituustavara')),
     iSrch, listBox, cntEl,
     h('div', { class: 'row', style: 'margin-top:10px' }, field('Laatu', 'prGrade', sGrade)),
-    h('label', { style: 'display:flex;align-items:center;gap:10px;cursor:pointer' }, cbOther, 'Mukaan kappale- ja pituustavara (Muu varasto)'),
     h('label', { style: 'display:flex;align-items:center;gap:10px;cursor:pointer' }, cbPage, 'Jokainen nimike omalle sivulle'),
     errBox,
     h('div', { class: 'actions' }, h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'Peruuta'), btnGo)]);
 }
-$('#printBtn').addEventListener('click', openPrintDialog);
+$('#printBtn').addEventListener('click', () => openPrintDialog('lots'));
+$('#printBtnOther').addEventListener('click', () => openPrintDialog('other'));
 
 // ── Piirto ja käynnistys ──────────────────────────────────────────────
 function renderAll() { renderFilters(); renderLots(); renderPieces(); renderLengthItems(); renderItems(); renderGrades(); }
