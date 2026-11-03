@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 17:45 -->
+<!-- Claude-versio: 2026-11-03 18:10 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -178,6 +178,7 @@
         <div class="field" style="flex:1 1 220px"><label class="label" for="fItem">Nimike</label><select id="fItem"></select></div>
         <div class="field"><div class="label">Laatu</div><div class="seg" id="fGrades"></div></div>
         <div class="field" style="flex:1 1 180px"><label class="label" for="fSearch">Nippunumero</label><input type="text" id="fSearch" maxlength="40" autocomplete="off" placeholder="haku…"></div>
+        <button class="btn" id="printBtn" type="button">🖨 Tulosta raportti…</button>
         <button class="btn btn-primary" id="newLotBtn" type="button">+ Uusi nippu</button>
       </div>
     </div>
@@ -1321,6 +1322,75 @@ async function openImport() {
   refresh();
 }
 $('#importBtn').addEventListener('click', openImport);
+
+// ═══════════════════════════════════════════════════════════════════════
+// TULOSTA RAPORTTI — valitse nimikkeet / kategoriat, avaa print_varasto.html
+// ═══════════════════════════════════════════════════════════════════════
+async function openPrintDialog() {
+  const hasStock = (i) => {
+    if (i.kind === 'lot_length') return lotRows.some((l) => l.item_id === i.id);
+    if (i.kind === 'piece') return num((pieceRows.find((p) => p.item_id === i.id) || {}).qty_now) !== 0;
+    return lengthRows.some((r) => r.item_id === i.id && num(r.qty_now) > 0);
+  };
+  const list = items.filter((i) => (i.active || hasStock(i)) && (i.kind !== 'length_piece' || lengthEnabled))
+    .sort((a, b) => a.name.localeCompare(b.name, 'fi', { numeric: true }));
+  if (!list.length) { showToast('Ei nimikkeitä tulostettavaksi', 'error'); return; }
+
+  // Kategoriat hinnastosta (tuoduille nimikkeille); jos haku epäonnistuu, valinta tehdään nimikkeittäin
+  const catOfItem = new Map();
+  try {
+    const r = await fetchAllProducts();
+    if (!r.error) { const pc = new Map((r.data || []).map((p) => [p.id, p.category || ''])); for (const i of list) if (i.product_id && pc.get(i.product_id)) catOfItem.set(i.id, pc.get(i.product_id)); }
+  } catch (e) { console.warn('kategorioita ei saatu', e); }
+
+  const KIND_ORDER = ['lot_length', 'piece', 'length_piece'];
+  const boxes = new Map(); // item.id → checkbox
+  const mkRow = (i) => {
+    const cb = h('input', { type: 'checkbox', checked: true, style: 'width:22px;height:22px', 'aria-label': i.name });
+    boxes.set(i.id, cb);
+    return h('label', { style: 'display:flex;align-items:center;gap:10px;padding:6px 4px;cursor:pointer;border-bottom:1px solid var(--border)' }, cb,
+      h('span', { style: 'flex:1' }, i.name), h('span', { class: 'hint' }, [KIND_LABEL[i.kind], catOfItem.get(i.id)].filter(Boolean).join(' · ')));
+  };
+  const listBox = h('div', { style: 'max-height:42vh;overflow:auto;border:1px solid var(--border);border-radius:var(--radius);padding:2px 10px' },
+    ...KIND_ORDER.flatMap((k) => list.filter((i) => i.kind === k).map(mkRow)));
+  const setAll = (v, pred) => { for (const i of list) if (!pred || pred(i)) boxes.get(i.id).checked = v; upd(); };
+  const cats = [...new Set(catOfItem.values())].sort((a, b) => a.localeCompare(b, 'fi'));
+  const catBox = cats.length ? h('div', { class: 'field' }, h('div', { class: 'label' }, 'Valitse kategorialla (hinnaston kategoria)'),
+    h('div', { class: 'seg' }, ...cats.map((c) => h('button', { type: 'button', class: 'chipbtn', onclick: () => { setAll(false); setAll(true, (i) => catOfItem.get(i.id) === c); } }, c)))) : null;
+  const sGrade = h('select', { id: 'prGrade' }, h('option', { value: '' }, 'Kaikki laadut'), ...grades.filter((g) => g.active).map((g) => h('option', { value: g.id }, g.name)));
+  const cbOther = h('input', { type: 'checkbox', id: 'prOther', checked: true, style: 'width:22px;height:22px' });
+  const cbPage = h('input', { type: 'checkbox', id: 'prPage', checked: true, style: 'width:22px;height:22px' });
+  const cntEl = h('div', { class: 'hint' });
+  const errBox = h('div', { class: 'banner err', style: 'display:none', role: 'alert' });
+  function upd() { const n = [...boxes.values()].filter((b) => b.checked).length; cntEl.textContent = 'Valittu ' + n + ' / ' + list.length + ' nimikettä'; }
+  for (const b of boxes.values()) b.addEventListener('change', upd);
+  upd();
+  const btnGo = h('button', { type: 'button', class: 'btn btn-primary' }, 'Avaa tuloste');
+  btnGo.addEventListener('click', () => {
+    const chosen = list.filter((i) => boxes.get(i.id).checked);
+    if (!chosen.length) { errBox.textContent = 'Valitse vähintään yksi nimike.'; errBox.style.display = 'block'; return; }
+    const q = new URLSearchParams();
+    if (chosen.length !== list.length) q.set('items', chosen.map((i) => i.id).join(','));
+    if (sGrade.value) { if (!UUID_RE.test(sGrade.value)) return; q.set('grade', sGrade.value); }
+    const onlyOtherKinds = chosen.every((i) => i.kind !== 'lot_length');
+    if (cbOther.checked || onlyOtherKinds) q.set('other', '1');
+    if (!cbPage.checked) q.set('pb', '0');
+    const qs = q.toString();
+    window.open('print_varasto.html' + (qs ? '?' + qs : ''), '_blank', 'noopener');
+    closeModal();
+  });
+  openModal([dlgHead('Tulosta varastoraportti', 'Valitse mitä raporttiin tulee. Raportti avautuu uuteen välilehteen, josta sen voi tulostaa tai tallentaa PDF:ksi (A4 vaaka).'),
+    catBox,
+    h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin:6px 0' }, h('button', { type: 'button', class: 'btn btn-small', onclick: () => setAll(true) }, 'Valitse kaikki'), h('button', { type: 'button', class: 'btn btn-small', onclick: () => setAll(false) }, 'Tyhjennä valinnat'),
+      h('button', { type: 'button', class: 'btn btn-small', onclick: () => { setAll(false); setAll(true, (i) => i.kind === 'lot_length'); } }, 'Vain niput')),
+    listBox, cntEl,
+    h('div', { class: 'row', style: 'margin-top:10px' }, field('Laatu', 'prGrade', sGrade)),
+    h('label', { style: 'display:flex;align-items:center;gap:10px;cursor:pointer' }, cbOther, 'Mukaan kappale- ja pituustavara (Muu varasto)'),
+    h('label', { style: 'display:flex;align-items:center;gap:10px;cursor:pointer' }, cbPage, 'Jokainen nimike omalle sivulle'),
+    errBox,
+    h('div', { class: 'actions' }, h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'Peruuta'), btnGo)]);
+}
+$('#printBtn').addEventListener('click', openPrintDialog);
 
 // ── Piirto ja käynnistys ──────────────────────────────────────────────
 function renderAll() { renderFilters(); renderLots(); renderPieces(); renderLengthItems(); renderItems(); renderGrades(); }
