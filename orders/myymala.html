@@ -679,6 +679,44 @@ function sectionsHaveRealData() {
   return sections.some(s => s.rows.some(r => r.productId || (r.nimikeTeksti || '').trim() || (r.desc || '').trim() || parseFloat(r.qty) > 0));
 }
 
+// =============================================
+// HINTOJEN SÄILYTYS -VALINTAMODAALI (2026-11-05)
+// Korvaa selaimen confirm()-kyselyn, jossa "Peruuta" tarkoitti "hae uudet hinnat" eikä
+// "älä tee mitään" — Tuomo ei kokenut saavansa itse päättää tuleeko vanhat hinnat/alennukset
+// mukaan. Palauttaa Promisena 'keep' | 'fresh' | null (null = peruutettu, ei tehdä mitään).
+// Käyttää olemassa olevia .modal-overlay/.modal-tyylejä, DOM luodaan vasta tarvittaessa.
+// =============================================
+function askKeepPrices(opts) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay open';
+    ov.innerHTML = `
+      <div class="modal" style="width:460px;">
+        <h2>${opts.title}</h2>
+        <button type="button" class="btn btn-primary" data-choice="keep" style="text-align:left;white-space:normal;padding:10px 14px;">
+          <div>${opts.keepLabel}</div>
+          <div style="font-size:11px;font-weight:400;opacity:0.9;margin-top:3px;letter-spacing:0;">${opts.keepHint}</div>
+        </button>
+        <button type="button" class="btn btn-ghost" data-choice="fresh" style="text-align:left;white-space:normal;padding:10px 14px;">
+          <div>${opts.freshLabel}</div>
+          <div style="font-size:11px;font-weight:400;margin-top:3px;letter-spacing:0;">${opts.freshHint}</div>
+        </button>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-choice="">Peruuta</button>
+        </div>
+      </div>`;
+    const onKey = e => { if (e.key === 'Escape') done(null); };
+    const done = v => { document.removeEventListener('keydown', onKey); ov.remove(); resolve(v); };
+    ov.addEventListener('click', e => {
+      if (e.target === ov) return done(null);
+      const b = e.target.closest('[data-choice]');
+      if (b) done(b.dataset.choice || null);
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(ov);
+  });
+}
+
 async function applyTemplate(templateId) {
   const sel = document.getElementById('rowTemplateSelect');
   if (!templateId) return;
@@ -688,7 +726,15 @@ async function applyTemplate(templateId) {
   }
   // 2026-09-28 (kohta 1/5): kysytään myös säilytetäänkö mallin tallennetut hinnat ja pyöristys,
   // vai haetaanko tuoreet hinnat hinnastosta — sama valinta kuin tarjous.html:ssä.
-  const keepPrices = confirm('Ladataanko malli tallennetuilla hinnoilla?\n\nOK = Säilytä mallin hinnat (ja pyöristys)\nPeruuta = Hae uudet hinnat hinnastosta');
+  const choice = await askKeepPrices({
+    title: 'Ladataanko mallin hinnat?',
+    keepLabel: 'Säilytä mallin hinnat',
+    keepHint: 'Mallin tallennetut hinnat ja pyöristys tulevat sellaisenaan.',
+    freshLabel: 'Hae uudet hinnat hinnastosta',
+    freshHint: 'Hinnat haetaan hinnastosta, mallin pyöristys jätetään pois.'
+  });
+  if (!choice) { sel.value = ''; return; } // Peruuta = ei ladata mallia lainkaan
+  const keepPrices = choice === 'keep';
   const data = await sbGet('quotes', `?id=eq.${templateId}&select=*`);
   const q = Array.isArray(data) ? data[0] : null;
   sel.value = ''; // nollataan heti — sama malli pitää voida valita uudelleen
