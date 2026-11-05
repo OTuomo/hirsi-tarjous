@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Myymälä — Okkosen Puutuote</title>
+<title>Tarjous — Okkosen Puutuote</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
   :root {
@@ -140,8 +140,7 @@
   .summary-table .value { text-align: right; color: var(--text); }
   .summary-table .big td { font-size: 16px; font-weight: 600; color: var(--accent); padding-top: 8px; border-top: 1px solid var(--border); }
   .summary-table input.adj { width: 90px; text-align: right; padding: 4px 7px; font-size: 12px; }
-  /* LISÄALENNUS (2026-09) — toinen alennuskierros YHT:n päälle, piilossa oletuksena. Kopioitu
-     tarjous.html:stä sellaisenaan. */
+  /* LISÄALENNUS (2026-09) — toinen alennuskierros YHT:n päälle, piilossa oletuksena */
   .extra-discount-toggle { background: none; border: none; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; padding: 6px 0 0; text-align: right; width: 100%; }
   .extra-discount-toggle:hover { color: var(--accent); }
   .extra-discount-panel { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); text-align: left; }
@@ -167,20 +166,65 @@
   .status-badge.archived { background: #2a2a2a; color: #666; }
   .stale-banner { display: none; align-items: center; gap: 10px; background: #3d2e1e; border: 1px solid var(--warn); color: var(--warn); font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
   .stale-banner.show { display: flex; }
-  /* MALLITILA (2026-09-28, kohta 2) — sama toteutus kuin tarjous.html:ssä. */
+  /* MALLITILA (2026-09-28, kohta 2) — näkyy vain kun avattu tarjous on mallipohja (is_template=true).
+     Sama violetti sävy kuin status-badge.model, jotta yhdistyy visuaalisesti samaan käsitteeseen. */
   .template-mode-banner { display: none; align-items: center; gap: 14px; flex-wrap: wrap; background: #2a1e3d; border: 1px solid #c084fc; color: #c084fc; font-size: 13px; padding: 10px 16px; border-radius: 6px; margin-bottom: 16px; font-family: 'IBM Plex Sans', sans-serif; }
   .template-mode-banner .tpl-name-field { display: flex; align-items: center; gap: 8px; }
   .template-mode-banner .tpl-name-field input { width: 220px; padding: 5px 8px; font-size: 13px; background: var(--input-bg); border: 1px solid #c084fc; color: var(--text); border-radius: 4px; }
   .template-mode-banner .tpl-unsaved { color: var(--warn); font-weight: 600; display: none; }
   /* Sisäinen huomio (2026-08) — ei koskaan tulostu, näkyy vain tässä sovelluksessa. Sama
-     amber-varoitusväri kuin stale-bannerissa (tarjous.html), jotta erottuu selvästi "tämä ei
-     mene asiakkaalle" — eri asia kuin yllä oleva "Huomiot"-kenttä joka TULOSTUU kuittiin. */
+     amber-varoitusväri kuin stale-bannerissa, jotta erottuu selvästi "tämä ei mene asiakkaalle". */
   .internal-note-panel { display: none; background: #3d2e1e; border: 1px solid var(--warn); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
   .internal-note-panel.show { display: block; }
   .internal-note-panel label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--warn); font-weight: 600; margin-bottom: 6px; }
   .internal-note-panel textarea { width: 100%; background: var(--input-bg); border: 1px solid var(--warn); border-radius: 6px; color: var(--text); padding: 8px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; resize: vertical; }
   .internal-note-panel textarea:focus { outline: none; border-color: var(--accent); }
   #noteToggleBtn.has-note { background: var(--warn); color: #1a1a1a; border-color: var(--warn); }
+  /* Merkkipaalut (2026-09) — käsin asetettavat viikot tilaus-/tuotantoaikataulun avainkohdille
+     (piirustukset, ikkuna/ovi-tilaus, puuosien tilaus, tuotanto). Ei liity varastosaldoon,
+     pelkkää aikataulutusta. Katso order_milestones-taulu. Piilossa oletuksena, avautuu
+     Toimitusviikon alla olevasta linkistä — pidetään huomaamattomana, koska vain osa
+     tarjouksista tarvitsee näitä. */
+  .milestone-toggle-link { background: none; border: none; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; padding: 4px 0 0; text-align: left; }
+  .milestone-toggle-link:hover { color: var(--accent); }
+  .milestones-panel { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .milestones-panel.show { display: block; }
+  .milestone-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid #33302a; flex-wrap: wrap; }
+  .milestone-row:last-child { border-bottom: none; }
+  .milestone-row.is-done .milestone-label { opacity: 0.5; }
+  .milestone-label { flex: 1 1 200px; font-size: 12px; color: var(--text); }
+  .milestone-week-btn { background: var(--input-bg); border: 1px solid var(--border); color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 5px 10px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+  .milestone-week-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .milestone-week-btn.set { color: var(--text); }
+  .milestone-clear-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px; padding: 2px 5px; line-height: 1; }
+  .milestone-clear-btn:hover { color: var(--danger); }
+  .milestone-done-toggle { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer; white-space: nowrap; }
+  .milestone-done-toggle input { width: auto; cursor: pointer; }
+  .milestone-late-badge { display: none; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; color: var(--danger); background: rgba(232,64,64,0.14); border: 1px solid rgba(232,64,64,0.35); border-radius: 3px; padding: 2px 7px; white-space: nowrap; }
+  .milestone-late-badge.show { display: inline-block; }
+  .milestone-note-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 2px 4px; line-height: 1; }
+  .milestone-note-btn:hover { color: var(--accent); }
+  .milestone-note-btn.has-note { color: var(--warn); }
+  .milestone-note-wrap { display: none; flex-basis: 100%; margin-top: 6px; }
+  .milestone-note-wrap.show { display: block; }
+  .milestone-note-input { width: 100%; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; padding: 6px 9px; border-radius: 4px; }
+  .milestone-note-input:focus { outline: none; border-color: var(--accent); }
+  /* Viikkokalenteri-modaali (2026-08) */
+  .week-cal-btn { background: none; border: none; color: var(--text-dim); font-size: 14px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
+  .week-cal-btn:hover { color: var(--accent); }
+  .cal-modal { width: 320px; }
+  .cal-header { display: flex; align-items: center; justify-content: space-between; }
+  .cal-header .cal-month-label { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; }
+  .cal-grid { display: grid; grid-template-columns: 28px repeat(7, 1fr); gap: 2px; margin-top: 6px; }
+  .cal-cell { text-align: center; font-size: 12px; padding: 6px 0; border-radius: 4px; cursor: default; }
+  .cal-dow { color: var(--text-dim); font-size: 10px; font-weight: 600; cursor: default; }
+  .cal-week-num { color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; border-radius: 4px; }
+  .cal-week-num:hover { background: var(--accent-glow); color: var(--accent); }
+  .cal-day { cursor: pointer; color: var(--text); }
+  .cal-day:hover { background: var(--accent-glow); color: var(--accent); }
+  .cal-day.other-month { color: var(--text-dim); opacity: 0.4; }
+  .cal-day.today { border: 1px solid var(--accent); }
+  .cal-day.selected-week, .cal-week-num.selected-week { background: var(--accent); color: #1a1a1a; font-weight: 600; }
 
   /* MODAL */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center; }
@@ -198,6 +242,26 @@
     .product-card-list { display: block !important; }
     .summary-table { width: 100%; }
     .action-bar { flex-direction: column; }
+    /* Yläpalkin napit (Sisäinen huomio, Pakkauslista, Tallenna jne.) eivät mahdu kapealle
+       ruudulle ja työnsivät ilman tätä koko SIVUN leveämmäksi kuin puhelimen näyttö — minkä
+       seurauksena position:fixed-modaalit (esim. viikkokalenteri) asemoituivat sen leveämmän,
+       näkymättömän sivun keskelle eikä oikeasti näkyvän ruudun keskelle (huomattu 2026-09,
+       testattu mobiilissa ensimmäistä kertaa). Rajataan ylivuoto omaksi vaakavierityskaistaksi
+       header-elementin sisään, jolloin body/viewport pysyy laitteen todellisessa leveydessä. */
+    /* Yläpalkin napit (Sisäinen huomio, Pakkauslista, Tallenna jne.) eivät mahdu kapealle
+       ruudulle ja työnsivät ilman tätä koko SIVUN leveämmäksi kuin puhelimen näyttö — minkä
+       seurauksena position:fixed-modaalit (esim. viikkokalenteri) asemoituivat sen leveämmän,
+       näkymättömän sivun keskelle eikä oikeasti näkyvän ruudun keskelle (huomattu 2026-09-12,
+       testattu mobiilissa ensimmäistä kertaa). Rajataan ylivuoto omaksi vaakavierityskaistaksi
+       .header-right-elementin sisään — EI koko header-elementtiin, koska ☰-valikon avattava
+       .nav-dropdown on headerin toinen lapsi (nav-menu-wrap), ei header-rightin sisällä.
+       Ensimmäinen yritys laittoi overflow-x:auto koko headeriin, mikä leikkasi valikon pois
+       näkyvistä (CSS pakottaa overflow-y:autoksi kun overflow-x ei ole visible) — korjattu
+       heti kun huomattiin, ks. Muistiinpanot. min-width:0 tarvitaan koska flex-lapset eivät
+       oletuksena kutistu content-leveyttä pienemmäksi, mikä muuten estäisi overflow-x:auto:n
+       toimimasta ja sivu venyisi silti leveämmäksi. */
+    .header-right { overflow-x: auto; min-width: 0; }
+    .header-right::-webkit-scrollbar { display: none; }
   }
   .product-card-list { display: none; }
   .product-card { background: var(--input-bg); border: 1px solid var(--border); border-radius: 5px; padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -212,6 +276,19 @@
   .week-input { background: transparent; border: none; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13px; width: 28px; text-align: center; padding: 0; outline: none; }
   .week-input::placeholder { color: var(--text-dim); }
   .week-dates { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); white-space: nowrap; flex: 1; }
+
+  /* KELLUVAT SIIRTYMÄNAPIT */
+  .scroll-nav { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 90; }
+  .scroll-nav-btn {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--panel); border: 1px solid var(--border); color: var(--accent);
+    font-size: 18px; font-weight: 700; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    transition: background 0.15s, transform 0.15s, border-color 0.15s;
+  }
+  .scroll-nav-btn:hover { background: var(--input-bg); border-color: var(--accent); transform: translateY(-2px); }
+  @media print { .scroll-nav { display: none !important; } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth-guard.js"></script>
@@ -227,23 +304,76 @@
       <a class="nav-item" href="asiakkaat.html">👤 Asiakkaat</a>
       <a class="nav-item" href="hinnasto.html">📦 Hinnasto</a>
       <a class="nav-item" href="tarjoukset.html">📋 Tarjoukset</a>
-      <a class="nav-item" href="tarjous.html">✏️ Uusi Tarjous</a>
-      <a class="nav-item current" href="myymala.html">🏪 Myymälä</a>
+      <a class="nav-item current" href="tarjous.html">✏️ Uusi Tarjous</a>
+      <a class="nav-item" href="myymala.html">🏪 Myymälä</a>
       <a class="nav-item" href="varasto.html">🏗️ Varasto</a>
       <a class="nav-item" href="kalenteri.html">📅 Kalenteri</a>
       <a class="nav-item current" href="todo.html">✅ Muistilista</a>
     </div>
   </div>
-  <h1>Myymälä</h1>
+  <h1>Tarjous</h1>
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
     <button class="btn btn-secondary" id="noteToggleBtn" onclick="toggleInternalNote()" style="padding:6px 14px;font-size:12px;" title="Sisäinen huomio — näkyy vain tässä sovelluksessa, ei koskaan tulosteessa">🔒 Sisäinen huomio</button>
     <button class="btn btn-secondary" id="btnPakkauslista" onclick="openPackingPage()" style="padding:6px 14px;font-size:12px;" title="Avaa erillinen pakkauslista omassa ikkunassa — voit vetää sen toiselle näytölle">📦 Pakkauslista</button>
-    <button class="btn btn-secondary" id="saveDraftBtn" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna ostos</button>
-    <button class="btn btn-secondary" id="btnSaveAsTemplate" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä ostos jatkuu ennallaan">📑 Tallenna malliksi</button>
+    <button class="btn btn-secondary" id="saveDraftBtn" onclick="saveDraft()" style="padding:6px 14px;font-size:12px;">💾 Tallenna</button>
+    <button class="btn btn-secondary" id="btnSaveAsTemplate" onclick="saveAsTemplate()" style="padding:6px 14px;font-size:12px;" title="Tallentaa tämänhetkisen sisällön uudeksi malliksi — tämä tarjous jatkuu ennallaan">📑 Tallenna malliksi</button>
+    <select id="statusSelect" onchange="changeStatus(this.value)"
+      style="font-size:12px;padding:6px 10px;width:auto;font-family:'IBM Plex Mono',monospace;background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:4px;">
+      <option value="DRAFT">Luonnos</option>
+      <option value="IN_PROGRESS">Kesken</option>
+      <option value="QUOTED">Tarjottu</option>
+      <option value="ORDERED">Tilattu</option>
+      <option value="COMPLETED">Valmis</option>
+      <option value="ARCHIVED">Arkisto</option>
+    </select>
+    <span class="status-badge draft" id="statusBadge">Luonnos</span>
   </div>
 </header>
 
+
+<!-- TEKSTIPOHJAT MODAL -->
+<div class="modal-overlay" id="textTplModal">
+  <div class="modal" style="width:560px;max-height:80vh;overflow-y:auto;">
+    <h2>Tekstipohjien hallinta</h2>
+    <div id="tplList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.05em;">Uusi pohja</div>
+      <div class="field">
+        <label>Nimi</label>
+        <input type="text" id="tplNewName" placeholder="esim. Vakiotoimitus">
+      </div>
+      <div class="field" style="margin-top:8px;">
+        <label>Sisältö</label>
+        <textarea id="tplNewContent" rows="4" placeholder="Kirjoita tekstipohja..."></textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <input type="checkbox" id="tplNewDefault" style="width:auto;">
+        <label style="text-transform:none;letter-spacing:0;font-size:13px;">Oletus (latautuu automaattisesti uuteen tarjoukseen)</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeTextTemplateModal()">Sulje</button>
+      <button class="btn btn-primary btn-sm" onclick="saveNewTextTemplate()">Lisää pohja</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIIKKOKALENTERI MODAL -->
+<div class="modal-overlay" id="weekCalModal">
+  <div class="modal cal-modal">
+    <div class="cal-header">
+      <button type="button" class="week-arrow" onclick="calStepMonth(-1)" title="Edellinen kuukausi">&#8249;</button>
+      <span class="cal-month-label" id="calMonthLabel"></span>
+      <button type="button" class="week-arrow" onclick="calStepMonth(1)" title="Seuraava kuukausi">&#8250;</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:4px;">Klikkaa päivää tai viikkonumeroa valitaksesi koko viikon</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeWeekCalendar()">Sulje</button>
+    </div>
+  </div>
+</div>
 
 <!-- LISÄÄ ASIAKAS MODAL -->
 <div class="modal-overlay" id="newCustModal">
@@ -309,7 +439,9 @@
   </div>
 </div>
 
-<!-- MALLIKSI TALLENNUS -MODAALI (2026-09-28) — sama kuin tarjous.html:ssä, ks. sen kommentit -->
+<!-- MALLIKSI TALLENNUS -MODAALI (2026-09-28) — korvaa vanhan prompt()-nimikyselyn. Tuomo saa
+     tässä valita mallille "sopivan" pyöreän hinnan (esim. 19895,89 -> 19890) sen sijaan että
+     malliin tallentuisi tuotteiden tarkka laskennallinen summa. Ks. CLAUDE.md "Mallin hinta". -->
 <div class="modal-overlay" id="tplSaveModal">
   <div class="modal" style="width:460px;">
     <h2>📑 Tallenna malliksi</h2>
@@ -350,14 +482,16 @@
 </div>
 
 <div class="page">
-  <div id="deletedBanner" style="display:none;align-items:center;gap:10px;background:#3d1e1e;border:1px solid #e05252;color:#e05252;font-size:13px;padding:10px 16px;border-radius:6px;margin-bottom:16px;font-family:'IBM Plex Sans',sans-serif;">🗑 Tämä ostos/malli on poistettu — ei enää näy tarjoukset.html-listalla, avautuu vain tällä suoralla linkillä.</div>
+
+  <div id="deletedBanner" style="display:none;align-items:center;gap:10px;background:#3d1e1e;border:1px solid #e05252;color:#e05252;font-size:13px;padding:10px 16px;border-radius:6px;margin-bottom:16px;font-family:'IBM Plex Sans',sans-serif;">🗑 Tämä tarjous on poistettu — ei enää näy tarjoukset.html-listalla, avautuu vain tällä suoralla linkillä.</div>
+  <div class="stale-banner" id="staleBanner">⏰ <span id="staleBannerText"></span></div>
   <div class="template-mode-banner" id="templateModeBanner">
     <strong>📑 MALLITILA</strong>
     <span class="tpl-name-field">
       <label for="tplEditName">Mallin nimi</label>
-      <input type="text" id="tplEditName" oninput="onTplEditNameInput()" placeholder="esim. Kovapaleteri">
+      <input type="text" id="tplEditName" oninput="onTplEditNameInput()" placeholder="esim. Harjusauna 70x145">
     </span>
-    <span>Muokkaat mallipohjaa — ei asiakkaan ostosta.</span>
+    <span>Muokkaat mallipohjaa — ei asiakkaan tarjousta.</span>
     <span class="tpl-unsaved" id="tplUnsavedNotice">● Tallentamattomia muutoksia — muista painaa "💾 Tallenna malli"</span>
   </div>
   <div class="internal-note-panel" id="internalNotePanel">
@@ -371,14 +505,13 @@
     <div class="panel-body">
       <div class="basics-grid">
         <div class="field" id="fieldCustomer">
-          <label>Asiakas</label>
+          <label>Asiakas *</label>
           <div class="customer-row">
             <div class="customer-search-wrap">
               <input type="text" id="customerSearch" placeholder="Hae nimellä..." autocomplete="off"
                 oninput="searchCustomers(this.value)" onfocus="searchCustomers(this.value)">
               <div class="customer-dropdown" id="customerDropdown"></div>
             </div>
-            <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="setCashCustomer()" title="Merkitse käteisasiakkaaksi ilman nimeä">⚡ Käteinen</button>
             <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="openNewCustModal()" title="Lisää uusi asiakas">+ Asiakas</button>
             <button class="btn btn-ghost btn-sm" style="white-space:nowrap;flex-shrink:0;" id="editCustBtn" onclick="openEditCustModal()" disabled title="Muokkaa valitun asiakkaan tietoja">✎ Muokkaa</button>
           </div>
@@ -389,23 +522,137 @@
           <label>Päivämäärä</label>
           <input type="date" id="quoteDate" onchange="autoSave()">
         </div>
+        <div class="field">
+          <label>Voimassa</label>
+          <input type="date" id="quoteValid" onchange="autoSave()">
+        </div>
+        <div class="field">
+          <label>Toimitusaste</label>
+          <select id="deliveryType" onchange="autoSave()">
+            <option value="">— valitse —</option>
+            <option value="hirsitoimitus">Hirsitoimitus</option>
+            <option value="puuosatoimitus">Puuosatoimitus</option>
+            <option value="valmistoimitus">Valmistoimitus</option>
+          </select>
+        </div>
+      </div>
+      <div class="basics-row2">
+        <div class="field">
+          <label>Toimitusviikko</label>
+          <div class="week-picker" id="weekPickerWrap">
+            <button type="button" class="week-arrow" onclick="stepWeek(-1)" title="Edellinen viikko">&#8249;</button>
+            <input type="text" id="weekInput" class="week-input" placeholder="vko" maxlength="2"
+              oninput="onWeekInput(this.value)" onblur="onWeekBlur(this.value)" onkeydown="if(event.key==='Enter'){onWeekBlur(this.value);this.blur();}">
+            <span class="week-dates" id="weekDates"></span>
+            <button type="button" class="week-arrow" onclick="stepWeek(1)" title="Seuraava viikko">&#8250;</button>
+            <button type="button" class="week-cal-btn" onclick="openWeekCalendar()" title="Valitse kalenterista">📅</button>
+            <button type="button" class="week-cal-btn" onclick="clearDeliveryWeek()" title="Poista toimitusviikko (esim. tilaus siirtyi toistaiseksi)">✕</button>
+          </div>
+          <input type="hidden" id="deliveryWeek">
+        </div>
+        <div class="field" style="flex:1 1 auto;">
+          <label>Kohde / viite</label>
+          <input type="text" id="quoteRef" placeholder="Esim. kohteen nimi tai viite" oninput="autoSave()">
+        </div>
         <div class="field field-quotenum" id="fieldQuoteNumber">
-          <label>Kuittinumero</label>
+          <label>Tarjousnumero</label>
           <input type="text" id="quoteNumber" readonly placeholder="Automaattinen">
         </div>
       </div>
-      <div class="field" style="margin-top:10px;">
-        <label>Huomiot</label>
-        <input type="text" id="quoteRef" placeholder="Vapaa huomio ostosta" oninput="autoSave()">
+
+      <!-- Toggle-linkki on omalla rivillään basics-row2:n ULKOPUOLELLA (ei .field-luokan sisällä) —
+           basics-row2 käyttää align-items:flex-end, ja jos linkki olisi Toimitusviikko-kentän
+           sisällä, se tekisi siitä muita kenttiä korkeamman ja työntäisi Kohde/viite- ja
+           Tarjousnumero-kentät alaspäin (huomattu 2026-09, korjattu). leveys:180px pitää sen
+           silti visuaalisesti Toimitusviikon alapuolella. -->
+      <div style="width:180px;" id="milestoneToggleWrap">
+        <button type="button" class="milestone-toggle-link" id="milestoneToggleBtn" onclick="toggleMilestonesPanel()">📌 Merkkipaalut ▾</button>
       </div>
-      <div class="field" style="margin-top:10px;display:flex;align-items:center;gap:8px;" id="rowRequiresInvoice">
-        <input type="checkbox" id="requiresInvoice" onchange="onRequiresInvoiceChange()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;">
-        <label for="requiresInvoice" style="margin:0;cursor:pointer;font-weight:400;" title="Rastita jos ostos ei ole maksettu heti kassaan, vaan Sanna laskuttaa asiakasta erikseen. Ei vaikuta tilaan (pysyy Valmiina), mutta näkyy laskutus.html:ssä ja muuttaa tulosteen kuitista tilausvahvistukseksi.">Laskutetaan erikseen (ei maksettu heti kassaan)</label>
+
+      <!-- MERKKIPAALUT (2026-09) — piilossa oletuksena, avautuu yllä olevasta linkistä samaan
+           kohtaan. Käsin asetettavat viikot, ei riippuvuutta toimitusviikosta. Viikko valitaan
+           samalla 📅-kalenterimodaalilla kuin toimitusviikko (ks. openWeekCalendar). Jokaisella
+           rivillä myös vapaaehtoinen 📝-huomio (order_milestones.note) omaa muistia varten —
+           ei tulostu koskaan, ei liity varastoon, pelkkä itselle jätettävä vapaa teksti. -->
+      <div class="milestones-panel" id="milestonesPanel">
+        <div class="milestone-row" data-type="piirustukset">
+          <span class="milestone-label">🖼️ Piirustukset ja suunnitelmat</span>
+          <button type="button" class="milestone-week-btn" id="ms_piirustukset_btn" onclick="openWeekCalendar('piirustukset')">— aseta viikko —</button>
+          <button type="button" class="milestone-clear-btn" id="ms_piirustukset_clear" onclick="clearMilestoneWeek('piirustukset')" title="Poista viikko">✕</button>
+          <label class="milestone-done-toggle">
+            <input type="checkbox" id="ms_piirustukset_done" onchange="onMilestoneDoneToggle('piirustukset', this.checked)">
+            Valmis
+          </label>
+          <button type="button" class="milestone-note-btn" id="ms_piirustukset_notebtn" onclick="toggleMilestoneNote('piirustukset')" title="Oma huomio">📝</button>
+          <span class="milestone-late-badge" id="ms_piirustukset_late">Myöhässä</span>
+          <div class="milestone-note-wrap" id="ms_piirustukset_notewrap">
+            <input type="text" class="milestone-note-input" id="ms_piirustukset_note" placeholder="Oma huomio, esim. 'Ikkunat tilattu, tilausvahvistus ei ole vielä tullut'..."
+              onblur="onMilestoneNoteBlur('piirustukset', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
+        </div>
+        <div class="milestone-row" data-type="ikkuna_ovi">
+          <span class="milestone-label">🪟 Ikkuna/ovi-tilaus</span>
+          <button type="button" class="milestone-week-btn" id="ms_ikkuna_ovi_btn" onclick="openWeekCalendar('ikkuna_ovi')">— aseta viikko —</button>
+          <button type="button" class="milestone-clear-btn" id="ms_ikkuna_ovi_clear" onclick="clearMilestoneWeek('ikkuna_ovi')" title="Poista viikko">✕</button>
+          <label class="milestone-done-toggle">
+            <input type="checkbox" id="ms_ikkuna_ovi_done" onchange="onMilestoneDoneToggle('ikkuna_ovi', this.checked)">
+            Valmis
+          </label>
+          <button type="button" class="milestone-note-btn" id="ms_ikkuna_ovi_notebtn" onclick="toggleMilestoneNote('ikkuna_ovi')" title="Oma huomio">📝</button>
+          <span class="milestone-late-badge" id="ms_ikkuna_ovi_late">Myöhässä</span>
+          <div class="milestone-note-wrap" id="ms_ikkuna_ovi_notewrap">
+            <input type="text" class="milestone-note-input" id="ms_ikkuna_ovi_note" placeholder="Oma huomio, esim. 'Ikkunat tilattu, tilausvahvistus ei ole vielä tullut'..."
+              onblur="onMilestoneNoteBlur('ikkuna_ovi', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
+        </div>
+        <div class="milestone-row" data-type="puuosat">
+          <span class="milestone-label">🪵 Puuosien tilaus</span>
+          <button type="button" class="milestone-week-btn" id="ms_puuosat_btn" onclick="openWeekCalendar('puuosat')">— aseta viikko —</button>
+          <button type="button" class="milestone-clear-btn" id="ms_puuosat_clear" onclick="clearMilestoneWeek('puuosat')" title="Poista viikko">✕</button>
+          <label class="milestone-done-toggle">
+            <input type="checkbox" id="ms_puuosat_done" onchange="onMilestoneDoneToggle('puuosat', this.checked)">
+            Valmis
+          </label>
+          <button type="button" class="milestone-note-btn" id="ms_puuosat_notebtn" onclick="toggleMilestoneNote('puuosat')" title="Oma huomio">📝</button>
+          <span class="milestone-late-badge" id="ms_puuosat_late">Myöhässä</span>
+          <div class="milestone-note-wrap" id="ms_puuosat_notewrap">
+            <input type="text" class="milestone-note-input" id="ms_puuosat_note" placeholder="Oma huomio..."
+              onblur="onMilestoneNoteBlur('puuosat', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
+        </div>
+        <div class="milestone-row" data-type="tuotanto">
+          <span class="milestone-label">🏭 Tuotanto</span>
+          <button type="button" class="milestone-week-btn" id="ms_tuotanto_btn" onclick="openWeekCalendar('tuotanto')">— aseta viikko —</button>
+          <button type="button" class="milestone-clear-btn" id="ms_tuotanto_clear" onclick="clearMilestoneWeek('tuotanto')" title="Poista viikko">✕</button>
+          <label class="milestone-done-toggle">
+            <input type="checkbox" id="ms_tuotanto_done" onchange="onMilestoneDoneToggle('tuotanto', this.checked)">
+            Valmis
+          </label>
+          <button type="button" class="milestone-note-btn" id="ms_tuotanto_notebtn" onclick="toggleMilestoneNote('tuotanto')" title="Oma huomio">📝</button>
+          <span class="milestone-late-badge" id="ms_tuotanto_late">Myöhässä</span>
+          <div class="milestone-note-wrap" id="ms_tuotanto_notewrap">
+            <input type="text" class="milestone-note-input" id="ms_tuotanto_note" placeholder="Oma huomio..."
+              onblur="onMilestoneNoteBlur('tuotanto', this.value)" onkeydown="if(event.key==='Enter'){this.blur();}">
+          </div>
+        </div>
       </div>
-      <div class="field" style="margin-top:6px;display:none;align-items:center;gap:8px;" id="printTplNameWrap">
-        <input type="checkbox" id="printTplName" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;" onchange="autoSave()">
-        <label for="printTplName" style="margin:0;cursor:pointer;font-weight:400;">Näytä mallin nimi tulosteessa (<span id="printTplNameLabel"></span>)</label>
-      </div>
+    </div>
+  </div>
+
+  <!-- VAKIOTEKSTI -->
+  <div class="panel">
+    <div class="panel-header">
+      Vakioteksti / huomiot
+      <span style="margin-left:auto;font-weight:400;font-size:11px;color:var(--text-dim);">Pohja:</span>
+      <select id="textTemplateSelect" onchange="applyTextTemplate(this.value)"
+        style="font-size:11px;padding:3px 6px;width:auto;margin-left:6px;text-transform:none;letter-spacing:0;">
+        <option value="">— valitse pohja —</option>
+        <option value="__none__">Ei tekstiä</option>
+      </select>
+      <button onclick="openTextTemplateModal()" style="margin-left:8px;padding:2px 8px;font-size:11px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;" title="Hallitse tekstipohjia">✎ Muokkaa pohjia</button>
+    </div>
+    <div class="panel-body default-text-wrap">
+      <textarea id="defaultText" oninput="autoSave()" placeholder="Vakioteksti tai toimitushuomiot..."></textarea>
     </div>
   </div>
 
@@ -440,10 +687,10 @@
       <tr id="rowKateBtn">
         <td class="label"></td>
         <td class="value">
-          <button type="button" onclick="openKateModal()" title="Näytä koko kaupan kateprosentti" style="padding:3px 7px;font-size:10px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;white-space:nowrap;">📊 Kate</button>
+          <button type="button" onclick="openKateModal()" title="Näytä koko tarjouksen kateprosentti" style="padding:3px 7px;font-size:10px;background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:3px;cursor:pointer;white-space:nowrap;">📊 Kate</button>
         </td>
       </tr>
-      <tr>
+      <tr id="rowAdjAmount">
         <td class="label">Pyöristys / alennus<br><span style="font-size:10px;font-weight:400;">(veroton)</span></td>
         <td class="value"><input class="adj" type="number" id="adjAmount" value="0" step="0.01" oninput="onAdjInput()"></td>
       </tr>
@@ -491,11 +738,45 @@
 
   <!-- TOIMINTOPAINIKKEET -->
   <div class="action-bar">
+    <!-- TUOTANNON ETENEMINEN (näkyy vain ORDERED-tilassa) -->
+    <div id="prodStatus" style="display:none;align-items:center;gap:12px;padding:6px 12px;background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.2);border-radius:4px;">
+      <span style="font-size:11px;color:var(--accent);font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:nowrap;">TUOTANTO:</span>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="prodTuotannossa" style="width:auto;" onchange="saveProdStatus()">
+        Tuotannossa
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="prodValmis" style="width:auto;" onchange="saveProdStatus()">
+        Valmis noutoon/lähetykseen
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;white-space:nowrap;">
+        <input type="checkbox" id="prodToimitettu" style="width:auto;" onchange="saveProdStatus()">
+        Toimitettu
+      </label>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:4px;">
+      <input type="checkbox" id="showPrices" checked style="width:auto;cursor:pointer;">
+      <label for="showPrices" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä rivihinnat tulosteessa</label>
+    </div>
+    <!-- Mallin nimi tulosteessa (2026-09-28, kohta 5) — näkyy vain jos tarjous on tehty mallista
+         (currentSourceTemplateName). Valinta TALLENTUU tarjoukselle (print_template_name-sarake),
+         ei nollaudu joka tulostuksella toisin kuin rivihintavalinta — Tuomon vastaus 2026-09-28. -->
+    <div style="display:none;align-items:center;gap:6px;margin-left:4px;" id="printTplNameWrap">
+      <input type="checkbox" id="printTplName" style="width:auto;cursor:pointer;" onchange="autoSave()">
+      <label for="printTplName" style="font-size:11px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;cursor:pointer;">Näytä mallin nimi tulosteessa (<span id="printTplNameLabel"></span>)</label>
+    </div>
     <div class="spacer"></div>
-    <button class="btn btn-ghost" id="printQuoteBtn" onclick="printQuote()">🖨 Tulosta kuitti</button>
+    <button class="btn btn-ghost" id="btnPrintQuote" onclick="printQuote()">🖨 Tulosta tarjous</button>
+    <button class="btn btn-ghost" id="btnCopyQuote" onclick="copyQuote()">⧉ Kopioi tarjous</button>
   </div>
 
 </div>
+
+<div class="scroll-nav">
+  <button type="button" class="scroll-nav-btn" onclick="scrollToTop()" title="Takaisin alkuun">↑</button>
+  <button type="button" class="scroll-nav-btn" onclick="scrollToBottom()" title="Siirry loppuun">↓</button>
+</div>
+
 <script>
 // =============================================
 // SUPABASE
@@ -547,11 +828,19 @@ async function sbRpc(fn, params={}) {
 // =============================================
 let customers = [];
 let products = [];
+let textTemplates = [];
 let rowTemplates = [];
 let sections = [];
 let currentQuoteId = null;
+const MILESTONE_TYPES = ['piirustukset', 'ikkuna_ovi', 'puuosat', 'tuotanto'];
+function emptyMilestone() { return { id: null, target_week: '', is_done: false, note: '' }; }
+let milestones = MILESTONE_TYPES.reduce((acc, t) => { acc[t] = emptyMilestone(); return acc; }, {});
+let currentStatus = 'DRAFT';
+let currentStatusChangedAt = null;
 let sectionIdCounter = 0;
 let rowIdCounter = 0;
+// Mallin nimi tulostetta varten (2026-09-28, kohta 5) — asetetaan kun tarjous ladataan/kopioidaan
+// mallista, ks. loadQuote()/copyQuoteFrom()/applyTemplate() ja updateSourceTemplateUI().
 let currentSourceTemplateName = null;
 
 function updateSourceTemplateUI(checked) {
@@ -567,10 +856,12 @@ function updateSourceTemplateUI(checked) {
 }
 
 // =============================================
-// MALLITILA (2026-09-28, kohta 2) — sama periaate kuin tarjous.html:ssä: kun avattu rivi ON
-// mallipohja (is_template=true), piilotetaan kentät jotka eivät koske mallia (asiakas,
-// kuittinumero, laskutetaan erikseen -rasti, alennus%, lisäalennus, pakkauslista, tulostus)
-// ja kytketään autosave pois päältä. Tallennus vain "💾 Tallenna malli" -napista.
+// MALLITILA (2026-09-28, kohta 2) — kun avattu tarjous ON mallipohja (is_template=true),
+// piilotetaan kentät jotka eivät koske mallia (asiakas, tarjousnumero, status, merkkipaalut,
+// tulostus, pakkauslista, alennus%, lisäalennus) ja kytketään autosave pois päältä. Muutokset
+// tallennetaan vain painamalla "💾 Tallenna malli" -nappia (sama nappi/funktio kuin
+// tavallisella tarjouksella, saveDraft() — ks. sen alusta). Kate-nappi ja YHT-kenttä (+
+// pyöristysnapit) jäävät näkyviin, koska niillä mallin kokonaishintaa muokataan.
 let isTemplateMode = false;
 let hasUnsavedTemplateChanges = false;
 
@@ -578,9 +869,12 @@ function enterTemplateMode(name) {
   isTemplateMode = true;
   document.getElementById('fieldCustomer').style.display = 'none';
   document.getElementById('fieldQuoteNumber').style.display = 'none';
-  document.getElementById('rowRequiresInvoice').style.display = 'none';
+  document.getElementById('statusSelect').style.display = 'none';
+  document.getElementById('statusBadge').style.display = 'none';
+  document.getElementById('milestoneToggleWrap').style.display = 'none';
+  document.getElementById('milestonesPanel').classList.remove('show');
   document.getElementById('btnPakkauslista').style.display = 'none';
-  document.getElementById('printQuoteBtn').style.display = 'none';
+  document.getElementById('btnPrintQuote').style.display = 'none';
   document.getElementById('rowDiscountPercent').style.display = 'none';
   document.getElementById('rowExtraDiscount').style.display = 'none';
   document.getElementById('extraDiscountPanel').classList.remove('show');
@@ -590,6 +884,8 @@ function enterTemplateMode(name) {
   document.getElementById('tplEditName').value = name || '';
 }
 
+// Mallin nimen muokkaus ei tallennu heti (ei autosavea mallitilassa) — vain merkitään
+// tallentamattomaksi, sama periaate kuin muillakin mallitilan kentillä.
 function onTplEditNameInput() {
   markTemplateUnsaved();
 }
@@ -605,6 +901,9 @@ function clearTemplateUnsaved() {
   document.getElementById('tplUnsavedNotice').style.display = 'none';
 }
 
+// Pyöristys LÄHIMPÄÄN annettuun väliin (sama periaate kuin tplSaveRound / Tuomon vastaus
+// 2026-09-28), mutta kohdistuu suoraan YHT-kenttään (adjGross) ja käyttää olemassa olevaa
+// onGrossInput()-laskentaa, joka jo päivittää adjAmount:in ja summarivit.
 function tplGrossRound(step) {
   const el = document.getElementById('adjGross');
   const val = parseFloat(el.value) || 0;
@@ -618,23 +917,36 @@ function tplGrossRound(step) {
 window.addEventListener('DOMContentLoaded', async () => {
   const today = new Date();
   document.getElementById('quoteDate').value = today.toISOString().slice(0,10);
+  const valid = new Date(today); valid.setDate(today.getDate() + 14);
+  document.getElementById('quoteValid').value = valid.toISOString().slice(0,10);
 
   // Odotetaan auth-guardin sessiota ennen Supabase-kutsuja
   await window._authReady;
 
-  await Promise.all([loadCustomers(), loadProducts(), loadRowTemplates()]);
+  await Promise.all([loadCustomers(), loadProducts(), loadTextTemplates(), loadRowTemplates()]);
 
   const params = new URLSearchParams(window.location.search);
   const openId = params.get('id');
+  const copyId = params.get('copy');
+  const custId = params.get('customer');
+  const custName = params.get('name');
 
   if (openId) {
     await loadQuote(openId);
+  } else if (copyId) {
+    const keepPrices = params.get('keepPrices') === '1';
+    await copyQuoteFrom(copyId, keepPrices);
+    // copyQuoteFrom() ei koskaan aseta asiakasta — jos kutsuja tiesi sen valmiiksi (esim.
+    // asiakkaat.html:n "⧉ Kopioi uudeksi tilaukseksi samalle asiakkaalle" -nappi), asetetaan
+    // se tässä kopion päälle. Ei ristiriitaa, koska kumpikaan kohta ei kirjoita samaan kenttään.
+    if (custId) setCustomer(custId, decodeURIComponent(custName || ''));
+    fetchNextQuoteNumber();
   } else {
-    addSection('Myymälämyynti', { silent: true }); // ei autosavea pelkästä avaamisesta, ks. addRow()
+    if (custId) setCustomer(custId, decodeURIComponent(custName || ''));
+    addSection('Hirsikehikko', { silent: true }); // ei autosavea pelkästä avaamisesta, ks. addRow()
     fetchNextQuoteNumber();
   }
 });
-
 
 async function loadCustomers() {
   const data = await sbGet('customers', '?is_active=eq.true&order=name.asc&select=id,name,customer_number,address,city,billing_address,billing_postal_code,billing_city,email,phone');
@@ -642,10 +954,7 @@ async function loadCustomers() {
 }
 
 async function loadProducts() {
-  // Myymälässä näytetään active + stock_only (kaikki paitsi hidden) — toisin kuin tarjous.html,
-  // jossa stock_only-tuotteet on tarkoituksella rajattu pois (2026-08, Tuomon pyynnöstä: varastotuotteet
-  // pitää voida myydä/tilata myös myymälän kautta).
-  const data = await sbGet('products', '?status=neq.hidden&order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,aihio_leveys,aihio_paksuus,kate_percent,vat_percent');
+  const data = await sbGet('products', '?status=not.in.(stock_only,hidden)&order=code.asc,name.asc&select=id,code,name,unit,price,category,pricing_model,kuutiohinta,tyosto_kuutio,salvostus_kuutio,leveys,mitta,aihio_leveys,aihio_paksuus,kate_percent,vat_percent');
   products = Array.isArray(data) ? data : [];
   console.log('Tuotteet ladattu:', products.length, 'kpl');
   products.forEach(p => {
@@ -659,18 +968,67 @@ async function loadProducts() {
   });
 }
 
-async function fetchNextQuoteNumber() {
+async function loadTextTemplates() {
   try {
-    const num = await sbRpc('next_quote_number');
-    if (num) document.getElementById('quoteNumber').value = num;
+    const data = await sbGet('quote_text_templates', '?order=name.asc&select=id,name,content,is_default');
+    if (!Array.isArray(data)) return;
+    textTemplates = data;
+    const sel = document.getElementById('textTemplateSelect');
+    data.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      sel.appendChild(opt);
+    });
+    const def = data.find(t => t.is_default);
+    if (def) {
+      document.getElementById('defaultText').value = def.content;
+      document.getElementById('textTemplateSelect').value = def.id;
+    }
   } catch(e) {}
+}
+
+function applyTextTemplate(val) {
+  const sel = document.getElementById('textTemplateSelect');
+  if (val === '__none__') {
+    document.getElementById('defaultText').value = '';
+    return;
+  }
+  if (!val) return;
+  const t = textTemplates.find(x => String(x.id) === String(val));
+  if (t) {
+    if (document.getElementById('defaultText').value && !confirm('Korvataanko nykyinen teksti valitulla pohjalla?')) {
+      // Peruutettu — valikko oli jo ehtinyt vaihtua uuteen pohjaan vaikka teksti ei muuttunut.
+      // Palautetaan valikko vastaamaan nykyistä tekstiä ettei se jää virheellisesti "jumiin"
+      // valitulle pohjalle (2026-09-28, ks. CLAUDE.md "Vakiotekstien valikon synkronointi").
+      syncTextTemplateSelect();
+      return;
+    }
+    document.getElementById('defaultText').value = t.content;
+  }
+  sel.value = val;
+}
+
+// Vakiotekstien valikon synkronointi (2026-09-28) — pitää "Pohja:"-valikon vastaamassa
+// defaultText-kentän TODELLISTA sisältöä sen sijaan että valikko jäisi näyttämään mitä
+// tahansa se sattui näyttämään edellisestä tarjouksesta/mallista. Kutsutaan aina kun
+// defaultText asetetaan ohjelmallisesti (loadQuote, copyQuoteFrom) ja applyTextTemplate():n
+// peruutuksen jälkeen. Jos teksti täsmää johonkin tallennettuun pohjaan sanatarkasti,
+// valikko näyttää sen nimeä; muuten valikko palaa oletukseen "— valitse pohja —".
+function syncTextTemplateSelect() {
+  const sel = document.getElementById('textTemplateSelect');
+  const text = document.getElementById('defaultText').value || '';
+  if (!text) { sel.value = ''; return; }
+  const match = textTemplates.find(t => t.content === text);
+  sel.value = match ? match.id : '';
 }
 
 // =============================================
 // MALLIPOHJAN RIVIEN LATAUS KESKEN LOMAKKEEN TÄYTÖN (2026-08)
-// Sama toteutus kuin tarjous.html:ssä, rakennettu myymälään alusta koska sillä ei ollut aiemmin
-// mitään kopiointimekanismia. Koskee VAIN rivejä (sections_json) — ei asiakasta, ei
-// "Laskutetaan erikseen" -rastia eikä muita jo täytettyjä kenttiä.
+// Eri asia kuin copyQuoteFrom()/?copy= — tämä koskee VAIN rivejä (sections_json), ei koske
+// asiakasta, tarjousnumeroa, toimitusastetta eikä vakiotekstiä. Tarkoitettu tilanteeseen jossa
+// tarjous on jo aloitettu (esim. asiakas valittu) ja käyttäjä huomaa vasta sitten että mallille
+// olisi käyttöä.
 // =============================================
 async function loadRowTemplates() {
   try {
@@ -737,7 +1095,8 @@ async function applyTemplate(templateId) {
     return;
   }
   // 2026-09-28 (kohta 1/5): kysytään myös säilytetäänkö mallin tallennetut hinnat ja pyöristys,
-  // vai haetaanko tuoreet hinnat hinnastosta — sama valinta kuin tarjous.html:ssä.
+  // vai haetaanko tuoreet hinnat hinnastosta — sama valinta kuin tarjoukset.html:n
+  // "Kopioi uudeksi tarjoukseksi" -napissa (copyQuoteFrom).
   const choice = await askKeepPrices({
     title: 'Ladataanko mallin hinnat?',
     keepLabel: 'Säilytä mallin hinnat',
@@ -749,7 +1108,7 @@ async function applyTemplate(templateId) {
   const keepPrices = choice === 'keep';
   const data = await sbGet('quotes', `?id=eq.${templateId}&select=*`);
   const q = Array.isArray(data) ? data[0] : null;
-  sel.value = ''; // nollataan heti — sama malli pitää voida valita uudelleen
+  sel.value = ''; // nollataan heti — sama malli pitää voida valita uudelleen, eikä valikon pidä jäädä "jumiin" valintaan
   if (!q || !q.sections_json) return;
   try {
     const templateSections = JSON.parse(q.sections_json);
@@ -760,7 +1119,7 @@ async function applyTemplate(templateId) {
         r.id = ++rowIdCounter;
         if (!keepPrices) {
           // Hinnat päivitetään tuoreimpaan hinnastoon (ei käytetä mallin mahdollisesti
-          // vanhentuneita hintoja) — sama periaate kuin tarjous.html:ssä.
+          // vanhentuneita hintoja) — sama periaate kuin copyQuoteFrom(keepPrices=false)
           const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
           if (prod) {
             r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
@@ -790,6 +1149,13 @@ async function applyTemplate(templateId) {
   } catch(e) {
     alert('Mallin lataus epäonnistui — mallin rivitieto voi olla vioittunut.');
   }
+}
+
+async function fetchNextQuoteNumber() {
+  try {
+    const num = await sbRpc('next_quote_number');
+    if (num) document.getElementById('quoteNumber').value = num;
+  } catch(e) {}
 }
 
 // =============================================
@@ -868,8 +1234,472 @@ window.addEventListener('scroll', () => {
   if (m) positionNimikeDropdown(m[1], parseInt(m[2]));
 }, { passive: true });
 
+// =============================================
+// VIIKKOSELAIN
+// =============================================
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return { week, year: d.getUTCFullYear() };
+}
+
+// =============================================
+// SISÄINEN HUOMIO (2026-08) — ei koskaan tulostu, tarkoitettu vain Tuomon/henkilökunnan
+// omaan käyttöön (esim. asiakkaan erikoistoive jota ei näytetä tarjouksella). Piilossa
+// oletuksena, avautuu automaattisesti jos tarjouksella on jo huomiotekstiä (ks. loadQuote/
+// copyQuoteFrom) — ettei sitä huomaisi jäävän piiloon vahingossa.
+// =============================================
+function toggleInternalNote() {
+  document.getElementById('internalNotePanel').classList.toggle('show');
+}
+
+function onInternalNoteInput() {
+  const val = document.getElementById('internalNote').value;
+  document.getElementById('noteToggleBtn').classList.toggle('has-note', !!val.trim());
+  autoSave();
+}
+
+function mondayOfWeek(year, week) {
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (jan4day - 1) + (week - 1) * 7);
+  return monday;
+}
+
+function weekDateRange(year, week) {
+  const monday = mondayOfWeek(year, week);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const fmt = d => `${d.getUTCDate()}.${d.getUTCMonth()+1}.`;
+  // Näytä vuosi vain jos se poikkeaa maanantain vuodesta
+  const suffix = sunday.getUTCFullYear() !== monday.getUTCFullYear()
+    ? `${sunday.getUTCFullYear()}` : `${monday.getUTCFullYear()}`;
+  return `${fmt(monday)}–${fmt(sunday)}${suffix}`;
+}
+
+// Asettaa viikkoselain-UI:n ja hidden inputin
+function setWeekValue(year, week) {
+  // Nollatäyte (05 eikä 5) — kalenteri.html vertaa viikkoja merkkijonoina "YYYY-WW"-muodossa,
+  // ja ilman nollatäytettä viikot 1-9 eivät koskaan täsmänneet eivätkä siis näkyneet
+  // kalenterissa (korjattu 2026-09, ks. keskustelu Tomin kanssa — kannassa ei ollut
+  // vahingoittunutta dataa tarkistushetkellä).
+  document.getElementById('deliveryWeek').value = `${year}-${String(week).padStart(2, '0')}`;
+  document.getElementById('weekInput').value = String(week);
+  document.getElementById('weekDates').textContent = weekDateRange(year, week);
+}
+
+function clearWeekValue() {
+  document.getElementById('deliveryWeek').value = '';
+  document.getElementById('weekInput').value = '';
+  document.getElementById('weekDates').textContent = '';
+}
+
+// Poistaa toimitusviikon kokonaan (esim. asiakas siirsi tilauksen toistaiseksi eikä uutta
+// ajankohtaa vielä tiedetä) — katoaa samalla kalenterista, koska kalenteri suodattaa
+// delivery_week-kentän perusteella.
+function clearDeliveryWeek() {
+  clearWeekValue();
+  autoSave();
+}
+
+// Käyttäjä kirjoittaa viikkonumeron
+function onWeekInput(val) {
+  const w = parseInt(val, 10);
+  if (!val) { document.getElementById('weekDates').textContent = ''; return; }
+  if (isNaN(w) || w < 1 || w > 53) { document.getElementById('weekDates').textContent = ''; return; }
+  // Laske vuosi: jos viikko on jo mennyt tänä vuonna, ehdota ensi vuotta
+  const today = new Date();
+  const { week: curWeek, year: curYear } = getISOWeek(today);
+  const year = w < curWeek ? curYear + 1 : curYear;
+  document.getElementById('weekDates').textContent = weekDateRange(year, w);
+}
+
+// Käyttäjä poistuu kentästä — tallenna arvo. HUOM (2026-08): tästä puuttui aiemmin autoSave()-
+// kutsu kokonaan — viikon muutos päivittyi vain näkyvään UI:hin muttei tallentunut, ellei jotain
+// muuta kenttää koskettu samalla. Korjattu.
+function onWeekBlur(val) {
+  const w = parseInt(val, 10);
+  if (!val || isNaN(w) || w < 1 || w > 53) { clearWeekValue(); autoSave(); return; }
+  const today = new Date();
+  const { week: curWeek, year: curYear } = getISOWeek(today);
+  const year = w < curWeek ? curYear + 1 : curYear;
+  setWeekValue(year, w);
+  autoSave();
+}
+
+// Nuolinäppäimet — sama puuttuva autoSave()-kutsu korjattu tähänkin.
+function stepWeek(delta) {
+  const current = document.getElementById('deliveryWeek').value;
+  let year, week;
+  if (current && current.includes('-')) {
+    [year, week] = current.split('-').map(Number);
+  } else {
+    const r = getISOWeek(new Date());
+    year = r.year; week = r.week;
+  }
+  const monday = mondayOfWeek(year, week);
+  monday.setUTCDate(monday.getUTCDate() + delta * 7);
+  const r = getISOWeek(monday);
+  setWeekValue(r.year, r.week);
+  autoSave();
+}
+
+// Ladataan tallennettu arvo tarjouksesta
+function loadDeliveryWeek(key) {
+  if (!key || !key.includes('-')) { clearWeekValue(); return; }
+  const [year, week] = key.split('-').map(Number);
+  setWeekValue(year, week);
+}
+
+// =============================================
+// MERKKIPAALUT (2026-09) — order_milestones-taulu. Käsin asetettavat viikot neljälle
+// tilauksen aikataulun avainkohdalle (Tuomon nimeämät: piirustukset, ikkuna/ovi-tilaus,
+// puuosien tilaus, tuotanto). EI riipu toimitusviikosta eikä lasketa mistään — käyttäjä
+// asettaa viikon suoraan, sama periaate kuin delivery_week:llä. Käyttää samoja
+// getISOWeek/mondayOfWeek/weekDateRange-apufunkioita kuin viikkoselain yllä.
+// Ei koske varastosaldoon eikä sections_jsoniin — täysin oma, kevyt aikataulumerkintä.
+// =============================================
+async function loadMilestones(quoteId) {
+  milestones = MILESTONE_TYPES.reduce((acc, t) => { acc[t] = emptyMilestone(); return acc; }, {});
+  if (quoteId) {
+    try {
+      const data = await sbGet('order_milestones', `?quote_id=eq.${quoteId}&select=id,milestone_type,target_week,is_done,note`);
+      if (Array.isArray(data)) {
+        data.forEach(row => {
+          if (MILESTONE_TYPES.includes(row.milestone_type)) {
+            milestones[row.milestone_type] = { id: row.id, target_week: row.target_week || '', is_done: !!row.is_done, note: row.note || '' };
+          }
+        });
+      }
+    } catch(e) { console.error('loadMilestones:', e); }
+  }
+  MILESTONE_TYPES.forEach(renderMilestoneRow);
+}
+
+function isMilestoneLate(m) {
+  if (!m || !m.target_week || m.is_done) return false;
+  const [y, w] = m.target_week.split('-').map(Number);
+  if (!y || !w) return false;
+  const { week: curWeek, year: curYear } = getISOWeek(new Date());
+  return (y < curYear) || (y === curYear && w < curWeek);
+}
+
+// Näyttää merkkipaalun tilan pienenä nappina ("— aseta viikko —" tai "Vko 32 · 4.8.–10.8.")
+// jota klikkaamalla avautuu sama 📅-kalenterimodaali kuin toimitusviikolla (ks. openWeekCalendar).
+function renderMilestoneRow(type) {
+  const m = milestones[type] || emptyMilestone();
+  const btn = document.getElementById(`ms_${type}_btn`);
+  const doneBox = document.getElementById(`ms_${type}_done`);
+  const lateEl = document.getElementById(`ms_${type}_late`);
+  const noteBtn = document.getElementById(`ms_${type}_notebtn`);
+  const noteInput = document.getElementById(`ms_${type}_note`);
+  const noteWrap = document.getElementById(`ms_${type}_notewrap`);
+  if (!btn) return; // sivu ei ole vielä renderöinyt paneelia
+  if (m.target_week && m.target_week.includes('-')) {
+    const [y, w] = m.target_week.split('-').map(Number);
+    btn.textContent = `Vko ${w} · ${weekDateRange(y, w)}`;
+    btn.classList.add('set');
+  } else {
+    btn.textContent = '— aseta viikko —';
+    btn.classList.remove('set');
+  }
+  doneBox.checked = m.is_done;
+  lateEl.classList.toggle('show', isMilestoneLate(m));
+  const rowEl = btn.closest('.milestone-row');
+  if (rowEl) rowEl.classList.toggle('is-done', m.is_done);
+  const hasNote = !!(m.note && m.note.trim());
+  if (noteInput) noteInput.value = m.note || '';
+  if (noteBtn) noteBtn.classList.toggle('has-note', hasNote);
+  // Huomio näkyy automaattisesti auki jos siinä on jo sisältöä (sama periaate kuin sisäisen
+  // huomion paneelilla) — ettei se jää vahingossa huomaamatta piilossa.
+  if (noteWrap && hasNote) noteWrap.classList.add('show');
+  updateMilestoneToggleLabel();
+}
+
+// Näyttää/piilottaa yhden merkkipaalun oman huomiokentän
+function toggleMilestoneNote(type) {
+  const wrap = document.getElementById(`ms_${type}_notewrap`);
+  if (!wrap) return;
+  wrap.classList.toggle('show');
+  if (wrap.classList.contains('show')) {
+    setTimeout(() => { const inp = document.getElementById(`ms_${type}_note`); if (inp) inp.focus(); }, 50);
+  }
+}
+
+// Kenttä vahvistuu (blur/Enter) — tallennetaan
+function onMilestoneNoteBlur(type, val) {
+  saveMilestone(type, { note: val.trim() || '' });
+}
+
+// Poistaa yksittäisen merkkipaalun viikon (esim. tilaus siirtyi toistaiseksi). Huomio ja
+// valmis-täppä jäävät koskemattomiksi — jos molemmat ovat myös tyhjiä, saveMilestone()
+// siivoaa rivin kannasta kokonaan automaattisesti (ks. sen sisäinen tyhjennyslogiikka).
+function clearMilestoneWeek(type) {
+  saveMilestone(type, { target_week: '' });
+}
+
+function onMilestoneDoneToggle(type, checked) {
+  saveMilestone(type, { is_done: checked });
+}
+
+// Piilossa/auki-linkki Toimitusviikon alla. Näyttää suluissa montako neljästä on asetettu,
+// jotta huomaa yhdellä silmäyksellä ilman että paneelia tarvitsee avata.
+function toggleMilestonesPanel() {
+  document.getElementById('milestonesPanel').classList.toggle('show');
+  updateMilestoneToggleLabel();
+}
+
+function updateMilestoneToggleLabel() {
+  const btn = document.getElementById('milestoneToggleBtn');
+  if (!btn) return;
+  const setCount = MILESTONE_TYPES.filter(t => milestones[t] && milestones[t].target_week).length;
+  const isOpen = document.getElementById('milestonesPanel').classList.contains('show');
+  const suffix = setCount ? ` (${setCount}/${MILESTONE_TYPES.length})` : '';
+  btn.textContent = `📌 Merkkipaalut${suffix} ${isOpen ? '▴' : '▾'}`;
+}
+
+// Tallentaa yhden merkkipaalun kentän kannnan order_milestones-tauluun. Luo rivin jos ei
+// vielä ole, päivittää jos on. Jos tarjousta ei ole vielä tallennettu (currentQuoteId
+// puuttuu) — sama tilanne kuin printQuote()/openPackingPage() jo vaatii — tallennetaan
+// tarjous ensin. Tämä on oikea käyttäjätoiminto (viikon syöttö/täpän klikkaus), joten heti
+// tallentaminen on ok, sama periaate kuin setCustomer():ssa jo nyt.
+async function saveMilestone(type, patch) {
+  if (!currentQuoteId) {
+    await saveDraft();
+    if (!currentQuoteId) {
+      alert('Tarjouksen tallennus epäonnistui — merkkipaalua ei voitu tallentaa.');
+      renderMilestoneRow(type);
+      return;
+    }
+  }
+  const m = milestones[type] || emptyMilestone();
+  const updated = Object.assign({}, m, patch);
+  // Tyhjä viikko + ei valmis + ei huomiota = merkkipaalua ei enää käytetä tällä tarjouksella
+  // -> poistetaan rivi kannasta kokonaan, ettei jää roikkumaan tyhjänä (sama siisteysperiaate
+  // kuin sales_type='myymala' tyhjien tarjousten siivouksessa aiemmin).
+  if (!updated.target_week && !updated.is_done && !(updated.note && updated.note.trim())) {
+    if (updated.id) {
+      try { await sbDelete('order_milestones', updated.id); } catch(e) { console.error('saveMilestone delete:', e); }
+    }
+    milestones[type] = emptyMilestone();
+    renderMilestoneRow(type);
+    return;
+  }
+  try {
+    if (updated.id) {
+      await sbPatch('order_milestones', updated.id, { target_week: updated.target_week || null, is_done: updated.is_done, note: updated.note || null });
+    } else {
+      const result = await sbPost('order_milestones', {
+        quote_id: currentQuoteId, milestone_type: type,
+        target_week: updated.target_week || null, is_done: updated.is_done, note: updated.note || null
+      });
+      if (result && result[0]) updated.id = result[0].id;
+    }
+    milestones[type] = updated;
+  } catch(e) { console.error('saveMilestone:', e); }
+  renderMilestoneRow(type);
+}
+function openTextTemplateModal() {
+  renderTplList();
+  document.getElementById('textTplModal').classList.add('open');
+}
+function closeTextTemplateModal() {
+  document.getElementById('textTplModal').classList.remove('open');
+  document.getElementById('tplNewName').value = '';
+  document.getElementById('tplNewContent').value = '';
+  document.getElementById('tplNewDefault').checked = false;
+}
+document.getElementById('textTplModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('textTplModal')) closeTextTemplateModal();
+});
+
+// =============================================
+// VIIKKOKALENTERI-MODAALI (2026-08) — visuaalinen apu toimitusviikon valintaan nykyisen
+// numerosyötön/nuolinappien rinnalle, ei korvaa niitä. Käyttää samoja ISO-viikkolaskennan
+// apufunktioita (getISOWeek/mondayOfWeek/weekDateRange) jotka ovat jo olemassa yllä.
+// =============================================
+let calViewYear, calViewMonth; // kuukausi jota kalenteri tällä hetkellä näyttää (0-11)
+let calTarget = null; // null = toimitusviikko, muuten milestone-tyyppi (esim. 'ikkuna_ovi')
+
+// Palauttaa kalenterin kohteen nykyisen tallennetun viikon '{year}-{week}' tai null.
+function calTargetCurrentValue() {
+  if (calTarget) return (milestones[calTarget] && milestones[calTarget].target_week) || '';
+  return document.getElementById('deliveryWeek').value;
+}
+
+function openWeekCalendar(target) {
+  calTarget = target || null;
+  const current = calTargetCurrentValue();
+  let refDate;
+  if (current && current.includes('-')) {
+    const [y, w] = current.split('-').map(Number);
+    refDate = mondayOfWeek(y, w);
+  } else {
+    refDate = new Date();
+  }
+  calViewYear = refDate.getUTCFullYear ? refDate.getUTCFullYear() : refDate.getFullYear();
+  calViewMonth = refDate.getUTCMonth ? refDate.getUTCMonth() : refDate.getMonth();
+  renderWeekCalendar();
+  document.getElementById('weekCalModal').classList.add('open');
+}
+function closeWeekCalendar() {
+  document.getElementById('weekCalModal').classList.remove('open');
+}
+document.getElementById('weekCalModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('weekCalModal')) closeWeekCalendar();
+});
+
+function calStepMonth(delta) {
+  calViewMonth += delta;
+  if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
+  if (calViewMonth > 11) { calViewMonth = 0; calViewYear++; }
+  renderWeekCalendar();
+}
+
+const CAL_DOW_LABELS = ['Ma','Ti','Ke','To','Pe','La','Su'];
+const CAL_MONTH_LABELS = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu','Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+
+function renderWeekCalendar() {
+  document.getElementById('calMonthLabel').textContent = `${CAL_MONTH_LABELS[calViewMonth]} ${calViewYear}`;
+
+  // Nykyinen valittu viikko (jos on) korostusta varten — toimitusviikko tai milestone,
+  // riippuen calTarget-muuttujasta (asetetaan openWeekCalendar():ssa)
+  const current = calTargetCurrentValue();
+  let selYear = null, selWeek = null;
+  if (current && current.includes('-')) [selYear, selWeek] = current.split('-').map(Number);
+
+  const today = new Date();
+
+  // Kuukauden 1. päivä ja sen viikonpäivä (ma=0...su=6), jotta ruudukko alkaa oikeasta kohdasta
+  const firstOfMonth = new Date(Date.UTC(calViewYear, calViewMonth, 1));
+  const firstDow = (firstOfMonth.getUTCDay() + 6) % 7; // ma=0
+  const gridStart = new Date(firstOfMonth);
+  gridStart.setUTCDate(gridStart.getUTCDate() - firstDow);
+
+  let html = '<div class="cal-cell cal-dow"></div>';
+  CAL_DOW_LABELS.forEach(d => html += `<div class="cal-cell cal-dow">${d}</div>`);
+
+  // 6 riviä (42 päivää) kattaa aina koko kuukauden riippumatta kuukauden pituudesta/alkupäivästä
+  for (let row = 0; row < 6; row++) {
+    const rowStart = new Date(gridStart);
+    rowStart.setUTCDate(rowStart.getUTCDate() + row * 7);
+    const { week: rowWeek, year: rowWeekYear } = getISOWeek(rowStart);
+    const isSelectedWeek = selWeek !== null && rowWeek === selWeek && rowWeekYear === selYear;
+    html += `<div class="cal-cell cal-week-num${isSelectedWeek?' selected-week':''}" onclick="pickWeekFromCalendar(${rowWeekYear},${rowWeek})" title="Valitse koko viikko ${rowWeek}">${rowWeek}</div>`;
+    for (let col = 0; col < 7; col++) {
+      const d = new Date(rowStart);
+      d.setUTCDate(d.getUTCDate() + col);
+      const inMonth = d.getUTCMonth() === calViewMonth;
+      const isToday = d.getUTCFullYear() === today.getFullYear() && d.getUTCMonth() === today.getMonth() && d.getUTCDate() === today.getDate();
+      const dWeek = getISOWeek(d);
+      const isSel = selWeek !== null && dWeek.week === selWeek && dWeek.year === selYear;
+      html += `<div class="cal-cell cal-day${inMonth?'':' other-month'}${isToday?' today':''}${isSel?' selected-week':''}" onclick="pickWeekFromCalendar(${dWeek.year},${dWeek.week})">${d.getUTCDate()}</div>`;
+    }
+  }
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+// Kutsutaan kun käyttäjä klikkaa päivää tai viikkonumeroa modaalissa. calTarget ratkaisee
+// meneekö valinta toimitusviikkoon (null, alkuperäinen käytös) vai johonkin milestoneen.
+function pickWeekFromCalendar(year, week) {
+  if (calTarget) {
+    // Nollatäyte (05 eikä 5) — kalenteri.html vertaa viikkoja merkkijonoina "YYYY-WW"-muodossa,
+    // ja ilman nollatäytettä viikot 1-9 eivät koskaan täsmäisi (sama bugi kuin
+    // toimitusviikossa on jo, ei korjattu tässä — ks. muistio).
+    saveMilestone(calTarget, { target_week: `${year}-${String(week).padStart(2, '0')}` });
+  } else {
+    setWeekValue(year, week);
+    autoSave();
+  }
+  closeWeekCalendar();
+}
+
+
+function renderTplList() {
+  const list = document.getElementById('tplList');
+  if (!textTemplates.length) {
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:12px;">Ei tekstipohjia vielä.</div>';
+    return;
+  }
+  list.innerHTML = textTemplates.map(t => `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <input type="text" value="${esc(t.name)}" id="tplName_${t.id}"
+          style="flex:1;font-size:13px;padding:4px 8px;">
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;text-transform:none;letter-spacing:0;">
+          <input type="checkbox" ${t.is_default ? 'checked' : ''} id="tplDef_${t.id}" style="width:auto;">
+          Oletus
+        </label>
+        <button onclick="saveTpl('${t.id}')" class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;">Tallenna</button>
+        <button onclick="deleteTpl('${t.id}')" class="btn btn-sm" style="padding:3px 8px;font-size:11px;color:var(--danger);background:transparent;border:1px solid rgba(232,64,64,0.3);">Poista</button>
+      </div>
+      <textarea id="tplContent_${t.id}" rows="3" style="font-size:12px;">${esc(t.content)}</textarea>
+    </div>
+  `).join('');
+}
+
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function saveTpl(id) {
+  const name    = document.getElementById('tplName_' + id).value.trim();
+  const content = document.getElementById('tplContent_' + id).value;
+  const isDef   = document.getElementById('tplDef_' + id).checked;
+  if (!name) return;
+  // Jos asetetaan oletukseksi, poistetaan muilta
+  if (isDef) {
+    for (const t of textTemplates.filter(x => x.id !== id && x.is_default)) {
+      await sbPatch('quote_text_templates', t.id, { is_default: false });
+    }
+  }
+  await sbPatch('quote_text_templates', id, { name, content, is_default: isDef });
+  await reloadTpl();
+}
+
+async function deleteTpl(id) {
+  const t = textTemplates.find(x => String(x.id) === String(id));
+  if (!confirm('Poistetaanko pohja "' + (t?.name || '') + '"?')) return;
+  await sbDelete('quote_text_templates', id);
+  await reloadTpl();
+}
+
+async function saveNewTextTemplate() {
+  const name    = document.getElementById('tplNewName').value.trim();
+  const content = document.getElementById('tplNewContent').value;
+  const isDef   = document.getElementById('tplNewDefault').checked;
+  if (!name) { alert('Anna pohjalle nimi'); return; }
+  if (isDef) {
+    for (const t of textTemplates.filter(x => x.is_default)) {
+      await sbPatch('quote_text_templates', t.id, { is_default: false });
+    }
+  }
+  await sbPost('quote_text_templates', { name, content, is_default: isDef });
+  await reloadTpl();
+  document.getElementById('tplNewName').value = '';
+  document.getElementById('tplNewContent').value = '';
+  document.getElementById('tplNewDefault').checked = false;
+}
+
+async function reloadTpl() {
+  const data = await sbGet('quote_text_templates', '?order=name.asc&select=id,name,content,is_default');
+  textTemplates = Array.isArray(data) ? data : [];
+  // Päivitä dropdown
+  const sel = document.getElementById('textTemplateSelect');
+  const cur = sel.value;
+  while (sel.options.length > 2) sel.remove(2);
+  textTemplates.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.name;
+    sel.appendChild(opt);
+  });
+  sel.value = cur;
+  renderTplList();
 }
 
 // UUSI ASIAKAS MODAL
@@ -879,14 +1709,7 @@ let editingCustomerId = null;
 function updateEditCustBtn() {
   const btn = document.getElementById('editCustBtn');
   if (!btn) return;
-  const id = document.getElementById('customerId').value;
-  const cust = id ? customers.find(c => c.id === id) : null;
-  // Käteisasiakas-rivi on järjestelmärivi (⚡ Käteinen) — sitä ei muokata
-  btn.disabled = !id || isCashCustomerName(cust && cust.name);
-}
-
-function isCashCustomerName(n) {
-  return String(n || '').trim().toLowerCase() === 'käteisasiakas';
+  btn.disabled = !document.getElementById('customerId').value;
 }
 
 function resetCustModalMode() {
@@ -915,7 +1738,6 @@ async function openEditCustModal() {
     const res = await sbGet('customers', `?id=eq.${id}&select=*`);
     if (!Array.isArray(res) || !res[0]) { alert('Asiakkaan tietojen haku epäonnistui.'); return; }
     const c = res[0];
-    if (isCashCustomerName(c.name)) { alert('Käteisasiakas-riviä ei voi muokata.'); return; }
     const set = (field, val) => { document.getElementById(field).value = val || ''; };
     set('nc_name', c.name);
     set('nc_phone', c.phone);
@@ -1002,6 +1824,21 @@ async function saveCustomerModal() {
     alert('Verkkovirhe.');
   }
   btn.textContent = idleLabel; btn.disabled = false;
+}
+
+// =============================================
+// PAKKAUSLISTA — avautuu omana sivuna, voidaan vetää toiselle näytölle
+// =============================================
+async function openPackingPage() {
+  if (!currentQuoteId) { alert('Tallenna tarjous ensin, niin pakkauslista voidaan yhdistää siihen.'); return; }
+  // Pakkauslista lukee rivit (myös piilotetut) kannasta -> tallennetaan lomakkeen tila ensin, ettei
+  // alle 2 s sitten tehty muutos (esim. rivin piilotus) jää autosave-debouncen taakse. Ikkuna avataan
+  // heti klikkauksessa, ettei selaimen ponnahdusikkunaesto estä sitä tallennuksen jälkeen.
+  const w = window.open('', '_blank');
+  clearTimeout(_autoSaveTimer);
+  try { await saveDraft(); } catch(e) {}
+  const url = `pakkauslista.html?id=${currentQuoteId}`;
+  if (w) w.location.href = url; else window.open(url, '_blank');
 }
 
 // =============================================
@@ -1281,9 +2118,10 @@ function addRow(secId, opts={}) {
   if (!sec) return;
   sec.rows.push({ id: ++rowIdCounter, productId: '', nimikeTeksti: '', hinnastoTeksti: '', desc: '', qty: '', unit: '', price: '', priceManual: false, basePrice: null, isAssembly: false, katePercent: null, vatPercent: null, hidden: false });
   renderSections();
-  // silent=true käytetään VAIN sivun alkulatauksessa (DOMContentLoaded), jotta pelkkä lomakkeen
-  // avaaminen ei enää luo tyhjää ostosriviä Supabaseen ennen kuin käyttäjä on oikeasti tehnyt
-  // jotain (2026-08 korjaus — sama bugi on myös tarjous.html:ssä, ei korjattu siellä vielä).
+  // silent=true käytetään VAIN sivun alkulatauksessa (uusi tyhjä tarjous) ja mallipohjan
+  // kopioinnin virhepolussa, jotta pelkkä lomakkeen avaaminen ei enää luo tyhjää tarjousriviä
+  // Supabaseen ennen kuin käyttäjä on oikeasti tehnyt jotain (2026-08 korjaus, sama bugi
+  // korjattiin ensin myymala.html:ään).
   if (!opts.silent) autoSave();
 }
 
@@ -1512,7 +2350,8 @@ function onGrossInput() {
 // =============================================
 // KATEPROSENTTI (sisäinen, ei koskaan tulosteelle)
 // =============================================
-// Lasketaan vain riveiltä joiden kate% on tiedossa. Ryhmitellään kate%:n mukaan modaaliin.
+// Lasketaan vain riveiltä joiden kate% on tiedossa (hinnastosta valitut, ei kokoonpanot
+// eikä vapaat tekstirivit). Ryhmitellään kate%:n mukaan, jotta näkee mistä lopputulos koostuu.
 function fmtQty(n) {
   return Number(n||0).toLocaleString('fi-FI', { maximumFractionDigits: 2 });
 }
@@ -1546,8 +2385,15 @@ function computeKateBreakdown() {
 }
 
 // =============================================
-// LISÄALENNUS (2026-09) — kopioitu tarjous.html:stä sellaisenaan. Toinen alennuskierros
-// YHT:n (verollisen, jo pyöristetyn) päälle. Ks. tarjous.html:n kommentit täydestä selityksestä.
+// LISÄALENNUS (2026-09) — toinen alennuskierros YHT:n (verollisen, jo pyöristetyn) päälle.
+// Eri asia kuin ylempi "Alennus %" joka laskee aina Välisummasta — tämä laskee siitä mitä
+// ON JO luvattu asiakkaalle (adjGross), koska asiakas voi tingata vielä lähetetystä hinnasta.
+// Ei omaa €-saraketta kannassa — € on aina laskettavissa prosentista + senhetkisestä YHT:sta,
+// sama periaate kuin monessa muussakin kentässä tässä sovelluksessa. HUOM: total_gross/
+// total_net/total_vat tallentuvat LOPULLISINA (lisäalennuksen jälkeen, ks. buildQuoteData),
+// joten adjGross-kenttä (stage-1 YHT) rekonstruoituu aina tuoreena sub/alennus%/pyöristys€:sta
+// recalcTotals():ssa — sitä EI koskaan ladata suoraan total_gross-arvosta kun lisäalennus>0,
+// koska ne eivät enää olisi sama luku.
 // =============================================
 
 function toggleExtraDiscount() {
@@ -1564,6 +2410,10 @@ function updateExtraDiscountToggleLabel() {
   btn.textContent = `➕ Lisäalennus${suffix} ${isOpen ? '▴' : '▾'}`;
 }
 
+// Sama kate%-kaava kuin Kate-modaalissa (computeKateBreakdown + effectiveRatio), tässä jaettuna
+// omaksi funktiokseen ja laajennettuna valinnaisella lisäalennuksella. withExtraDiscount=true
+// käyttää extraDiscountPercent-kentän senhetkistä arvoa, false laskee kateen ilman sitä
+// (= sama luku kuin Kate-modaali on aina näyttänyt, ei muutu tämän ominaisuuden myötä).
 function computeOverallKatePercent(withExtraDiscount) {
   const data = computeKateBreakdown();
   if (data.knownCost <= 0) return null;
@@ -1581,8 +2431,14 @@ function computeOverallKatePercent(withExtraDiscount) {
   return ((knownRevenueAfter - data.knownCost) / data.knownCost) * 100;
 }
 
+// Kate-% raja jonka alle jäätyä "Kate jälkeen" -luku värjäytyy punaiseksi lisäalennuspaneelissa.
+// Tuomon toive 2026-09: muistuttaa jos lisäalennus vie katteen liian pieneksi. Muutettavissa
+// tähän tarvittaessa myöhemmin jos Tuomo haluaa eri rajan.
 const EXTRA_DISCOUNT_KATE_WARN_THRESHOLD = 10;
 
+// Päivittää "Lopullinen hinta" -lukeman, lisäalennus€-kentän ja kate ennen/jälkeen -tiedon.
+// Kutsutaan aina kun lisäalennuskenttä muuttuu, tai kun YHT muuttuu rivien/alennuksen kautta
+// (recalcTotals()/onGrossInput() kutsuvat tätä lopussaan).
 function renderExtraDiscountPanel() {
   const grossBase = parseFloat(document.getElementById('adjGross').value) || 0;
   const extraPct = parseFloat(document.getElementById('extraDiscountPercent').value) || 0;
@@ -1667,7 +2523,7 @@ function openKateModal() {
     </table>
     <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border);">
       ${discountPercent > 0 ? `<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">Yllä olevat summat ovat ennen alennusta. Alennus ${discountPercent.toLocaleString('fi-FI',{maximumFractionDigits:1})} % (+ mahdollinen pyöristys) pienentää tuottoa kertoimella × ${effectiveRatio.toLocaleString('fi-FI',{minimumFractionDigits:3,maximumFractionDigits:3})} — tämä on jo huomioitu alla olevassa kokonaiskatteessa.</div>` : ''}
-      <div style="font-size:14px;"><b>Koko kaupan kate alennuksen jälkeen: </b><span style="color:var(--accent);font-weight:600;">${katePct !== null ? katePct.toLocaleString('fi-FI', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' %' : '– (ei hinnastotuotteita)'}</span></div>
+      <div style="font-size:14px;"><b>Koko tarjouksen kate alennuksen jälkeen: </b><span style="color:var(--accent);font-weight:600;">${katePct !== null ? katePct.toLocaleString('fi-FI', {minimumFractionDigits:1, maximumFractionDigits:1}) + ' %' : '– (ei hinnastotuotteita)'}</span></div>
       ${(() => {
         const extraPct = parseFloat(document.getElementById('extraDiscountPercent').value) || 0;
         if (extraPct <= 0 || katePct === null) return '';
@@ -1675,7 +2531,7 @@ function openKateModal() {
         const lowStyle = kateAfterExtra < EXTRA_DISCOUNT_KATE_WARN_THRESHOLD ? 'color:var(--danger);font-weight:700;' : 'color:var(--accent);font-weight:600;';
         return `<div style="font-size:14px;margin-top:4px;"><b>...ja lisäalennuksen (−${extraPct.toLocaleString('fi-FI',{maximumFractionDigits:1})}%) jälkeen: </b><span style="${lowStyle}">${kateAfterExtra.toLocaleString('fi-FI',{minimumFractionDigits:1,maximumFractionDigits:1})} %</span></div>`;
       })()}
-      ${data.unknownRevenue > 1 ? `<div style="font-size:10px;color:var(--text-dim);margin-top:6px;">Huom: ${fmt(data.unknownRevenue)} € on kokoonpanoja tai vapaita "Kohde"-rivejä joiden kate ei ole tiedossa — ei mukana kateprosentissa.</div>` : ''}
+      ${data.unknownRevenue > 1 ? `<div style="font-size:10px;color:var(--text-dim);margin-top:6px;">Huom: ${fmt(data.unknownRevenue)} € tarjouksesta on kokoonpanoja tai vapaita "Kohde"-rivejä joiden kate ei ole tiedossa — ei mukana kateprosentissa.</div>` : ''}
     </div>
   `;
   document.getElementById('kateModal').classList.add('open');
@@ -1758,7 +2614,7 @@ function priceVatCardLineHTML(row) {
   return badge ? `${grossStr} ${badge}` : grossStr;
 }
 
-// Koko ostoksen "tehollinen" alv-% painotettuna riveittäin niiden verottomalla summalla.
+// Koko tarjouksen "tehollinen" alv-% painotettuna riveittäin niiden verottomalla summalla.
 // Jos kaikilla riveillä sama alv-%, palauttaa täsmälleen sen. Rivit joilla ei ole vielä
 // vatPercent-tietoa (esim. vapaat "Kohde"-tekstirivit) oletetaan 25.5%:iin, kuten muuallakin.
 function computeQuoteVatRate(secs) {
@@ -1788,22 +2644,29 @@ function buildQuoteData(status) {
   const vat = noTax * computeQuoteVatRate(sections) / 100;
   const grossStage1 = parseFloat(document.getElementById('adjGross').value) || 0;
   const extraDiscountPercent = parseFloat(document.getElementById('extraDiscountPercent').value) || 0;
+  // Lisäalennus pienentää lopullista verollista hintaa suoraan (se on mitä asiakas oikeasti
+  // maksaa) — veroton ja alv skaalataan samalla kertoimella, jotta net+alv=gross pysyy
+  // paikkansapitävänä tulosteella. total_gross/total_net/total_vat tallentuvat siis aina
+  // LOPULLISINA (lisäalennuksen jälkeisinä) lukuina, ei sinä mitä alunperin pyöristettiin.
   const scale = 1 - extraDiscountPercent / 100;
   return {
     customer_id: document.getElementById('customerId').value || null,
     quote_number: document.getElementById('quoteNumber').value || null,
-    // Mallitilassa (2026-09-28, kohta 2) status pysyy DRAFT:na (sama käytäntö kuin
-    // confirmSaveAsTemplate():ssa) — vain oikea kassamyynti on aina COMPLETED.
-    status: isTemplateMode ? 'DRAFT' : 'COMPLETED', // Huom: tämä EI tarkoita että se on maksettu, ks. requires_invoice alla.
-    sale_type: 'myymala',
-    requires_invoice: isTemplateMode ? false : document.getElementById('requiresInvoice').checked, // true = ei maksettu heti kassaan, Sanna laskuttaa erikseen; ei koske mallia
+    valid_until: document.getElementById('quoteValid').value || null,
+    status: status || currentStatus,
     notes: document.getElementById('quoteRef').value || null,
     internal_note: document.getElementById('internalNote').value.trim() || null,
+    footer_text: document.getElementById('defaultText').value || null,
     discount_amount: adj,
     discount_percent: discountPercent,
     extra_discount_percent: extraDiscountPercent,
     extra_discount_display: document.getElementById('extraDiscountDisplay').value || 'hidden',
     sections_json: JSON.stringify(sections),
+    delivery_type: document.getElementById('deliveryType').value || null,
+    delivery_week: document.getElementById('deliveryWeek').value.trim() || null,
+    // Mallitilassa (2026-09-28, kohta 2) is_template pysyy true:na ja nimi luetaan mallitilan
+    // omasta nimikentästä — muuten tavallisen tarjouksen tallennus asettaa aina false:n
+    // (tallenna-malliksi-toiminto ohittaa nämä erikseen, ks. confirmSaveAsTemplate()).
     is_template: isTemplateMode,
     template_name: isTemplateMode ? (document.getElementById('tplEditName').value.trim() || null) : undefined,
     source_template_name: currentSourceTemplateName,
@@ -1818,7 +2681,7 @@ async function saveDraft() {
   const el = document.getElementById('saveStatus');
   el.className = 'saving'; el.textContent = 'Tallennetaan...';
   try {
-    const data = buildQuoteData();
+    const data = buildQuoteData(currentStatus);
     let result;
     if (currentQuoteId) {
       result = await sbPatch('quotes', currentQuoteId, data);
@@ -1835,10 +2698,11 @@ async function saveDraft() {
 }
 
 // =============================================
-// TALLENNA MALLIKSI (2026-08) — sama periaate kuin tarjous.html:ssä (oma kopio, ei jaettuja
-// JS-moduuleja). Ottaa lomakkeen tämänhetkisen sisällön ja tallentaa sen UUTENA erillisenä
-// mallirivinä — nykyistä ostosta (currentQuoteId) ei kosketa. requires_invoice/status nollataan
-// koska ne kuvaavat vain oikeaa kassamyyntiä, eivät koske mallia.
+// TALLENNA MALLIKSI (2026-08) — ottaa lomakkeen TÄMÄNHETKISEN (mahdollisesti vielä
+// tallentamattoman) sisällön ja tallentaa sen UUTENA erillisenä mallirivinä. Alkuperäiseen
+// tarjoukseen (currentQuoteId) ei koskuta millään tavalla — käyttäjä jatkaa sen täyttämistä
+// normaalisti painikkeen painamisen jälkeen. Korvaa aiemman, rikkinäisen "Malli"-statusvalinnan
+// (se asetti vain status='MODEL' muttei koskaan is_template-lippua) — poistettu statusSelectistä.
 function saveAsTemplate() {
   document.getElementById('tplSaveName').value = '';
   document.querySelector('input[name="tplSavePriceMode"][value="fresh"]').checked = true; // oletus: hinnastohinnat
@@ -1894,9 +2758,6 @@ function tplSaveRefreshPrice() {
 function closeTplSaveModal() {
   document.getElementById('tplSaveModal').classList.remove('open');
 }
-document.getElementById('tplSaveModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('tplSaveModal')) closeTplSaveModal();
-});
 
 // Pyöristys LÄHIMPÄÄN annettuun väliin, ei alaspäin (Tuomon vastaus 2026-09-28)
 function tplSaveRound(step) {
@@ -1918,20 +2779,25 @@ async function confirmSaveAsTemplate() {
   const targetGross = parseFloat(document.getElementById('tplSavePrice').value);
   if (!(targetGross > 0)) { alert('Anna kelvollinen hinta.'); return; }
 
-  const data = buildQuoteData();
-  data.customer_id = null;
-  data.quote_number = null;
-  data.source_template_name = null;
+  const data = buildQuoteData(currentStatus);
+  data.customer_id = null;       // malli on geneerinen, ei sidottu tiettyyn asiakkaaseen
+  data.quote_number = null;      // malleilla ei ole tarjousnumeroa (sama kuin Harjusauna/Täyspohja)
+  data.discount_percent = 0;     // alkuperäisen tarjouksen alennus ei saa "periytyä" malliin
+  data.extra_discount_percent = 0; // sama periaate lisäalennukselle
+  data.internal_note = null;     // sisäinen huomio koskee tätä yksittäistä tarjousta, ei mallia
+  data.footer_text = null;       // 2026-09-28 (kohta 4): vakioteksti EI enää periydy malliin —
+                                  // käyttäjä valitsee pohjan itse kun malli otetaan käyttöön
+  data.source_template_name = null; // malli itse ei ole tehty mistään toisesta mallista
   data.print_template_name = false;
-  data.discount_percent = 0;
-  data.extra_discount_percent = 0; // sama periaate lisäalennukselle kuin alennus%:lle
-  data.internal_note = null; // sisäinen huomio koskee tätä yksittäistä ostosta, ei mallia
   data.is_template = true;
   data.status = 'DRAFT';
-  data.requires_invoice = false; // ei koske mallia, vain oikeaa myymälämyyntiä
   data.template_name = name;
 
-  // Loppusummat JOHDETAAN Tuomon antamasta pyöreästä hinnasta, sama periaate kuin tarjous.html:ssä.
+  // Loppusummat JOHDETAAN Tuomon antamasta pyöreästä hinnasta (targetGross), ei tuotteiden
+  // tarkasta laskennallisesta summasta — sama "johda lopullisesta" -periaate kuin
+  // print_quote.html:n lisäalennuslaskennassa. discount_amount tallennetaan 4 desimaalilla
+  // ettei sentin pyöristys (ks. CLAUDE.md "sentin pyöristysvirhe") saa YHT:tä eroamaan
+  // annetusta pyöreästä hinnasta.
   const tplSecs = tplBuildSections(tplSaveFresh());
   data.sections_json = JSON.stringify(tplSecs); // mallille valinnan mukaiset rivit (lomake ei muutu)
   const sub = tplSecs.reduce((a,s) => a + sectionSum(s), 0);
@@ -1945,27 +2811,11 @@ async function confirmSaveAsTemplate() {
   try {
     await sbPost('quotes', data);
     closeTplSaveModal();
-    alert('Tallennettu malliksi: "' + name + '" — löytyy nyt Mallipohjat-välilehdeltä. Tämä ostos jatkuu ennallaan.');
-    loadRowTemplates();
+    alert('Tallennettu malliksi: "' + name + '" — löytyy nyt Mallipohjat-välilehdeltä. Tämä tarjous jatkuu ennallaan.');
+    loadRowTemplates(); // päivittää "Lataa malli"-pudotusvalikon heti, ilman sivun päivitystä
   } catch(e) {
     alert('Mallin tallennus epäonnistui.');
   }
-}
-
-// =============================================
-// SISÄINEN HUOMIO (2026-08) — ei koskaan tulostu, tarkoitettu vain Tuomon/henkilökunnan
-// omaan käyttöön. Eri asia kuin yllä oleva "Huomiot"-kenttä (notes) joka TULOSTUU kuittiin/
-// tilausvahvistukseen. Piilossa oletuksena, avautuu automaattisesti jos ostoksella on jo
-// huomiotekstiä (ks. loadQuote) — ettei sitä huomaisi jäävän piiloon vahingossa.
-// =============================================
-function toggleInternalNote() {
-  document.getElementById('internalNotePanel').classList.toggle('show');
-}
-
-function onInternalNoteInput() {
-  const val = document.getElementById('internalNote').value;
-  document.getElementById('noteToggleBtn').classList.toggle('has-note', !!val.trim());
-  autoSave();
 }
 
 // =============================================
@@ -1975,7 +2825,7 @@ let _autoSaveTimer = null;
 
 function autoSave() {
   // Mallitilassa (2026-09-28, kohta 2) EI autosavea — malli tallentuu vain "💾 Tallenna malli"
-  // -napista.
+  // -napista, jotta keskeneräiset kokeilut mallin parissa eivät tallennu vahingossa.
   if (isTemplateMode) { markTemplateUnsaved(); return; }
   const el = document.getElementById('saveStatus');
   // Jos ei vielä ID:tä, tallenna heti (uusi tarjous)
@@ -1990,32 +2840,67 @@ function autoSave() {
 }
 
 
+async function saveProdStatus() {
+  if (!currentQuoteId) return;
+  try {
+    await sbPatch('quotes', currentQuoteId, {
+      prod_tuotannossa: document.getElementById('prodTuotannossa').checked,
+      prod_valmis:      document.getElementById('prodValmis').checked,
+      prod_toimitettu:  document.getElementById('prodToimitettu').checked,
+    });
+  } catch(e) { console.error('saveProdStatus:', e); }
+}
+
+async function changeStatus(newStatus) {
+  currentStatus = newStatus;
+  currentStatusChangedAt = new Date().toISOString();
+  updateStatusBadge();
+  document.getElementById('prodStatus').style.display = ['ORDERED','COMPLETED'].includes(newStatus) ? 'flex' : 'none';
+  if (currentQuoteId) {
+    try { await sbPatch('quotes', currentQuoteId, { status: newStatus, status_changed_at: currentStatusChangedAt }); } catch(e) {}
+  } else {
+    autoSave(); // uusi, ei vielä tallennettu tarjous — luo tietue heti, status mukana (status_changed_at = DB:n oletus now())
+  }
+}
+
 // =============================================
-// LATAUS (myymäläostoksen avaus — käytännössä vain kuitin uudelleentarkastelu)
+// LATAUS
 // =============================================
 async function loadQuote(id) {
   const data = await sbGet('quotes', `?id=eq.${id}&select=*`);
   const q = Array.isArray(data) ? data[0] : null;
   if (!q) return;
   currentQuoteId = q.id;
+  currentStatus = q.status || 'DRAFT';
+  currentStatusChangedAt = q.status_changed_at || q.created_at || null;
+  loadMilestones(q.id); // ei odoteta valmiiksi — ei estä muun lomakkeen renderöintiä
+  document.getElementById('prodStatus').style.display = ['ORDERED','COMPLETED'].includes(currentStatus) ? 'flex' : 'none';
   document.getElementById('quoteNumber').value = q.quote_number || '';
   document.getElementById('quoteDate').value = (q.created_at||'').slice(0,10);
+  document.getElementById('quoteValid').value = (q.valid_until||'').slice(0,10);
+  loadDeliveryWeek(q.delivery_week || '');
+  document.getElementById('prodTuotannossa').checked = q.prod_tuotannossa || false;
+  document.getElementById('prodValmis').checked      = q.prod_valmis      || false;
+  document.getElementById('prodToimitettu').checked  = q.prod_toimitettu  || false;
+  document.getElementById('deliveryType').value = q.delivery_type || '';
   document.getElementById('quoteRef').value = q.notes || '';
   document.getElementById('internalNote').value = q.internal_note || '';
   document.getElementById('noteToggleBtn').classList.toggle('has-note', !!q.internal_note);
   if (q.internal_note) document.getElementById('internalNotePanel').classList.add('show');
+  document.getElementById('defaultText').value = q.footer_text || '';
+  syncTextTemplateSelect();
   document.getElementById('adjAmount').value = q.discount_amount || 0;
   document.getElementById('discountPercent').value = q.discount_percent || 0;
   document.getElementById('extraDiscountPercent').value = q.extra_discount_percent || 0;
   document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'hidden';
   if (parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
-  document.getElementById('requiresInvoice').checked = !!q.requires_invoice;
+  if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
   currentSourceTemplateName = q.source_template_name || null;
   updateSourceTemplateUI(!!q.print_template_name);
-  updatePrintButtonLabel();
-  if (q.total_gross) document.getElementById('adjGross').value = q.total_gross;
   if (q.is_template) enterTemplateMode(q.template_name); // kohta 2 (2026-09-28) — piilottaa mallille kuulumattomat kentät
-  document.getElementById('deletedBanner').style.display = q.deleted_at ? 'flex' : 'none'; // kohta 3
+  // Kohta 3 (2026-09-28): poistettu tarjous ei näy listoilla, mutta suora ?id=-linkki avaa
+  // sen silti — vain varoitusbanneri, ei estoa (Tuomon vastaus "bannerilla avautuva").
+  document.getElementById('deletedBanner').style.display = q.deleted_at ? 'flex' : 'none';
   if (q.customer_id) {
     let cust = customers.find(c => c.id === q.customer_id);
     if (!cust) {
@@ -2033,9 +2918,9 @@ async function loadQuote(id) {
       sections = JSON.parse(q.sections_json);
       sections.forEach(s => s.rows.forEach(r => {
         if (r.id > rowIdCounter) rowIdCounter = r.id;
-        // Vanhemmat ostokset (ennen kate%-ominaisuutta) eivät sisällä katePercent-kenttää
+        // Vanhemmat tarjoukset (ennen kate%-ominaisuutta) eivät sisällä katePercent-kenttää
         // riveillä, vaikka productId on tallessa. Täydennetään se tässä hinnastosta jotta
-        // kateprosentti-modaali toimii myös vanhoilla ostoksilla, ilman että hintoihin koskee.
+        // kateprosentti-modaali toimii myös vanhoilla tarjouksilla, ilman että hintoihin koskee.
         if ((r.katePercent === undefined || r.katePercent === null) && r.productId) {
           const prod = products.find(p => p.id === r.productId || String(p.id) === String(r.productId));
           if (prod) {
@@ -2043,8 +2928,8 @@ async function loadQuote(id) {
             r.katePercent = (!r.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
           }
         }
-        // Vanhemmat ostokset eivät sisällä vatPercent-kenttää riveillä. Täydennetään
-        // hinnastosta jotta alv lasketaan oikein myös vanhoilla ostoksilla, ilman
+        // Vanhemmat tarjoukset eivät sisällä vatPercent-kenttää riveillä. Täydennetään
+        // hinnastosta jotta alv lasketaan oikein myös vanhoilla tarjouksilla, ilman
         // että hintoihin koskee. Jos tuotetta ei enää löydy, oletetaan 25.5%.
         if (r.vatPercent === undefined || r.vatPercent === null) {
           const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
@@ -2052,61 +2937,142 @@ async function loadQuote(id) {
         }
       }));
       sections.forEach(s => { if (s.id > sectionIdCounter) sectionIdCounter = s.id; });
-    } catch(e) { sections = []; addSection('Myymälämyynti'); }
+    } catch(e) { sections = []; addSection('Hirsikehikko'); }
+  }
+  renderSections();
+  updateStatusBadge();
+}
+
+async function copyQuoteFrom(id, keepPrices) {
+  const data = await sbGet('quotes', `?id=eq.${id}&select=*`);
+  const q = Array.isArray(data) ? data[0] : null;
+  if (!q) return;
+  document.getElementById('deliveryType').value = q.delivery_type || '';
+  document.getElementById('quoteRef').value = q.notes || '';
+  document.getElementById('internalNote').value = q.internal_note || '';
+  document.getElementById('noteToggleBtn').classList.toggle('has-note', !!q.internal_note);
+  if (q.internal_note) document.getElementById('internalNotePanel').classList.add('show');
+  document.getElementById('defaultText').value = q.footer_text || '';
+  syncTextTemplateSelect();
+  // Pyöristys/alennus-€ säilytetään VAIN kun hinnat säilytetään sellaisenaan (keepPrices) —
+  // uusien hinnastohintojen päälle vanha pyöristys antaisi väärän summan, koska hinnat ovat
+  // voineet muuttua oleellisestikin (2026-09-28, Tuomon vastaus kohtaan "pyöristys nollaus").
+  document.getElementById('adjAmount').value = keepPrices ? (q.discount_amount || 0) : 0;
+  // Koko tarjouksen alennus-% ja lisäalennus säilytetään VAIN kun hinnat säilytetään sellaisenaan —
+  // uusien hinnastohintojen päälle vanha alennus ei välttämättä enää sovi (2026-11-05, Tuomon
+  // päätös: uusilla hinnoilla alennus-% nollataan pyöristyksen tapaan).
+  document.getElementById('discountPercent').value = keepPrices ? (q.discount_percent || 0) : 0;
+  document.getElementById('extraDiscountPercent').value = keepPrices ? (q.extra_discount_percent || 0) : 0;
+  document.getElementById('extraDiscountDisplay').value = keepPrices ? (q.extra_discount_display || 'hidden') : 'hidden';
+  if (keepPrices && parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
+  // Mallin nimi periytyy kopioon VAIN kun kopioidaan suoraan mallista (is_template=true) —
+  // tavallisesta tarjouksesta kopioitaessa ei, vaikka sekin olisi joskus tehty mallista
+  // (2026-09-28, Tuomon vastaus kohtaan 19: "Ei peri").
+  currentSourceTemplateName = q.is_template ? (q.template_name || null) : null;
+  updateSourceTemplateUI(false); // uusi kopio ei ole vielä tulostettu — oletuksena pois päältä
+  if (q.sections_json) {
+    try {
+      sections = JSON.parse(q.sections_json);
+      sectionIdCounter = 0; rowIdCounter = 0;
+      sections.forEach(s => {
+        s.id = ++sectionIdCounter;
+        s.rows.forEach(r => {
+          r.id = ++rowIdCounter;
+          if (!keepPrices) {
+            const prod = products.find(p => p.id === r.productId || String(p.id) === String(r.productId));
+            if (prod) {
+              r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
+              r.price = r.basePrice || '';
+              r.priceManual = false;
+              r.katePercent = (prod.pricing_model !== 'assembly' && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
+              r.vatPercent = prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
+            }
+          } else if ((r.katePercent === undefined || r.katePercent === null) && r.productId) {
+            // Hinnat säilytetään sellaisenaan, mutta täydennetään puuttuva kate% jos vanha tarjous
+            const prod = products.find(p => p.id === r.productId || String(p.id) === String(r.productId));
+            if (prod) {
+              r.isAssembly = prod.pricing_model === 'assembly';
+              r.katePercent = (!r.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
+            }
+          }
+          // Vanhemmat tarjoukset eivät sisällä vatPercent-kenttää riveillä — täydennetään
+          // hinnastosta molemmissa tapauksissa (keepPrices tai ei), samaan tapaan kuin loadQuote().
+          if (r.vatPercent === undefined || r.vatPercent === null) {
+            const prod = r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
+            r.vatPercent = prod && prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
+          }
+        });
+      });
+    } catch(e) { sections = []; addSection('Hirsikehikko', { silent: true }); } // currentQuoteId on vielä null kopiointihetkellä
   }
   renderSections();
 }
 
-// Laskutetaan erikseen -rasti (2026-08) — vaikuttaa vain siihen mitä printQuote() tulostaa
-// ja mitä laskutus.html näyttää; status pysyy aina COMPLETED, sale_type aina myymala.
-function onRequiresInvoiceChange() {
-  updatePrintButtonLabel();
-  autoSave();
+async function copyQuote() {
+  if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
+  const choice = await askKeepPrices({
+    title: 'Kopioidaanko hinnat ja alennukset?',
+    keepLabel: 'Säilytä hinnat ja alennukset',
+    keepHint: 'Rivien hinnat, rivikohtaiset alennukset, alennus-%, pyöristys ja lisäalennus kopioituvat sellaisenaan.',
+    freshLabel: 'Hae uudet hinnat hinnastosta',
+    freshHint: 'Hinnat haetaan hinnastosta. Rivikohtaiset alennukset, alennus-%, pyöristys ja lisäalennus nollataan.'
+  });
+  if (!choice) return; // Peruuta = ei kopioida mitään
+  window.open(`tarjous.html?copy=${currentQuoteId}&keepPrices=${choice==='keep'?'1':'0'}`, '_blank');
 }
 
-function updatePrintButtonLabel() {
-  const btn = document.getElementById('printQuoteBtn');
-  if (!btn) return;
-  const requiresInvoice = document.getElementById('requiresInvoice').checked;
-  btn.textContent = requiresInvoice ? '🖨 Tulosta tilausvahvistus' : '🖨 Tulosta kuitti';
+function updateStatusBadge() {
+  const badge = document.getElementById('statusBadge');
+  const sel = document.getElementById('statusSelect');
+  const map = {
+    DRAFT:       ['draft',    'Luonnos'],
+    IN_PROGRESS: ['progress', 'Kesken'],
+    QUOTED:      ['sent',     'Tarjottu'],
+    ORDERED:     ['ordered',  'Tilattu'],
+    COMPLETED:   ['completed','Valmis'],
+    ARCHIVED:    ['archived', 'Arkisto'],
+    MODEL:       ['model',    'Malli'],
+  };
+  const [cls, label] = map[currentStatus] || ['draft', currentStatus];
+  badge.className = `status-badge ${cls}`;
+  badge.textContent = label;
+  if (sel) sel.value = currentStatus;
+  checkStaleStatus();
 }
 
-// Käteisasiakas-pikanappi — ei vaadi nimen syöttöä, käyttää valmiiksi luotua "Käteisasiakas"-riviä customers-taulussa
-function setCashCustomer() {
-  const cash = customers.find(c => c.name === 'Käteisasiakas');
-  if (cash) {
-    setCustomer(cash.id, cash.name);
-  } else {
-    alert('Käteisasiakas-riviä ei löytynyt asiakasrekisteristä. Tarkista että se on luotu Supabaseen.');
+// Muistuttaa jos tarjous on jämähtänyt Luonnos/Kesken/Tarjottu-tilaan yli 7 päiväksi.
+// Tilattu/Valmis/Arkisto/Malli eivät ole "unohdettuja" vaikka ne olisivat vanhoja, joten niistä ei muistuteta.
+const STALE_STATUSES = ['DRAFT', 'IN_PROGRESS', 'QUOTED'];
+const STALE_DAYS = 7;
+function checkStaleStatus() {
+  const banner = document.getElementById('staleBanner');
+  const text = document.getElementById('staleBannerText');
+  if (!currentQuoteId || !currentStatusChangedAt || !STALE_STATUSES.includes(currentStatus)) {
+    banner.classList.remove('show');
+    return;
   }
-}
-
-// =============================================
-// PAKKAUSLISTA — avautuu omana sivuna, voidaan vetää toiselle näytölle.
-// pakkauslista.html/print_supply.html eivät riipu sale_type:sta, toimivat pelkän
-// tarjous-id:n perusteella — sama toteutus kuin tarjous.html:ssä (2026-08).
-// =============================================
-async function openPackingPage() {
-  if (!currentQuoteId) { alert('Tallenna ostos ensin, niin pakkauslista voidaan yhdistää siihen.'); return; }
-  // Pakkauslista lukee rivit (myös piilotetut) kannasta -> tallennetaan lomakkeen tila ensin, ettei
-  // alle 2 s sitten tehty muutos (esim. rivin piilotus) jää autosave-debouncen taakse. Ikkuna avataan
-  // heti klikkauksessa, ettei selaimen ponnahdusikkunaesto estä sitä tallennuksen jälkeen.
-  const w = window.open('', '_blank');
-  clearTimeout(_autoSaveTimer);
-  try { await saveDraft(); } catch(e) {}
-  const url = `pakkauslista.html?id=${currentQuoteId}`;
-  if (w) w.location.href = url; else window.open(url, '_blank');
+  const days = Math.floor((Date.now() - new Date(currentStatusChangedAt).getTime()) / 86400000);
+  if (days >= STALE_DAYS) {
+    const labelMap = { DRAFT: 'Luonnos', IN_PROGRESS: 'Kesken', QUOTED: 'Tarjottu' };
+    text.textContent = `Tämä on ollut tilassa "${labelMap[currentStatus] || currentStatus}" jo ${days} päivää — muistathan päivittää tilan?`;
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
 }
 
 // =============================================
 // TULOSTUS
 // =============================================
 function printQuote() {
-  if (!currentQuoteId) { alert('Tallenna ostos ensin.'); return; }
-  const showPrices = '1';
+  if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
+  const showPrices = document.getElementById('showPrices').checked ? '1' : '0';
   const showTpl = (currentSourceTemplateName && document.getElementById('printTplName').checked) ? '1' : '0';
   window.open(`print_quote.html?id=${currentQuoteId}&prices=${showPrices}&tpl=${showTpl}`, '_blank');
 }
+
+// printSupply() poistettu 2026-07 — tarvikelista tehdään aina pakkauslista.html:n kautta (ks. openPackingPage),
+// jotta käyttäjä joutuu aina päättämään näkyvätkö kokoonpanot eriteltynä vai ei.
 
 // =============================================
 // NAV
@@ -2114,6 +3080,16 @@ function printQuote() {
 function toggleNav(e) {
   e.stopPropagation();
   document.getElementById('navDropdown').classList.toggle('open');
+}
+
+// =============================================
+// KELLUVAT SIIRTYMÄNAPIT
+// =============================================
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function scrollToBottom() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 }
 </script>
 </body>
