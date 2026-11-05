@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-05 18:40 -->
+<!-- Claude-versio: 2026-11-05 18:55 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -325,7 +325,7 @@
       </label>
       <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;margin-top:6px;">
         <input type="radio" name="tplSavePriceMode" value="keep" onchange="tplSaveRefreshPrice()" style="width:auto;flex:none;margin:3px 0 0;padding:0;">
-        <span><strong>Säilytä tämän tarjouksen hinnat</strong><br><span style="font-size:12px;color:var(--text-dim);">Rivien hinnat ja alennukset tallentuvat sellaisenaan.</span></span>
+        <span><strong>Säilytä tämän tarjouksen hinnat</strong><br><span style="font-size:12px;color:var(--text-dim);">Rivien hinnat ja alennukset tallentuvat sellaisenaan. Ehdotettu hinta on tarjouksen lopullinen hinta (lisäalennus mukaan lukien).</span></span>
       </label>
       <div id="tplSaveHint" style="display:none;font-size:12px;color:var(--text-dim);margin-top:6px;"></div>
     </div>
@@ -1881,12 +1881,20 @@ function tplSaveRefreshPrice() {
   let noTax = sub;
   if (!fresh) {
     // "Säilytä hinnat": ehdotus = tarjouksen YHT (verollinen) eli alennus-% ja pyöristys/alennus-€
-    // huomioiden — sama luku kuin lomakkeen YHT-rivillä. (Lisäalennus ei ole mukana, se ei tallennu malliin.)
+    // huomioiden — sama luku kuin lomakkeen YHT-rivillä.
     const dp = parseFloat(document.getElementById('discountPercent').value) || 0;
     const adj = parseFloat(document.getElementById('adjAmount').value) || 0;
     noTax = sub * (1 - dp / 100) + adj;
   }
-  document.getElementById('tplSavePrice').value = Math.round(noTax * (1 + vatRate / 100) * 100) / 100;
+  let gross = Math.round(noTax * (1 + vatRate / 100) * 100) / 100;
+  if (!fresh) {
+    // Lisäalennus (2026-11-05): ehdotus = LOPULLINEN hinta, sama laskenta kuin renderExtraDiscountPanel()
+    // (YHT pyöristettynä × (1 − lisäalennus-%)). Itse lisäalennus ei tallennu malliin (extra_discount_percent=0) —
+    // se on mukana vain mallin hinnassa.
+    const ep = parseFloat(document.getElementById('extraDiscountPercent').value) || 0;
+    if (ep > 0) gross = Math.round((gross * (1 - ep / 100) + 1e-9) * 100) / 100;
+  }
+  document.getElementById('tplSavePrice').value = gross;
   // Varoitus: rivit joita ei löydy hinnastosta eivät päivity, vaikka alennus niissä olisi
   const hint = document.getElementById('tplSaveHint');
   let stuck = 0;
