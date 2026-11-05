@@ -311,11 +311,23 @@
 
 <!-- MALLIKSI TALLENNUS -MODAALI (2026-09-28) — sama kuin tarjous.html:ssä, ks. sen kommentit -->
 <div class="modal-overlay" id="tplSaveModal">
-  <div class="modal" style="width:420px;">
+  <div class="modal" style="width:460px;">
     <h2>📑 Tallenna malliksi</h2>
     <div class="field">
       <label>Nimi *</label>
       <input type="text" id="tplSaveName" placeholder="esim. Harjusauna 70x145">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>Hinnat mallissa</label>
+      <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;margin-top:4px;">
+        <input type="radio" name="tplSavePriceMode" value="fresh" checked onchange="tplSaveRefreshPrice()" style="margin-top:3px;">
+        <span><strong>Hinnastohinnat</strong><br><span style="font-size:12px;color:var(--text-dim);">Rivien hinnat haetaan hinnastosta, rivikohtaiset alennukset nollataan. Sopii yleiseksi pohjaksi.</span></span>
+      </label>
+      <label style="display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;margin-top:6px;">
+        <input type="radio" name="tplSavePriceMode" value="keep" onchange="tplSaveRefreshPrice()" style="margin-top:3px;">
+        <span><strong>Säilytä tämän tarjouksen hinnat</strong><br><span style="font-size:12px;color:var(--text-dim);">Rivien hinnat ja alennukset tallentuvat sellaisenaan.</span></span>
+      </label>
+      <div id="tplSaveHint" style="display:none;font-size:12px;color:var(--text-dim);margin-top:6px;"></div>
     </div>
     <div class="field" style="margin-top:10px;">
       <label>Hinta (verollinen) *</label>
@@ -1828,14 +1840,55 @@ async function saveDraft() {
 // mallirivinä — nykyistä ostosta (currentQuoteId) ei kosketa. requires_invoice/status nollataan
 // koska ne kuvaavat vain oikeaa kassamyyntiä, eivät koske mallia.
 function saveAsTemplate() {
-  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
-  const vatRate = computeQuoteVatRate(sections);
-  const currentGross = Math.round(sub * (1 + vatRate / 100) * 100) / 100;
   document.getElementById('tplSaveName').value = '';
-  document.getElementById('tplSavePrice').value = currentGross;
+  document.querySelector('input[name="tplSavePriceMode"][value="fresh"]').checked = true; // oletus: hinnastohinnat
+  tplSaveRefreshPrice(); // asettaa ehdotetun hinnan (tplSavePrice) valinnan mukaan
   document.getElementById('tplSaveRoundStep').value = 10;
   document.getElementById('tplSaveModal').classList.add('open');
   document.getElementById('tplSaveName').focus();
+}
+
+// Mallin rivit valinnan mukaan — SYVÄKOPIO, ei koske lomakkeen omaa sections-taulukkoa
+// (nykyinen tarjous/ostos jatkuu ennallaan). fresh=true: hinnat tuoreesta hinnastosta ja
+// rivikohtaiset alennukset nollataan (sama periaate kuin applyTemplate/copyQuoteFrom keepPrices=false).
+function tplFindProduct(r) {
+  return r.productId ? products.find(p => p.id === r.productId || String(p.id) === String(r.productId)) : null;
+}
+function tplBuildSections(fresh) {
+  const copy = JSON.parse(JSON.stringify(sections));
+  if (!fresh) return copy;
+  copy.forEach(s => s.rows.forEach(r => {
+    const prod = tplFindProduct(r);
+    if (!prod) return; // ei hinnastossa → rivi säilyy sellaisenaan
+    r.basePrice = prod.price != null ? parseFloat(prod.price) : null;
+    r.price = r.basePrice || '';
+    r.priceManual = false;
+    r.isAssembly = prod.pricing_model === 'assembly';
+    r.katePercent = (!r.isAssembly && prod.kate_percent != null) ? parseFloat(prod.kate_percent) : null;
+    r.vatPercent = prod.vat_percent != null ? parseFloat(prod.vat_percent) : 25.5;
+  }));
+  return copy;
+}
+function tplSaveFresh() {
+  const el = document.querySelector('input[name="tplSavePriceMode"]:checked');
+  return !el || el.value !== 'keep';
+}
+function tplSaveRefreshPrice() {
+  const fresh = tplSaveFresh();
+  const secs = tplBuildSections(fresh);
+  const sub = secs.reduce((a,s) => a + sectionSum(s), 0);
+  const vatRate = computeQuoteVatRate(secs);
+  document.getElementById('tplSavePrice').value = Math.round(sub * (1 + vatRate / 100) * 100) / 100;
+  // Varoitus: rivit joita ei löydy hinnastosta eivät päivity, vaikka alennus niissä olisi
+  const hint = document.getElementById('tplSaveHint');
+  let stuck = 0;
+  if (fresh) sections.forEach(s => s.rows.forEach(r => {
+    if (r.hidden || tplFindProduct(r)) return;
+    const b = parseFloat(r.basePrice), p = parseFloat(r.price);
+    if (!isNaN(b) && !isNaN(p) && b !== p) stuck++;
+  }));
+  hint.style.display = stuck ? 'block' : 'none';
+  hint.textContent = stuck ? '⚠ ' + stuck + ' alennettua riviä ei löydy hinnastosta — niiden hinta säilyy sellaisenaan.' : '';
 }
 
 function closeTplSaveModal() {
@@ -1879,8 +1932,10 @@ async function confirmSaveAsTemplate() {
   data.template_name = name;
 
   // Loppusummat JOHDETAAN Tuomon antamasta pyöreästä hinnasta, sama periaate kuin tarjous.html:ssä.
-  const sub = sections.reduce((a,s) => a + sectionSum(s), 0);
-  const vatRate = computeQuoteVatRate(sections);
+  const tplSecs = tplBuildSections(tplSaveFresh());
+  data.sections_json = JSON.stringify(tplSecs); // mallille valinnan mukaiset rivit (lomake ei muutu)
+  const sub = tplSecs.reduce((a,s) => a + sectionSum(s), 0);
+  const vatRate = computeQuoteVatRate(tplSecs);
   const targetNet = targetGross / (1 + vatRate / 100);
   data.discount_amount = Math.round((targetNet - sub) * 10000) / 10000;
   data.total_net = Math.round(targetNet * 100) / 100;
