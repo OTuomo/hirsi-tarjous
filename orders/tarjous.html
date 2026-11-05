@@ -1037,6 +1037,44 @@ function sectionsHaveRealData() {
   return sections.some(s => s.rows.some(r => r.productId || (r.nimikeTeksti || '').trim() || (r.desc || '').trim() || parseFloat(r.qty) > 0));
 }
 
+// =============================================
+// HINTOJEN SÄILYTYS -VALINTAMODAALI (2026-11-05)
+// Korvaa selaimen confirm()-kyselyn, jossa "Peruuta" tarkoitti "hae uudet hinnat" eikä
+// "älä tee mitään" — Tuomo ei kokenut saavansa itse päättää tuleeko vanhat hinnat/alennukset
+// mukaan. Palauttaa Promisena 'keep' | 'fresh' | null (null = peruutettu, ei tehdä mitään).
+// Käyttää olemassa olevia .modal-overlay/.modal-tyylejä, DOM luodaan vasta tarvittaessa.
+// =============================================
+function askKeepPrices(opts) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay open';
+    ov.innerHTML = `
+      <div class="modal" style="width:460px;">
+        <h2>${opts.title}</h2>
+        <button type="button" class="btn btn-primary" data-choice="keep" style="text-align:left;white-space:normal;padding:10px 14px;">
+          <div>${opts.keepLabel}</div>
+          <div style="font-size:11px;font-weight:400;opacity:0.9;margin-top:3px;letter-spacing:0;">${opts.keepHint}</div>
+        </button>
+        <button type="button" class="btn btn-ghost" data-choice="fresh" style="text-align:left;white-space:normal;padding:10px 14px;">
+          <div>${opts.freshLabel}</div>
+          <div style="font-size:11px;font-weight:400;margin-top:3px;letter-spacing:0;">${opts.freshHint}</div>
+        </button>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-choice="">Peruuta</button>
+        </div>
+      </div>`;
+    const onKey = e => { if (e.key === 'Escape') done(null); };
+    const done = v => { document.removeEventListener('keydown', onKey); ov.remove(); resolve(v); };
+    ov.addEventListener('click', e => {
+      if (e.target === ov) return done(null);
+      const b = e.target.closest('[data-choice]');
+      if (b) done(b.dataset.choice || null);
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(ov);
+  });
+}
+
 async function applyTemplate(templateId) {
   const sel = document.getElementById('rowTemplateSelect');
   if (!templateId) return;
@@ -1047,7 +1085,15 @@ async function applyTemplate(templateId) {
   // 2026-09-28 (kohta 1/5): kysytään myös säilytetäänkö mallin tallennetut hinnat ja pyöristys,
   // vai haetaanko tuoreet hinnat hinnastosta — sama valinta kuin tarjoukset.html:n
   // "Kopioi uudeksi tarjoukseksi" -napissa (copyQuoteFrom).
-  const keepPrices = confirm('Ladataanko malli tallennetuilla hinnoilla?\n\nOK = Säilytä mallin hinnat (ja pyöristys)\nPeruuta = Hae uudet hinnat hinnastosta');
+  const choice = await askKeepPrices({
+    title: 'Ladataanko mallin hinnat?',
+    keepLabel: 'Säilytä mallin hinnat',
+    keepHint: 'Mallin tallennetut hinnat ja pyöristys tulevat sellaisenaan.',
+    freshLabel: 'Hae uudet hinnat hinnastosta',
+    freshHint: 'Hinnat haetaan hinnastosta, mallin pyöristys jätetään pois.'
+  });
+  if (!choice) { sel.value = ''; return; } // Peruuta = ei ladata mallia lainkaan
+  const keepPrices = choice === 'keep';
   const data = await sbGet('quotes', `?id=eq.${templateId}&select=*`);
   const q = Array.isArray(data) ? data[0] : null;
   sel.value = ''; // nollataan heti — sama malli pitää voida valita uudelleen, eikä valikon pidä jäädä "jumiin" valintaan
@@ -2857,10 +2903,13 @@ async function copyQuoteFrom(id, keepPrices) {
   // uusien hinnastohintojen päälle vanha pyöristys antaisi väärän summan, koska hinnat ovat
   // voineet muuttua oleellisestikin (2026-09-28, Tuomon vastaus kohtaan "pyöristys nollaus").
   document.getElementById('adjAmount').value = keepPrices ? (q.discount_amount || 0) : 0;
-  document.getElementById('discountPercent').value = q.discount_percent || 0;
-  document.getElementById('extraDiscountPercent').value = q.extra_discount_percent || 0;
-  document.getElementById('extraDiscountDisplay').value = q.extra_discount_display || 'hidden';
-  if (parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
+  // Koko tarjouksen alennus-% ja lisäalennus säilytetään VAIN kun hinnat säilytetään sellaisenaan —
+  // uusien hinnastohintojen päälle vanha alennus ei välttämättä enää sovi (2026-11-05, Tuomon
+  // päätös: uusilla hinnoilla alennus-% nollataan pyöristyksen tapaan).
+  document.getElementById('discountPercent').value = keepPrices ? (q.discount_percent || 0) : 0;
+  document.getElementById('extraDiscountPercent').value = keepPrices ? (q.extra_discount_percent || 0) : 0;
+  document.getElementById('extraDiscountDisplay').value = keepPrices ? (q.extra_discount_display || 'hidden') : 'hidden';
+  if (keepPrices && parseFloat(q.extra_discount_percent) > 0) document.getElementById('extraDiscountPanel').classList.add('show');
   // Mallin nimi periytyy kopioon VAIN kun kopioidaan suoraan mallista (is_template=true) —
   // tavallisesta tarjouksesta kopioitaessa ei, vaikka sekin olisi joskus tehty mallista
   // (2026-09-28, Tuomon vastaus kohtaan 19: "Ei peri").
@@ -2906,8 +2955,15 @@ async function copyQuoteFrom(id, keepPrices) {
 
 async function copyQuote() {
   if (!currentQuoteId) { alert('Tallenna tarjous ensin.'); return; }
-  const keepPrices = confirm('Kopioidaanko hinnat sellaisenaan?\n\nOK = Säilytä vanhat hinnat\nPeruuta = Hae uudet hinnat hinnastosta');
-  window.open(`tarjous.html?copy=${currentQuoteId}&keepPrices=${keepPrices?'1':'0'}`, '_blank');
+  const choice = await askKeepPrices({
+    title: 'Kopioidaanko hinnat ja alennukset?',
+    keepLabel: 'Säilytä hinnat ja alennukset',
+    keepHint: 'Rivien hinnat, rivikohtaiset alennukset, alennus-%, pyöristys ja lisäalennus kopioituvat sellaisenaan.',
+    freshLabel: 'Hae uudet hinnat hinnastosta',
+    freshHint: 'Hinnat haetaan hinnastosta. Rivikohtaiset alennukset, alennus-%, pyöristys ja lisäalennus nollataan.'
+  });
+  if (!choice) return; // Peruuta = ei kopioida mitään
+  window.open(`tarjous.html?copy=${currentQuoteId}&keepPrices=${choice==='keep'?'1':'0'}`, '_blank');
 }
 
 function updateStatusBadge() {
