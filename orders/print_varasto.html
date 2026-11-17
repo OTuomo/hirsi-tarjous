@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 22:10 -->
+<!-- Claude-versio: 2026-11-17 20:05 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -47,6 +47,7 @@
   table.rep td { padding: 3px 4px; border-bottom: 1px solid #ddd; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 8.3pt; white-space: nowrap; }
   table.rep td.pk { font-family: 'IBM Plex Sans', Arial, sans-serif; font-weight: 700; font-size: 9pt; text-align: left; }
   table.rep td.l { font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 8.3pt; }
+  table.rep tr.grp td { background: #f3ede4; font-family: 'IBM Plex Sans', Arial, sans-serif; font-weight: 700; font-size: 8.8pt; text-align: left; border-bottom: 1px solid #bbb; }
   table.rep td.note { font-family: 'IBM Plex Sans', Arial, sans-serif; text-align: left; white-space: normal; max-width: 60mm; }
   table.rep td.len { border-left: 1px solid #eee; }
   table.rep td.zero { background: #f7f7f7; }
@@ -154,13 +155,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     const withOther = params.get('other') === '1';          // kappale- ja pituustavara mukaan
     const newpage = params.get('pb') !== '0';                 // jokainen nimike omalle sivulle (oletus kyllä)
 
-    const [rItems, rLines, rGrades, rPieces, rLens] = await Promise.all([
-      fetchAll('stock_items', 'id,name,kind,unit,width_mm,thickness_mm,active', (q) => q.order('name').order('id')),
+    const ITEM_COLS = 'id,name,kind,unit,width_mm,thickness_mm,active';
+    let [rItems, rLines, rGrades, rPieces, rLens, rCats] = await Promise.all([
+      fetchAll('stock_items', ITEM_COLS + ',category', (q) => q.order('name').order('id')),
       fetchAll('stock_lot_lines', 'lot_id,item_id,package_no,grade_id,grade_name,arrived_on,note,length_mm,qty_now,jm_now,m3_now', (q) => q.gt('qty_now', 0).order('package_no').order('length_mm')),
       db.from('stock_grades').select('id,name'),
       withOther ? db.from('stock_piece_balances').select('*') : Promise.resolve({ data: [] }),
-      withOther ? db.from('stock_length_balances').select('*') : Promise.resolve({ data: [] })
+      withOther ? db.from('stock_length_balances').select('*') : Promise.resolve({ data: [] }),
+      db.from('product_categories').select('name,sort_order').order('sort_order').order('name')
     ]);
+    // kategoriat_migraatio ajamatta → ei kategoria-saraketta: haetaan nimikkeet ilman sitä (raportti ilman ryhmittelyä)
+    if (rItems.error) rItems = await fetchAll('stock_items', ITEM_COLS, (q) => q.order('name').order('id'));
+    const catNames = rCats.error ? [] : (rCats.data || []).map((c) => c.name);
+    const catOrder = (n) => { if (!n) return 1e9; const k = catNames.indexOf(n); return k < 0 ? 1e8 : k; };
+    const catCmp = (a, b) => catOrder(a) - catOrder(b) || String(a || '').localeCompare(String(b || ''), 'fi');
     if (rItems.error || rLines.error || rGrades.error || rPieces.error) { console.error(rItems.error || rLines.error || rGrades.error || rPieces.error); root.textContent = 'Tietojen lataus epäonnistui. Kirjaudu sisään ja yritä uudelleen.'; return; }
     const lensData = rLens.error ? [] : (rLens.data || []);  // v3 puuttuu → pituustavara jää pois, muu raportti toimii
 
@@ -192,17 +200,30 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     if (withOther) {
       const pieces = items.filter((i) => i.kind === 'piece' && pick(i)).map((i) => ({ i, q: Number(((rPieces.data || []).find((p) => p.item_id === i.id) || {}).qty_now) || 0 })).filter((x) => x.q !== 0).sort((a, b) => natCmp(a.i.name, b.i.name));
-      const lenItems = items.filter((i) => i.kind === 'length_piece' && pick(i)).sort((a, b) => natCmp(a.name, b.name));
+      const lenItems = items.filter((i) => i.kind === 'length_piece' && pick(i)).sort((a, b) => catCmp(a.category, b.category) || natCmp(a.name, b.name));
       let other = '';
       if (pieces.length) {
+        // Kappaletavara kategorioittain (inventointi), jos nimikkeillä on kategorioita
+        const grouped = pieces.some((p) => p.i.category);
+        let body = '';
+        if (grouped) {
+          const groups = new Map();
+          for (const p of pieces) { const k = p.i.category || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(p); }
+          for (const k of [...groups.keys()].sort(catCmp)) {
+            body += `<tr class="grp"><td colspan="3">${esc(k || 'Ei kategoriaa')}</td></tr>`;
+            body += groups.get(k).map((p) => `<tr><td class="l">${esc(p.i.name)}</td><td class="l">${esc(p.i.unit)}</td><td>${fi(p.q, 0)}</td></tr>`).join('');
+          }
+        } else {
+          body = pieces.map((p) => `<tr><td class="l">${esc(p.i.name)}</td><td class="l">${esc(p.i.unit)}</td><td>${fi(p.q, 0)}</td></tr>`).join('');
+        }
         other += `<div class="sec"><div class="sec-title"><span>Kappaletavara</span></div><table class="rep simple"><thead><tr><th class="l">Nimike</th><th class="l">Yksikkö</th><th>Saldo</th></tr></thead><tbody>
-          ${pieces.map((p) => `<tr><td class="l">${esc(p.i.name)}</td><td class="l">${esc(p.i.unit)}</td><td>${fi(p.q, 0)}</td></tr>`).join('')}</tbody></table></div>`;
+          ${body}</tbody></table></div>`;
       }
       for (const it of lenItems) {
         const ls = lensData.filter((r) => r.item_id === it.id && Number(r.qty_now) > 0).sort((a, b) => a.length_mm - b.length_mm);
         if (!ls.length) continue;
         const pcs = ls.reduce((a, r) => a + Number(r.qty_now), 0), jm = ls.reduce((a, r) => a + Number(r.jm_now), 0);
-        other += `<div class="sec"><div class="sec-title"><span>Pituustavara: ${esc(it.name)}</span></div><table class="rep simple"><thead><tr><th class="l">Pituus (m)</th><th>kpl</th><th>jm</th></tr></thead><tbody>
+        other += `<div class="sec"><div class="sec-title"><span>Pituustavara: ${esc(it.name)}</span>${it.category ? `<span class="sub">${esc(it.category)}</span>` : ''}</div><table class="rep simple"><thead><tr><th class="l">Pituus (m)</th><th>kpl</th><th>jm</th></tr></thead><tbody>
           ${ls.map((r) => `<tr><td class="l">${esc(fLenM(r.length_mm))}</td><td>${fi(r.qty_now, 0)}</td><td>${fi(r.jm_now, 1)}</td></tr>`).join('')}
           <tr class="tot"><td class="l">Yhteensä</td><td>${fi(pcs, 0)}</td><td>${fi(jm, 1)}</td></tr></tbody></table></div>`;
       }

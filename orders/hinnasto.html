@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-02 18:55 -->
+<!-- Claude-versio: 2026-11-17 20:05 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -337,6 +337,36 @@
 
   .saving { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-dim); }
 
+  /* KATEGORIAT-IKKUNA */
+  .cat-hint { font-size: 12px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; line-height: 1.5; }
+  .cat-list { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .cat-row {
+    display: grid; grid-template-columns: minmax(130px, 1.6fr) 120px 80px minmax(110px, 1fr) 150px;
+    gap: 8px; align-items: center; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .cat-row:last-child { border-bottom: none; }
+  .cat-row.head {
+    background: rgba(255,255,255,0.03); font-size: 11px; color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .cat-row.is-hidden .c-name { opacity: 0.55; }
+  .cat-row.is-editing { background: var(--accent-glow); }
+  .cat-row .mono { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+  .cat-row .acts { display: flex; gap: 4px; justify-content: flex-end; }
+  .cat-row .c-sub { display: none; font-size: 11px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
+  .cat-badge { font-size: 10px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; margin-left: 6px; }
+  .cat-form { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: rgba(255,255,255,0.02); }
+  .cat-form-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; font-family: 'IBM Plex Mono', monospace; }
+  .cat-row .btn:disabled, .cat-form .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .cat-warn { font-size: 12px; color: var(--accent); font-family: 'IBM Plex Mono', monospace; line-height: 1.5; }
+  @media (max-width: 640px) {
+    .cat-row { grid-template-columns: 1fr auto; }
+    .cat-row.head { display: none; }
+    .cat-row .c-range, .cat-row .c-cnt, .cat-row .c-stock { display: none; }
+    .cat-row .c-sub { display: block; }
+    .cat-form .form-grid { grid-template-columns: 1fr; }
+  }
+
   @media (max-width: 700px) {
     .page { padding: 16px; }
     .page-header { flex-direction: column; align-items: stretch; }
@@ -368,6 +398,7 @@
   <h1>Hinnasto</h1>
   <div class="header-right">
     <span class="saving" id="saveStatus"></span>
+    <button class="btn btn-ghost btn-sm" id="catBtn">🗂 Kategoriat</button>
     <button class="btn btn-ghost btn-sm" id="csvBtn">⬆ Tuo CSV</button>
     <button class="btn btn-primary btn-sm" id="newBtn">+ Uusi tuote</button>
   </div>
@@ -469,18 +500,9 @@
       <!-- Kategoria ensin — täyttää koodin automaattisesti -->
       <div class="form-group">
         <label>Kategoria</label>
+        <!-- vaihtoehdot rakennetaan kategorialistasta (product_categories), ks. buildCategorySelect() -->
         <select id="fCategory" onchange="onCategoryChange()">
           <option value="">— valitse —</option>
-          <option value="Hirret">Hirret</option>
-          <option value="Sahatavara">Sahatavara</option>
-          <option value="Höylätty">Höylätty</option>
-          <option value="Pienrauta">Pienrauta</option>
-          <option value="Tarvikkeet">Tarvikkeet</option>
-          <option value="Ovet ja ikkunat">Ovet ja ikkunat</option>
-          <option value="Kattotarvikkeet">Kattotarvikkeet</option>
-          <option value="Vakiomallit">Vakiomallit</option>
-          <option value="Työ">Työ</option>
-          <option value="Työ, Rakennustyö">Työ, Rakennustyö</option>
         </select>
       </div>
       <div class="form-group">
@@ -675,6 +697,69 @@
   </div>
 </div>
 
+<!-- MODAL: kategoriat (product_categories) -->
+<div class="modal-backdrop" id="catModal">
+  <div class="modal" style="width:780px;">
+    <div class="modal-title">Kategoriat</div>
+    <p class="cat-hint" style="margin-bottom:12px;">
+      Kategoriat näkyvät hinnastossa ja varastossa. Uusi kategoria tulee heti käyttöön uuden tuotteen valikkoon.
+      Kategoriaa, jossa on tuotteita, ei voi poistaa — piilota se, jolloin vanhat tuotteet pitävät sen.
+    </p>
+    <div class="cat-list" id="catList"></div>
+
+    <div class="cat-form" id="catForm">
+      <div class="cat-form-title" id="catFormTitle">Uusi kategoria</div>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label for="cfName">Nimi</label>
+          <input type="text" id="cfName" maxlength="40" autocomplete="off" placeholder="esim. Työkalut">
+        </div>
+        <div class="form-group">
+          <label for="cfFrom">Tuotekoodit alkaen</label>
+          <input type="text" id="cfFrom" inputmode="numeric" maxlength="6" placeholder="esim. 10000">
+        </div>
+        <div class="form-group">
+          <label for="cfTo">… asti</label>
+          <input type="text" id="cfTo" inputmode="numeric" maxlength="6" placeholder="esim. 10999">
+        </div>
+        <div class="form-group full cat-hint" id="cfRangeHint">Koodiväli on vapaaehtoinen. Kun se on annettu, uudelle tuotteelle ehdotetaan seuraava vapaa koodi väliltä.</div>
+        <div class="form-group">
+          <label for="cfPricing">Hinnoittelu oletuksena</label>
+          <select id="cfPricing">
+            <option value="simple">Kappalehinta (osto + kate)</option>
+            <option value="cubic">Kuutiohinta (sahatavara, hirret)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="cfStock">Varastossa</label>
+          <select id="cfStock">
+            <option value="piece">Kappaletavara</option>
+            <option value="lot_length">Nippu (pituuksia, sahatavara)</option>
+            <option value="length_piece">Pituustavara (mitta + kpl)</option>
+            <option value="none">Ei näy varastossa (esim. työ)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="cfActive">Tila</label>
+          <select id="cfActive">
+            <option value="1">Käytössä</option>
+            <option value="0">Piilotettu (ei uusille tuotteille)</option>
+          </select>
+        </div>
+        <div class="form-group full cat-warn" id="cfWarn" style="display:none;"></div>
+      </div>
+      <div class="form-actions" style="margin-top:12px;">
+        <button class="btn btn-ghost" id="cfCancel" type="button" style="display:none;">Peruuta muokkaus</button>
+        <button class="btn btn-primary" id="cfSave" type="button">Lisää kategoria</button>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-ghost" id="catCloseBtn" type="button">Sulje</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -702,6 +787,7 @@ const filterCat    = document.getElementById('filterCat');
 const filterActive = document.getElementById('filterActive');
 const modal        = document.getElementById('modal');
 const csvModal     = document.getElementById('csvModal');
+const catModal     = document.getElementById('catModal');
 const toast        = document.getElementById('toast');
 const pInfo        = document.getElementById('paginationInfo');
 
@@ -800,37 +886,73 @@ function toggleStockFields() {
 loadProducts();
 
 async function loadProducts() {
-  const { data, error } = await db.from('products').select('*').order('code');
+  const [res] = await Promise.all([
+    db.from('products').select('*').order('code'),
+    loadCategories()
+  ]);
+  const { data, error } = res;
   if (error) { showToast('Virhe ladattaessa: ' + error.message, 'error'); return; }
   allProducts = data || [];
   buildCategoryFilter();
   applyFilters();
   updateStats();
   updateLowCount();
+  if (catModal.classList.contains('open')) renderCatList();
+}
+
+// ── Kategoriat (taulu product_categories, yhteinen varaston kanssa) ──
+// Kategoriat, koodivälit ja hinnoittelun oletus tulevat tietokannasta, joten Tuomo voi lisätä
+// uusia "Kategoriat"-ikkunasta ilman koodimuutosta. Jos taulua ei vielä ole (kategoriat_migraatio.sql
+// ajamatta), käytetään vanhaa kiinteää listaa, jotta sivu toimii silti.
+const FALLBACK_CATEGORIES = [
+  ['Hirret', 2000, 2999, 'cubic'], ['Sahatavara', 1000, 1999, 'cubic'], ['Höylätty', 3000, 3999, 'cubic'],
+  ['Pienrauta', 4000, 4999, 'simple'], ['Tarvikkeet', 5000, 5999, 'simple'], ['Ovet ja ikkunat', 6000, 6999, 'simple'],
+  ['Kattotarvikkeet', 7000, 7999, 'simple'], ['Vakiomallit', 9000, 9999, 'simple'], ['Työ', 0, 99, 'simple'],
+  ['Työ, Rakennustyö', 100, 199, 'simple']
+].map(([name, code_from, code_to, pricing_default], i) => ({ id: null, name, code_from, code_to, pricing_default, stock_mode: 'piece', sort_order: i, active: true }));
+let categories = [];
+let catsFromDb = false;
+
+async function loadCategories() {
+  const { data, error } = await db.from('product_categories').select('*').order('sort_order').order('name');
+  if (error) {
+    console.warn('product_categories ei käytettävissä (kategoriat_migraatio.sql ajamatta?) — käytetään kiinteää listaa', error);
+    categories = FALLBACK_CATEGORIES.slice();
+    catsFromDb = false;
+  } else {
+    categories = data || [];
+    catsFromDb = true;
+  }
+  buildCategorySelect(document.getElementById('fCategory').value);
+}
+
+const catByName = (name) => categories.find(c => c.name === name) || null;
+const codeNum = (code) => /^\d{1,9}$/.test(String(code ?? '').trim()) ? parseInt(String(code).trim(), 10) : null;
+
+// Tuotelomakkeen kategoriavalikko: käytössä olevat kategoriat järjestyksessä. Muokattavan tuotteen
+// nykyinen kategoria lisätään aina mukaan (myös piilotettu), ettei se katoa tallennuksessa.
+function buildCategorySelect(current) {
+  const sel = document.getElementById('fCategory');
+  const cur = current || '';
+  const list = categories.filter(c => c.active);
+  const opts = ['<option value="">— valitse —</option>'];
+  for (const c of list) opts.push(`<option value="${esc(c.name)}">${esc(c.name)}</option>`);
+  if (cur && !list.some(c => c.name === cur)) {
+    const known = catByName(cur);
+    opts.push(`<option value="${esc(cur)}">${esc(cur)} ${known ? '(piilotettu)' : '(ei listassa)'}</option>`);
+  }
+  sel.innerHTML = opts.join('');
+  sel.value = cur;
 }
 
 // ── Hinnoittelulogiikka ────────────────────────────────────
 
-
-const CODE_RANGES = {
-  'Työ':              [0,    99],
-  'Työ, Rakennustyö': [100,  199],
-  'Sahatavara':       [1000, 1999],
-  'Hirret':           [2000, 2999],
-  'Höylätty':         [3000, 3999],
-  'Pienrauta':        [4000, 4999],
-  'Tarvikkeet':       [5000, 5999],
-  'Ovet ja ikkunat':  [6000, 6999],
-  'Kattotarvikkeet':  [7000, 7999],
-  'Vakiomallit':      [9000, 9999],
-};
-
 function onCategoryChange() {
-  // Aseta hinnoittelumalli automaattisesti kategorian mukaan
+  // Aseta hinnoittelumalli automaattisesti kategorian oletuksen mukaan
   const cat = document.getElementById('fCategory').value;
-  const cubicCats = ['Hirret', 'Sahatavara', 'Höylätty'];
-  if (cat && !document.getElementById('fPricingModel').dataset.userChanged) {
-    document.getElementById('fPricingModel').value = cubicCats.includes(cat) ? 'cubic' : 'simple';
+  const c = catByName(cat);
+  if (c && !document.getElementById('fPricingModel').dataset.userChanged) {
+    document.getElementById('fPricingModel').value = c.pricing_default === 'cubic' ? 'cubic' : 'simple';
     togglePricingFields();
   }
   // Laske seuraava vapaa koodi vain uutta tuotetta tehdessä
@@ -838,8 +960,9 @@ function onCategoryChange() {
 }
 
 async function autoFillCode(cat) {
-  if (!cat || !CODE_RANGES[cat]) return;
-  const [min, max] = CODE_RANGES[cat];
+  const c = catByName(cat);
+  if (!c || c.code_from == null || c.code_to == null) return;
+  const min = c.code_from, max = c.code_to;
   // Hae kaikki olemassaolevat koodit tältä väliltä
   const existing = allProducts
     .map(p => parseInt(p.code))
@@ -853,6 +976,8 @@ async function autoFillCode(cat) {
   }
   if (next <= max) {
     document.getElementById('fCode').value = String(next);
+  } else {
+    showToast(`Kategorian ${cat} koodiväli ${min}–${max} on täynnä — anna koodi käsin tai laajenna väliä Kategoriat-ikkunassa`, 'error');
   }
 }
 
@@ -936,9 +1061,10 @@ function applyFilters() {
     let va = a[sortCol] ?? '';
     let vb = b[sortCol] ?? '';
     if (typeof va === 'number') return sortDir === 'asc' ? va - vb : vb - va;
+    // numeric: koodit lajitellaan numeroina (2000 ennen 10000), myös jos sarake on tekstiä
     return sortDir === 'asc'
-      ? String(va).localeCompare(String(vb), 'fi')
-      : String(vb).localeCompare(String(va), 'fi');
+      ? String(va).localeCompare(String(vb), 'fi', { numeric: true })
+      : String(vb).localeCompare(String(va), 'fi', { numeric: true });
   });
 
   page = 0;
@@ -1039,11 +1165,16 @@ function updateStats() {
 }
 
 function buildCategoryFilter() {
-  const cats = [...new Set(allProducts.map(p => p.category).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'fi'));
+  // Suodatin: kategoriat kategorialistan järjestyksessä, vain ne joissa on tuotteita (+ määrä)
+  const cnt = new Map();
+  allProducts.forEach(p => { if (p.category) cnt.set(p.category, (cnt.get(p.category) || 0) + 1); });
+  const ordered = categories.map(c => c.name).filter(n => cnt.has(n));
+  const extra = [...cnt.keys()].filter(n => !catByName(n)).sort((a,b) => a.localeCompare(b, 'fi'));
+  const cats = [...ordered, ...extra];
   const cur = filterCat.value;
   filterCat.innerHTML = '<option value="">Kaikki kategoriat</option>' +
-    cats.map(c => `<option value="${esc(c)}" ${c === cur ? 'selected' : ''}>${esc(c)}</option>`).join('');
-  // kategoriavalikko lomakkeessa päivitetään dynaamisesti tarvittaessa
+    cats.map(c => `<option value="${esc(c)}" ${c === cur ? 'selected' : ''}>${esc(c)} (${cnt.get(c)})</option>`).join('');
+  if (cur && !cnt.has(cur)) filterCat.value = '';
 }
 
 // ── Sorting ────────────────────────────────────────────────
@@ -1074,6 +1205,7 @@ function openNew() {
   editingId = null;
   document.getElementById('modalTitle').textContent = 'Uusi tuote';
   clearForm();
+  buildCategorySelect('');
   modal.classList.add('open');
 }
 
@@ -1086,7 +1218,7 @@ async function openEdit(id) {
   document.getElementById('fCode').value         = p.code        || '';
   document.getElementById('fName').value         = p.name        || '';
   document.getElementById('fUnit').value         = p.unit        || '';
-  document.getElementById('fCategory').value     = p.category    || '';
+  buildCategorySelect(p.category || '');          // lisää myös piilotetun kategorian valikkoon
   document.getElementById('fPricingModel').dataset.userChanged = '1';
   document.getElementById('fVat').value          = p.vat_percent ?? 25.5;
   document.getElementById('fActive').value       = p.status || 'active';
@@ -1217,6 +1349,9 @@ async function saveProduct() {
 
   if (error) {
     saveBtn.disabled = false; saveBtn.textContent = 'Tallenna';
+    if (error.code === '23503' && /category/i.test(error.message || '')) {
+      showToast('Kategoriaa ei löydy kategorialistasta (onko se juuri poistettu?) — lataa sivu uudelleen', 'error'); loadProducts(); return;
+    }
     showToast('Virhe tallennuksessa: ' + error.message, 'error'); return;
   }
 
@@ -1320,6 +1455,38 @@ document.getElementById('csvImportBtn').addEventListener('click', async () => {
   const btn = document.getElementById('csvImportBtn');
   btn.disabled = true; btn.textContent = 'Tuodaan…';
 
+  // Kategoriat: tuotteen kategorian pitää löytyä kategorialistasta (tietokanta valvoo).
+  // Kirjainkoko korjataan listan mukaiseksi; uudet kategoriat lisätään listaan vain luvalla.
+  if (catsFromDb) {
+    const byLower = new Map(categories.map(c => [c.name.toLowerCase(), c.name]));
+    const unknown = new Map();
+    for (const r of csvRows) {
+      const c = (r.category || '').trim();
+      if (!c) { r.category = null; continue; }
+      if (byLower.has(c.toLowerCase())) r.category = byLower.get(c.toLowerCase());
+      else { r.category = c; if (!unknown.has(c.toLowerCase())) unknown.set(c.toLowerCase(), c); }
+    }
+    if (unknown.size) {
+      const names = [...unknown.values()];
+      const tooLong = names.find(n => n.length > 40);
+      if (tooLong) {
+        showToast('CSV:n kategorian nimi on liian pitkä (max 40 merkkiä): ' + tooLong.slice(0, 40) + '…', 'error');
+        btn.disabled = false; btn.textContent = 'Tuo tuotteet'; return;
+      }
+      if (!confirm(`CSV:ssä on ${names.length} kategoriaa, joita ei ole kategorialistassa:\n\n${names.join('\n')}\n\nLisätäänkö ne listaan (ilman koodiväliä)? Voit muokata niitä myöhemmin Kategoriat-ikkunassa.\n\nPeruuta = tuontia ei tehdä.`)) {
+        btn.disabled = false; btn.textContent = 'Tuo tuotteet'; return;
+      }
+      const maxSort = categories.reduce((m, c) => Math.max(m, c.sort_order || 0), 0);
+      const newRows = names.map((name, i) => ({ name, sort_order: maxSort + 10 * (i + 1) }));
+      const { data: insCats, error: catErr } = await db.from('product_categories').insert(newRows).select();
+      if (catErr || !insCats || insCats.length !== newRows.length) {
+        showToast('Kategorioiden lisäys epäonnistui: ' + (catErr ? catErr.message : 'oikeusongelma?'), 'error');
+        btn.disabled = false; btn.textContent = 'Tuo tuotteet'; return;
+      }
+      await loadCategories();
+    }
+  }
+
   const withCode    = csvRows.filter(r => r.code);
   const withoutCode = csvRows.filter(r => !r.code);
   let err = null;
@@ -1342,6 +1509,230 @@ document.getElementById('csvImportBtn').addEventListener('click', async () => {
   csvModal.classList.remove('open');
   loadProducts();
 });
+
+// ── Kategoriat-ikkuna (lisää / muokkaa / järjestä / piilota / poista) ──
+// Kaikki kirjautuneet saavat nyt hallita kategorioita (rajataan myöhemmin roolityössä).
+// Tietokanta valvoo: nimi yksilöllinen (myös kirjainkoko), koodivälit eivät mene päällekkäin,
+// käytössä olevaa kategoriaa ei voi poistaa, ja nimen muutos päivittyy tuotteisiin ja varastoon.
+let catEditingId = null;
+let catBusy = false;
+const STOCK_LABEL = { piece: 'Kappaletavara', lot_length: 'Nippu', length_piece: 'Pituustavara', none: 'Ei varastossa' };
+const fmtRange = (c) => c.code_from != null ? `${c.code_from}–${c.code_to}` : '—';
+const prodCount = (name) => allProducts.filter(p => p.category === name).length;
+const cfEl = (id) => document.getElementById(id);
+
+cfEl('catBtn').addEventListener('click', openCatModal);
+cfEl('catCloseBtn').addEventListener('click', closeCatModal);
+catModal.addEventListener('click', e => { if (e.target === catModal) closeCatModal(); });
+cfEl('cfCancel').addEventListener('click', resetCatForm);
+cfEl('cfSave').addEventListener('click', saveCategory);
+['cfFrom', 'cfTo', 'cfName'].forEach(id => cfEl(id).addEventListener('input', updateCatWarn));
+
+function openCatModal() {
+  if (!catsFromDb) {
+    showToast('Kategorialistaa ei löydy tietokannasta — aja ensin kategoriat_migraatio.sql Supabasessa', 'error');
+    return;
+  }
+  resetCatForm();
+  renderCatList();
+  catModal.classList.add('open');
+}
+function closeCatModal() { catModal.classList.remove('open'); resetCatForm(); }
+
+function renderCatList() {
+  const box = cfEl('catList');
+  const head = '<div class="cat-row head"><div>Kategoria</div><div>Koodiväli</div><div>Tuotteita</div><div>Varastossa</div><div></div></div>';
+  if (!categories.length) { box.innerHTML = head + '<div class="cat-row"><div class="cat-hint">Ei kategorioita.</div></div>'; return; }
+  box.innerHTML = head + categories.map((c, i) => {
+    const n = prodCount(c.name);
+    const stock = STOCK_LABEL[c.stock_mode] || c.stock_mode;
+    const sub = [fmtRange(c), n + ' tuotetta', stock].join(' · ');
+    return `<div class="cat-row${c.active ? '' : ' is-hidden'}${c.id === catEditingId ? ' is-editing' : ''}">
+      <div><span class="c-name">${esc(c.name)}</span>${c.active ? '' : '<span class="cat-badge">piilotettu</span>'}<div class="c-sub">${esc(sub)}</div></div>
+      <div class="mono c-range">${esc(fmtRange(c))}</div>
+      <div class="mono c-cnt">${n}</div>
+      <div class="c-stock">${esc(stock)}</div>
+      <div class="acts">
+        <button type="button" class="btn btn-ghost btn-sm btn-icon" data-act="up" data-id="${esc(c.id)}" title="Siirrä ylös" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button type="button" class="btn btn-ghost btn-sm btn-icon" data-act="down" data-id="${esc(c.id)}" title="Siirrä alas" ${i === categories.length - 1 ? 'disabled' : ''}>↓</button>
+        <button type="button" class="btn btn-ghost btn-sm btn-icon" data-act="edit" data-id="${esc(c.id)}" title="Muokkaa">✎</button>
+        <button type="button" class="btn btn-danger btn-sm btn-icon" data-act="del" data-id="${esc(c.id)}" title="${n ? 'Kategoriassa on tuotteita — piilota se poistamisen sijaan' : 'Poista kategoria'}" ${n ? 'disabled' : ''}>✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+cfEl('catList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b || b.disabled) return;
+  const c = categories.find(x => x.id === b.dataset.id);
+  if (!c) return;
+  if (b.dataset.act === 'edit') startEditCat(c);
+  else if (b.dataset.act === 'del') deleteCategory(c);
+  else moveCategory(c, b.dataset.act === 'up' ? -1 : 1);
+});
+
+// Seuraava vapaa tuhannen koodiväli suurimman käytetyn välin jälkeen (esim. 11000–11999),
+// jolla ei ole toista kategoriaa eikä yhtään tuotetta.
+function suggestRange() {
+  const taken = (a, b) => categories.some(c => c.code_from != null && a <= c.code_to && b >= c.code_from)
+    || allProducts.some(p => { const n = codeNum(p.code); return n != null && n >= a && n <= b; });
+  const maxTo = categories.reduce((m, c) => c.code_to != null ? Math.max(m, c.code_to) : m, -1);
+  for (let a = (Math.floor(maxTo / 1000) + 1) * 1000; a + 999 <= 999999; a += 1000) {
+    if (!taken(a, a + 999)) return [a, a + 999];
+  }
+  return null;
+}
+
+function resetCatForm() {
+  catEditingId = null;
+  cfEl('catFormTitle').textContent = 'Uusi kategoria';
+  cfEl('cfSave').textContent = 'Lisää kategoria';
+  cfEl('cfCancel').style.display = 'none';
+  cfEl('cfName').value = '';
+  const r = catsFromDb ? suggestRange() : null;
+  cfEl('cfFrom').value = r ? String(r[0]) : '';
+  cfEl('cfTo').value = r ? String(r[1]) : '';
+  cfEl('cfPricing').value = 'simple';
+  cfEl('cfStock').value = 'piece';
+  cfEl('cfActive').value = '1';
+  updateCatWarn();
+  if (catModal.classList.contains('open')) renderCatList();
+}
+
+function startEditCat(c) {
+  catEditingId = c.id;
+  cfEl('catFormTitle').textContent = 'Muokkaa kategoriaa: ' + c.name;
+  cfEl('cfSave').textContent = 'Tallenna muutokset';
+  cfEl('cfCancel').style.display = '';
+  cfEl('cfName').value = c.name;
+  cfEl('cfFrom').value = c.code_from != null ? String(c.code_from) : '';
+  cfEl('cfTo').value = c.code_to != null ? String(c.code_to) : '';
+  cfEl('cfPricing').value = c.pricing_default === 'cubic' ? 'cubic' : 'simple';
+  cfEl('cfStock').value = STOCK_LABEL[c.stock_mode] ? c.stock_mode : 'piece';
+  cfEl('cfActive').value = c.active ? '1' : '0';
+  updateCatWarn();
+  renderCatList();
+  cfEl('catForm').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  cfEl('cfName').focus();
+}
+
+function readCatForm() {
+  const name = cfEl('cfName').value.trim().replace(/\s+/g, ' ');
+  if (!name || name.length > 40) return { error: 'Anna kategorialle nimi (max 40 merkkiä).' };
+  const dup = categories.find(c => c.id !== catEditingId && c.name.toLowerCase() === name.toLowerCase());
+  if (dup) return { error: `Kategoria ${dup.name} on jo olemassa.` };
+  const fs = cfEl('cfFrom').value.trim(), ts = cfEl('cfTo').value.trim();
+  let code_from = null, code_to = null;
+  if (fs || ts) {
+    if (!/^\d{1,6}$/.test(fs) || !/^\d{1,6}$/.test(ts)) return { error: 'Anna koodiväli kokonaislukuina (esim. 11000 ja 11999) tai jätä molemmat tyhjiksi.' };
+    code_from = parseInt(fs, 10); code_to = parseInt(ts, 10);
+    if (code_from > code_to) return { error: 'Koodivälin alku ei voi olla suurempi kuin loppu.' };
+    const clash = categories.find(c => c.id !== catEditingId && c.code_from != null && code_from <= c.code_to && code_to >= c.code_from);
+    if (clash) return { error: `Koodiväli menee päällekkäin kategorian ${clash.name} kanssa (${fmtRange(clash)}).` };
+  }
+  return { row: {
+    name, code_from, code_to,
+    pricing_default: cfEl('cfPricing').value === 'cubic' ? 'cubic' : 'simple',
+    stock_mode: STOCK_LABEL[cfEl('cfStock').value] ? cfEl('cfStock').value : 'piece',
+    active: cfEl('cfActive').value === '1'
+  } };
+}
+
+// Ei-estävät huomautukset: muiden kategorioiden tuotteita välillä, nimen muutos koskee tuotteita
+function updateCatWarn() {
+  const el = cfEl('cfWarn');
+  const msgs = [];
+  const fs = cfEl('cfFrom').value.trim(), ts = cfEl('cfTo').value.trim();
+  const orig = catEditingId ? categories.find(c => c.id === catEditingId) : null;
+  if (/^\d{1,6}$/.test(fs) && /^\d{1,6}$/.test(ts) && +fs <= +ts) {
+    const others = allProducts.filter(p => { const n = codeNum(p.code); return n != null && n >= +fs && n <= +ts && p.category !== (orig ? orig.name : null); });
+    if (others.length) {
+      msgs.push(`Huom: välillä on jo ${others.length} tuotetta muista kategorioista (esim. ${others.slice(0, 3).map(p => p.code + ' ' + (p.name || '')).join(', ')}). Uusille tuotteille ehdotetaan silti vain vapaita koodeja.`);
+    }
+  }
+  if (orig) {
+    const nm = cfEl('cfName').value.trim().replace(/\s+/g, ' ');
+    const n = prodCount(orig.name);
+    if (nm && nm !== orig.name && n) msgs.push(`Uusi nimi päivittyy myös ${n} tuotteeseen ja varaston nimikkeisiin.`);
+  }
+  el.innerHTML = msgs.map(esc).join('<br>');
+  el.style.display = msgs.length ? '' : 'none';
+}
+
+function catErrorMsg(error) {
+  console.error('product_categories', error);
+  const code = error && error.code, msg = (error && error.message) || '';
+  if (code === '23P01') return 'Koodiväli menee päällekkäin toisen kategorian kanssa.';
+  if (code === '23505') return 'Samanniminen kategoria on jo olemassa.';
+  if (code === '23503') return 'Kategoriaa käytetään tuotteissa tai varaston nimikkeissä, joten sitä ei voi poistaa. Piilota se sen sijaan.';
+  if (code === '23514') return 'Tarkista nimi (1–40 merkkiä) ja koodiväli.';
+  if (code === '42501' || /permission denied|row-level security|JWT/i.test(msg)) return 'Ei oikeutta. Kirjaudu ulos ja sisään ja yritä uudelleen.';
+  return 'Tallennus epäonnistui: ' + msg;
+}
+
+async function saveCategory() {
+  if (catBusy) return;
+  const { row, error } = readCatForm();
+  if (error) { showToast(error, 'error'); return; }
+  const btn = cfEl('cfSave');
+  catBusy = true; btn.disabled = true;
+  try {
+    const wasEdit = !!catEditingId;
+    let res;
+    if (wasEdit) {
+      res = await db.from('product_categories').update(row).eq('id', catEditingId).select();
+    } else {
+      row.sort_order = categories.reduce((m, c) => Math.max(m, c.sort_order || 0), 0) + 10;
+      res = await db.from('product_categories').insert([row]).select();
+    }
+    if (res.error) { showToast(catErrorMsg(res.error), 'error'); return; }
+    if (!res.data || !res.data[0]) { showToast('Tallennus ei onnistunut (oikeusongelma?)', 'error'); return; }
+    showToast(wasEdit ? 'Kategoria päivitetty ✓' : `Kategoria ${row.name} lisätty ✓`, 'success');
+    catEditingId = null;
+    await loadProducts();   // nimen muutos päivittää tuotteet → ladataan nekin
+    resetCatForm();
+  } catch (e) {
+    console.error(e); showToast('Tallennus epäonnistui. Yritä uudelleen.', 'error');
+  } finally { catBusy = false; btn.disabled = false; }
+}
+
+async function deleteCategory(c) {
+  if (catBusy) return;
+  if (prodCount(c.name)) { showToast('Kategoriassa on tuotteita — piilota se poistamisen sijaan', 'error'); return; }
+  if (!confirm(`Poistetaanko kategoria "${c.name}"?`)) return;
+  catBusy = true;
+  try {
+    const { data, error } = await db.from('product_categories').delete().eq('id', c.id).select();
+    if (error) { showToast(catErrorMsg(error), 'error'); return; }
+    if (!data || !data[0]) { showToast('Poisto ei onnistunut (oikeusongelma?)', 'error'); return; }
+    showToast('Kategoria poistettu', 'success');
+    if (catEditingId === c.id) catEditingId = null;
+    await loadProducts();
+    resetCatForm();
+  } catch (e) {
+    console.error(e); showToast('Poisto epäonnistui. Yritä uudelleen.', 'error');
+  } finally { catBusy = false; }
+}
+
+async function moveCategory(c, dir) {
+  if (catBusy) return;
+  const list = categories.slice();
+  const i = list.findIndex(x => x.id === c.id), j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  const changes = list.map((x, k) => ({ id: x.id, sort_order: (k + 1) * 10, old: x.sort_order })).filter(x => x.sort_order !== x.old);
+  catBusy = true;
+  try {
+    const results = await Promise.all(changes.map(x => db.from('product_categories').update({ sort_order: x.sort_order }).eq('id', x.id).select()));
+    const bad = results.find(r => r.error || !r.data || !r.data[0]);
+    if (bad) showToast(bad.error ? catErrorMsg(bad.error) : 'Järjestyksen tallennus ei onnistunut (oikeusongelma?)', 'error');
+    await loadCategories();
+    buildCategoryFilter();
+    renderCatList();
+  } catch (e) {
+    console.error(e); showToast('Järjestyksen tallennus epäonnistui', 'error');
+  } finally { catBusy = false; }
+}
 
 // ── Helpers ────────────────────────────────────────────────
 // ── Kokoonpano: komponenttien haku ja hallinta ─────────────

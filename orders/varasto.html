@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Claude-versio: 2026-11-03 21:50 -->
+<!-- Claude-versio: 2026-11-17 20:05 -->
 <html lang="fi">
 <head>
 <meta charset="UTF-8">
@@ -90,6 +90,7 @@
   .cols-items { grid-template-columns:minmax(200px,1fr) 140px 160px 110px 220px; }
   .cols-import { grid-template-columns:36px 64px minmax(200px,1fr) 150px 110px 200px; }
   .cols-pieces { grid-template-columns:minmax(200px,1fr) 90px 120px 330px; }
+  .tr.grp { grid-template-columns:1fr; background:var(--accent-bg); color:var(--accent-dim); font-weight:600; padding-top:8px; padding-bottom:8px; }
   .cols-lenrows { grid-template-columns:minmax(90px,1fr) minmax(90px,1fr) minmax(90px,1fr); }
   .combo { position:relative; }
   .combo input { padding-right:40px; }
@@ -210,6 +211,7 @@
   <section id="panePieces" role="tabpanel" aria-labelledby="tabPieces" style="display:none;flex-direction:column;gap:16px">
     <div class="row" style="align-items:flex-end">
       <div class="field" style="max-width:420px;flex:1 1 260px"><label class="label" for="pieceSearch">Hae nimikettä</label><input type="text" id="pieceSearch" maxlength="60" autocomplete="off" placeholder="kirjoita nimen osa…"></div>
+      <div class="field" id="pieceCatWrap" style="flex:0 1 240px;display:none"><label class="label" for="pieceCat">Kategoria</label><select id="pieceCat"></select></div>
       <button class="btn" id="printBtnOther" type="button">🖨 Tulosta kappaletavara…</button>
     </div>
     <div class="hint">Kappaletavara = tavara jolla on vain määrä (ei pituuksia). Uuden nimikkeen voi lisätä välilehdellä "Nimikkeet ja laadut".</div>
@@ -246,6 +248,7 @@
           <div class="field" id="ifDimsWrap" style="flex:2 1 260px"><div class="label">Mitat (mm)</div>
             <div style="display:flex;gap:8px;align-items:center"><input type="text" inputmode="numeric" id="ifW" maxlength="4" class="mono" aria-label="Leveys mm" placeholder="leveys 150"><span aria-hidden="true">×</span><input type="text" inputmode="numeric" id="ifT" maxlength="4" class="mono" aria-label="Paksuus mm" placeholder="paksuus 50"></div></div>
           <div class="field" id="ifUnitWrap" style="flex:1 1 120px;display:none"><label class="label" for="ifUnit">Yksikkö</label><input type="text" id="ifUnit" maxlength="10" value="kpl"></div>
+          <div class="field" id="ifCatWrap" style="flex:1 1 200px;display:none"><label class="label" for="ifCat">Kategoria</label><select id="ifCat"></select><div class="hint" id="ifCatHint" style="display:none">Tulee hinnastosta — muutetaan hinnastossa</div></div>
           <button class="btn btn-primary" id="ifSave" type="submit">Lisää nimike</button>
           <button class="btn" id="ifCancel" type="button" style="display:none">Peruuta muokkaus</button>
         </div>
@@ -337,6 +340,8 @@ function dbErrorMsg(error, ctx) {
   if (code === '23514' && /pkg_chk/.test(msg)) return 'Nippunumerossa saa olla vain kirjaimia, numeroita ja merkit . _ / - (max 40).';
   if (code === '23514' && /Tyyppiä ei voi vaihtaa|tyyppiä ei voi vaihtaa/.test(msg)) return 'Tyyppiä ei voi vaihtaa, koska nimikkeellä on jo kirjauksia. Nimeä vanha nimike uudelleen (esim. lisää perään "vanha"), poista se käytöstä ja luo uusi nimike.';
   if (code === '23514' && /Pituustavaralle/.test(msg)) return 'Anna pituus (0,1–20 m).';
+  if (code === '23514' && /linkitetyn nimikkeen kategoria/.test(msg)) return 'Hinnastosta tuodun nimikkeen kategoria tulee hinnastosta — muuta se hinnastossa.';
+  if (code === '23503' && /category/i.test(msg)) return 'Kategoriaa ei löydy (onko se juuri poistettu?). Lataa sivu uudelleen.';
   if (code === '22023' || (code === 'P0001' && /pituus|Nipulla/i.test(msg))) return msg;
   if (code === '42501' || code === 'PGRST301' || /permission denied|row-level security|JWT/i.test(msg)) return 'Ei oikeutta tähän toimintoon. Kirjaudu ulos ja sisään ja yritä uudelleen.';
   if (code === '23514') return 'Tietokanta hylkäsi arvot (tarkista pituudet, määrät ja tekstit).';
@@ -347,6 +352,8 @@ function dbErrorMsg(error, ctx) {
 let items = [], grades = [], lotRows = [], lineRows = [], pieceRows = [], lengthRows = [];
 let lenFlt = null; // valittu mitta (mm) pituustavara-osion suodattimena
 let lengthEnabled = false; // pituustavara (varasto_migraatio_v3) käytössä vain jos näkymä stock_length_balances löytyy
+let categories = [];       // yhteinen kategorialista hinnaston kanssa (product_categories)
+let catsEnabled = false;   // kategoriat_migraatio.sql ajettu → kategoriat käytössä; muuten sivu toimii ilman niitä
 let linesByLot = new Map();
 let flt = { item: '', grade: '', len: null, q: '' };
 let tabNow = 'lots';
@@ -376,8 +383,13 @@ async function loadAll() {
     db.from('stock_lots_summary').select('*').gt('pcs_now', 0).order('arrived_on', { ascending: false }).limit(LIMIT),
     db.from('stock_lot_lines').select('lot_id,item_id,length_mm,qty_now,jm_now,m3_now').gt('qty_now', 0).limit(LIMIT),
     db.from('stock_piece_balances').select('*'),
-    db.from('stock_length_balances').select('*')
+    db.from('stock_length_balances').select('*'),
+    db.from('product_categories').select('id,name,sort_order,stock_mode,active').order('sort_order').order('name')
   ]);
+  const catRes = res.pop(); // kategoriat_migraatio voi puuttua vielä → kategoriat piilotetaan, muu sivu toimii
+  catsEnabled = !catRes.error;
+  categories = catRes.error ? [] : (catRes.data || []);
+  if (catRes.error) console.warn('product_categories ei käytettävissä (kategoriat_migraatio.sql ajamatta?)', catRes.error);
   const lenRes = res.pop(); // v3-migraatio voi puuttua vielä → pituustavara piilotetaan, muu sivu toimii
   lengthEnabled = !lenRes.error;
   lengthRows = lenRes.error ? [] : (lenRes.data || []);
@@ -400,6 +412,11 @@ async function loadAll() {
 async function reloadAndRender() { if (await loadAll()) renderAll(); }
 
 const itemById = (id) => items.find((i) => i.id === id);
+// Kategoriat: järjestys kategorialistan mukaan, tuntemattomat ja "ei kategoriaa" loppuun
+const NO_CAT = '__none';
+const catOrder = (name) => { if (!name) return 1e9; const k = categories.findIndex((c) => c.name === name); return k < 0 ? 1e8 : k; };
+const catCmp = (a, b) => catOrder(a) - catOrder(b) || String(a || '').localeCompare(String(b || ''), 'fi');
+const catLabel = (name) => name || 'Ei kategoriaa';
 const lotItems = () => items.filter((i) => i.kind === 'lot_length' && i.active);
 const gradeName = (id) => { const g = grades.find((x) => x.id === id); return g ? g.name : ''; };
 
@@ -1093,17 +1110,42 @@ async function openLot(lotId) {
 // ═══════════════════════════════════════════════════════════════════════
 // KAPPALETAVARA
 // ═══════════════════════════════════════════════════════════════════════
+// Kappaletavara-välilehden kategoriasuodatin: vain kategoriat, joissa on kappale- tai pituustavaraa
+const pieceTabItem = (i) => i.kind === 'piece' || (i.kind === 'length_piece' && lengthEnabled);
+const pieceCatOk = (i) => { const v = $('#pieceCat').value; return !catsEnabled || !v || (v === NO_CAT ? !i.category : i.category === v); };
+function renderPieceCatFilter() {
+  const sel = $('#pieceCat');
+  $('#pieceCatWrap').style.display = catsEnabled ? '' : 'none';
+  if (!catsEnabled) return;
+  const cur = sel.value;
+  const cnt = new Map();
+  for (const i of items) if (pieceTabItem(i) && i.active) { const k = i.category || NO_CAT; cnt.set(k, (cnt.get(k) || 0) + 1); }
+  const keys = [...cnt.keys()].filter((k) => k !== NO_CAT).sort(catCmp);
+  if (cnt.has(NO_CAT)) keys.push(NO_CAT);
+  sel.replaceChildren(h('option', { value: '' }, 'Kaikki kategoriat'), ...keys.map((k) => h('option', { value: k }, (k === NO_CAT ? 'Ei kategoriaa' : k) + ' (' + cnt.get(k) + ')')));
+  sel.value = cnt.has(cur) ? cur : '';
+}
 function renderPieces() {
   const bal = new Map(pieceRows.map((p) => [p.item_id, p.qty_now]));
   const pq = $('#pieceSearch').value;
-  const list = items.filter((i) => i.kind === 'piece' && (i.active || num(bal.get(i.id)) > 0) && matchesQuery(i.name, pq));
+  const list = items.filter((i) => i.kind === 'piece' && (i.active || num(bal.get(i.id)) > 0) && matchesQuery(i.name, pq) && pieceCatOk(i));
   const head = h('div', { class: 'tr head cols-pieces' }, h('div', null, 'Nimike'), h('div', null, 'Yksikkö'), h('div', { class: 'r' }, 'Saldo'), h('div', null, ''));
-  if (!list.length) { $('#pieceList').replaceChildren(head, h('div', { class: 'empty' }, pq.trim() ? 'Ei hakutuloksia.' : 'Ei kappaletavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Kappaletavara).')); return; }
-  $('#pieceList').replaceChildren(head, ...list.map((i) => h('div', { class: 'tr cols-pieces' },
+  if (!list.length) { $('#pieceList').replaceChildren(head, h('div', { class: 'empty' }, pq.trim() || $('#pieceCat').value ? 'Ei hakutuloksia.' : 'Ei kappaletavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Kappaletavara).')); return; }
+  const row = (i) => h('div', { class: 'tr cols-pieces' },
     h('div', null, i.name + (i.active ? '' : ' (ei käytössä)')), h('div', null, i.unit), h('div', { class: 'r mono', style: 'font-weight:600' }, fint.format(num(bal.get(i.id)))),
     h('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
       h('button', { type: 'button', class: 'btn btn-small btn-ghost', disabled: !i.active, onclick: () => openPieceMove(i.id, 'saapuminen') }, '+ Saapuminen'),
-      h('button', { type: 'button', class: 'btn btn-small', onclick: () => openPieceMove(i.id, 'myynti') }, '− Nosto')))));
+      h('button', { type: 'button', class: 'btn btn-small', onclick: () => openPieceMove(i.id, 'myynti') }, '− Nosto')));
+  // Ryhmittely kategorioittain (inventointia varten), kun kategoriat ovat käytössä eikä yhtä kategoriaa ole valittu
+  if (!catsEnabled || $('#pieceCat').value || !list.some((i) => i.category)) { $('#pieceList').replaceChildren(head, ...list.map(row)); return; }
+  const groups = new Map();
+  for (const i of list) { const k = i.category || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); }
+  const out = [head];
+  for (const k of [...groups.keys()].sort(catCmp)) {
+    const g = groups.get(k);
+    out.push(h('div', { class: 'tr grp' }, h('div', null, catLabel(k) + ' · ' + g.length + (g.length === 1 ? ' nimike' : ' nimikettä'))), ...g.map(row));
+  }
+  $('#pieceList').replaceChildren(...out);
 }
 function openPieceMove(itemId, startKey) {
   const item = itemById(itemId); if (!item) return;
@@ -1154,10 +1196,10 @@ function renderLengthItems() {
   if (!lengthEnabled) return;
   const lq = $('#pieceSearch').value;
   const base = items.filter((i) => i.kind === 'length_piece' && (i.active || lensOf(i.id).length));
-  const all = base.filter((i) => matchesQuery(i.name, lq));
+  const all = base.filter((i) => matchesQuery(i.name, lq) && pieceCatOk(i));
   if (!all.length) {
     $('#lenPieceCard').style.display = 'none'; $('#lenPieceTiles').style.display = 'none';
-    $('#lengthList').replaceChildren(h('div', { class: 'empty card' }, base.length && lq.trim() ? 'Ei hakutuloksia.' : 'Ei pituustavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Pituustavara).')); return;
+    $('#lengthList').replaceChildren(h('div', { class: 'empty card' }, base.length && (lq.trim() || $('#pieceCat').value) ? 'Ei hakutuloksia.' : 'Ei pituustavara-nimikkeitä. Lisää ensimmäinen välilehdellä "Nimikkeet ja laadut" (tyyppi: Pituustavara).')); return;
   }
   // Mitat yli kaikkien pituustavara-nimikkeiden (kuten "Pituudet varastossa" nipuissa)
   const lens = new Map();
@@ -1183,6 +1225,7 @@ function renderLengthItems() {
     const pcs = ls.reduce((a, r) => a + num(r.qty_now), 0), jm = ls.reduce((a, r) => a + num(r.jm_now), 0);
     const head = h('div', { style: 'display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)' },
       h('div', null, h('div', { style: 'font-weight:600;font-size:16px' }, i.name + (i.active ? '' : ' (ei käytössä)')),
+        catsEnabled && i.category ? h('div', { class: 'hint' }, i.category) : null,
         h('div', { class: 'mono', style: 'color:var(--accent-dim);font-weight:600' }, fint.format(pcs) + ' kpl · ' + f1.format(jm) + ' jm yhteensä'),
         ls.length ? h('div', { class: 'chips', style: 'margin-top:6px' }, ...ls.map((r) => h('span', { class: 'chip' + (lenFlt === null ? '' : r.length_mm === lenFlt ? ' hit' : ' dim') }, fLen(r.length_mm) + ' m × ' + fint.format(num(r.qty_now))))) : null),
       h('div', { style: 'display:flex;gap:8px' },
@@ -1329,13 +1372,26 @@ function syncKindUI() {
   $('#ifUnitWrap').style.display = k === 'piece' ? '' : 'none';
 }
 $('#ifKind').addEventListener('change', syncKindUI);
+// Nimikkeen kategoria: varaston omalle nimikkeelle valittavissa; hinnastosta tuodulla se tulee hinnastosta (lukittu)
+function syncCatField(cur, linked) {
+  $('#ifCatWrap').style.display = catsEnabled ? '' : 'none';
+  if (!catsEnabled) return;
+  const v = cur || '';
+  const active = categories.filter((c) => c.active);
+  const opts = [h('option', { value: '' }, '— ei kategoriaa —'), ...active.map((c) => h('option', { value: c.name }, c.name))];
+  if (v && !active.some((c) => c.name === v)) opts.push(h('option', { value: v }, v + ' (piilotettu)'));
+  $('#ifCat').replaceChildren(...opts);
+  $('#ifCat').value = v;
+  $('#ifCat').disabled = !!linked;
+  $('#ifCatHint').style.display = linked ? '' : 'none';
+}
 function resetItemForm() {
   editingItemId = null;
   $('#ifName').value = ''; $('#ifW').value = ''; $('#ifT').value = ''; $('#ifUnit').value = 'kpl';
   $('#ifKind').disabled = false; $('#ifKind').value = 'lot_length';
   for (const o of $('#ifKind').options) o.disabled = false;
   $('#itemFormTitle').textContent = 'Lisää nimike'; $('#ifSave').textContent = 'Lisää nimike'; $('#ifCancel').style.display = 'none';
-  syncKindUI();
+  syncKindUI(); syncCatField('', false);
 }
 $('#ifCancel').addEventListener('click', resetItemForm);
 function startEditItem(i) {
@@ -1346,7 +1402,7 @@ function startEditItem(i) {
   for (const o of $('#ifKind').options) o.disabled = o.value === 'lot_length' && i.kind !== 'lot_length';
   $('#ifW').value = i.width_mm || ''; $('#ifT').value = i.thickness_mm || ''; $('#ifUnit').value = i.unit;
   $('#itemFormTitle').textContent = 'Muokkaa nimikettä'; $('#ifSave').textContent = 'Tallenna muutokset'; $('#ifCancel').style.display = '';
-  syncKindUI(); $('#ifName').focus(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  syncKindUI(); syncCatField(i.category, !!i.product_id); $('#ifName').focus(); window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 let itemSaving = false;
 $('#itemForm').addEventListener('submit', async (e) => {
@@ -1364,6 +1420,14 @@ $('#itemForm').addEventListener('submit', async (e) => {
     if (unit.length < 1 || unit.length > 10) return showToast('Anna yksikkö (esim. kpl)', 'error');
     row.unit = unit;
   } else if (kind !== 'length_piece' || !lengthEnabled) return showToast('Virheellinen tyyppi', 'error');
+  if (catsEnabled) { // hinnastoon linkitetyn kategoriaa ei lähetetä (tietokanta ottaa sen hinnastosta)
+    const origItem = editingItemId ? itemById(editingItemId) : null;
+    if (!origItem || !origItem.product_id) {
+      const c = $('#ifCat').value;
+      if (c && !categories.some((x) => x.name === c)) return showToast('Valittua kategoriaa ei löydy — lataa sivu uudelleen', 'error');
+      row.category = c || null;
+    }
+  }
   if (editingItemId) { const orig = itemById(editingItemId); if (orig && orig.kind !== kind) { if (orig.kind === 'lot_length') return showToast('Nipun tyyppiä ei voi vaihtaa', 'error'); row.kind = kind; if (kind === 'length_piece') row.unit = 'kpl'; } }
   itemSaving = true; $('#ifSave').disabled = true;
   try {
@@ -1385,6 +1449,7 @@ async function setItemActive(i, active) {
 $('#itemShowInactive').addEventListener('change', () => renderItems());
 $('#itemSearch').addEventListener('input', () => renderItems());
 $('#pieceSearch').addEventListener('input', () => { renderPieces(); renderLengthItems(); });
+$('#pieceCat').addEventListener('change', () => { renderPieces(); renderLengthItems(); });
 function renderItems() {
   const head = h('div', { class: 'tr head cols-items' }, h('div', null, 'Nimike'), h('div', null, 'Tyyppi'), h('div', null, 'Mitat / yksikkö'), h('div', null, 'Tila'), h('div', null, ''));
   // Käytöstä poistetut piilotetaan oletuksena (siisti lista); kirjanpito säilyy, ja ne saa esiin ruksista
@@ -1396,7 +1461,7 @@ function renderItems() {
   const shownItems = items.filter((i) => (i.active || showAll || i.id === editingItemId) && (i.id === editingItemId || matchesQuery(i.name, iq)));
   if (!shownItems.length) { $('#itemList').replaceChildren(head, h('div', { class: 'empty' }, iq.trim() ? 'Ei hakutuloksia.' : 'Ei nimikkeitä.')); return; }
   $('#itemList').replaceChildren(head, ...shownItems.map((i) => h('div', { class: 'tr cols-items' },
-    h('div', { style: 'font-weight:500' }, i.name), h('div', null, KIND_LABEL[i.kind] || i.kind),
+    h('div', null, h('div', { style: 'font-weight:500' }, i.name), catsEnabled && i.category ? h('div', { class: 'hint' }, i.category) : null), h('div', null, KIND_LABEL[i.kind] || i.kind),
     h('div', { class: 'mono' }, i.kind === 'lot_length' ? i.thickness_mm + ' × ' + i.width_mm + ' mm' : i.kind === 'length_piece' ? 'mitta + kpl' : i.unit),
     h('div', { class: i.active ? '' : 'muted' }, i.active ? 'Käytössä' : 'Ei käytössä'),
     h('div', { style: 'display:flex;gap:8px;justify-content:flex-end' },
@@ -1436,8 +1501,19 @@ function renderGrades() {
 // ═══════════════════════════════════════════════════════════════════════
 // TUO HINNASTOSTA
 // ═══════════════════════════════════════════════════════════════════════
-const NIPPU_CAT_RE = /sahatavara|höylätty|hirret/i;      // oletuksena nippuja (pituuksia)
-const SKIP_CAT_RE = /^(työ|vakiomallit)/i;               // palvelut ja kokoonpanot eivät ole varastotavaraa
+// Varaston oletustapa tulee kategorialistasta (Kategoriat-ikkuna hinnastossa: "Varastossa").
+// Vanhat nimisäännöt ovat varalla vain, jos kategoriat_migraatio.sql on ajamatta.
+// (Vanha sääntö /^(työ|.../ olisi piilottanut myös "Työkalut"-kategorian!)
+const NIPPU_CAT_RE = /sahatavara|höylätty|hirret/i;
+const SKIP_CAT_RE = /^(työ|työ, rakennustyö|vakiomallit)$/i;
+function stockModeOf(p) {
+  if (catsEnabled) {
+    const c = categories.find((x) => x.name === p.category);
+    return c ? c.stock_mode : 'piece';
+  }
+  if (SKIP_CAT_RE.test(String(p.category || '').trim())) return 'none';
+  return NIPPU_CAT_RE.test(p.category || '') ? 'lot_length' : 'piece';
+}
 const dimStr = (x) => { const n = Math.round(Number(x)); return Number.isFinite(n) && n > 0 ? String(n) : ''; };
 
 // Hinnaston haku sivutettuna (Supabase palauttaa kerralla max 1000 riviä) — muuten isossa hinnastossa osa tuotteista ja kategorioista puuttuisi
@@ -1457,14 +1533,16 @@ async function openImport() {
   const linked = new Set(items.map((i) => i.product_id).filter(Boolean));
   const names = new Set(items.map((i) => i.name.trim().toLowerCase()));
   // Piilotetut (active=false) tuotteet mukaan: ne voivat silti olla varastotavaraa. Pois jäävät vain palvelut (Työ), kokoonpanot ja nimettömät.
-  const prods = (data || []).filter((p) => p.name && !SKIP_CAT_RE.test(p.category || '') && p.pricing_model !== 'assembly');
+  const prods = (data || []).filter((p) => p.name && stockModeOf(p) !== 'none' && p.pricing_model !== 'assembly')
+    .sort((a, b) => String(a.code || '').localeCompare(String(b.code || ''), 'fi', { numeric: true }));
   const skipped = (data || []).length - prods.length;
   if (!prods.length) { showToast('Hinnastossa ei ole tuotavia tuotteita', 'error'); return; }
 
   const rows = prods.map((p) => {
     const w = dimStr(p.aihio_leveys), t = dimStr(p.aihio_paksuus);
     const exists = linked.has(p.id) || names.has(String(p.name).trim().toLowerCase());
-    const kind = NIPPU_CAT_RE.test(p.category || '') && w && t ? 'lot_length' : 'piece';
+    const mode = stockModeOf(p);
+    const kind = mode === 'lot_length' && w && t ? 'lot_length' : mode === 'length_piece' && lengthEnabled ? 'length_piece' : 'piece';
     const cb = h('input', { type: 'checkbox', 'aria-label': 'Valitse ' + p.name, disabled: exists, style: 'width:22px;height:22px' });
     const sKind = h('select', { 'aria-label': 'Tyyppi: ' + p.name, disabled: exists }, h('option', { value: 'lot_length' }, 'Nippu'), h('option', { value: 'piece' }, 'Kappale'), ...(lengthEnabled ? [h('option', { value: 'length_piece' }, 'Pituustavara')] : []));
     sKind.value = kind;
@@ -1490,7 +1568,7 @@ async function openImport() {
     const cur = sCat.value;
     const shown = prods.filter((p) => cbHidden.checked || p.active !== false);
     const cnt = new Map(); for (const p of shown) cnt.set(catOf(p), (cnt.get(catOf(p)) || 0) + 1);
-    const cats = [...cnt.keys()].sort((a, b) => a.localeCompare(b, 'fi'));
+    const cats = [...cnt.keys()].sort(catCmp);
     sCat.replaceChildren(h('option', { value: '' }, 'Kaikki kategoriat (' + shown.length + ')'), ...cats.map((c) => h('option', { value: c }, c + ' (' + cnt.get(c) + ')')));
     sCat.value = cnt.has(cur) ? cur : '';
   }
@@ -1573,7 +1651,7 @@ async function openImport() {
       h('div', { class: 'field', style: 'flex:1 1 220px' }, h('label', { class: 'label', for: 'imQ' }, 'Haku'), iSearch), btnAll, btnNone),
     h('div', { style: 'display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center' },
       hiddenN ? h('label', { style: 'display:flex;align-items:center;gap:8px;cursor:pointer' }, cbHidden, 'Näytä myös hinnastossa piilotetut (' + hiddenN + ')') : null,
-      skipped ? h('span', { class: 'hint' }, skipped + ' tuotetta jätetty pois listasta (Työ- ja Vakiomallit-kategoriat sekä kokoonpanotuotteet — ei varastotavaraa)') : null),
+      skipped ? h('span', { class: 'hint' }, skipped + ' tuotetta jätetty pois listasta (kategoriat joille on valittu "Ei näy varastossa", esim. Työ ja Vakiomallit, sekä kokoonpanotuotteet)') : null),
     listBox, errBox, h('div', { style: 'display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px' }, cntEl,
       h('div', { class: 'actions' }, h('button', { type: 'button', class: 'btn', onclick: closeModal }, 'Peruuta'), btnGo))]);
   refresh();
@@ -1593,12 +1671,17 @@ async function openPrintDialog(mode) { // mode: 'lots' (Niput-välilehti, oletus
     .sort((a, b) => a.name.localeCompare(b.name, 'fi', { numeric: true }));
   if (!list.length) { showToast('Ei nimikkeitä tulostettavaksi', 'error'); return; }
 
-  // Kategoriat hinnastosta (tuoduille nimikkeille); jos haku epäonnistuu, valinta tehdään nimikkeittäin
+  // Kategoriat: nimikkeen oma kategoria (hinnastosta tuoduilla sama kuin hinnastossa). Jos kategoriat_migraatio
+  // on ajamatta, haetaan kategoria hinnastosta kuten ennen.
   const catOfItem = new Map();
-  try {
-    const r = await fetchAllProducts();
-    if (!r.error) { const pc = new Map((r.data || []).map((p) => [p.id, p.category || ''])); for (const i of list) if (i.product_id && pc.get(i.product_id)) catOfItem.set(i.id, pc.get(i.product_id)); }
-  } catch (e) { console.warn('kategorioita ei saatu', e); }
+  if (catsEnabled) {
+    for (const i of list) if (i.category) catOfItem.set(i.id, i.category);
+  } else {
+    try {
+      const r = await fetchAllProducts();
+      if (!r.error) { const pc = new Map((r.data || []).map((p) => [p.id, p.category || ''])); for (const i of list) if (i.product_id && pc.get(i.product_id)) catOfItem.set(i.id, pc.get(i.product_id)); }
+    } catch (e) { console.warn('kategorioita ei saatu', e); }
+  }
 
   const isLot = (i) => i.kind === 'lot_length';
   const KIND_ORDER = mode === 'other' ? ['piece', 'length_piece', 'lot_length'] : ['lot_length', 'piece', 'length_piece'];
@@ -1619,8 +1702,8 @@ async function openPrintDialog(mode) { // mode: 'lots' (Niput-välilehti, oletus
   const vis = (i) => matchesQuery(i.name + ' ' + (catOfItem.get(i.id) || ''), iSrch.value);
   const setAll = (v, pred) => { for (const i of list) if (vis(i) && (!pred || pred(i))) boxes.get(i.id).checked = v; upd(); };
   iSrch.addEventListener('input', () => { for (const i of list) rowEls.get(i.id).style.display = vis(i) ? 'flex' : 'none'; });
-  const cats = [...new Set(catOfItem.values())].sort((a, b) => a.localeCompare(b, 'fi'));
-  const catBox = cats.length ? h('div', { class: 'field' }, h('div', { class: 'label' }, 'Valitse kategorialla (hinnaston kategoria)'),
+  const cats = [...new Set(catOfItem.values())].sort(catCmp);
+  const catBox = cats.length ? h('div', { class: 'field' }, h('div', { class: 'label' }, 'Valitse kategorialla'),
     h('div', { class: 'seg' }, ...cats.map((c) => h('button', { type: 'button', class: 'chipbtn', onclick: () => { setAll(false); setAll(true, (i) => catOfItem.get(i.id) === c); } }, c)))) : null;
   const sGrade = h('select', { id: 'prGrade' }, h('option', { value: '' }, 'Kaikki laadut'), ...grades.filter((g) => g.active).map((g) => h('option', { value: g.id }, g.name)));
   // Oletus: nimikkeet peräkkäin (säästää paperia); viimeksi tehty valinta muistetaan tässä selaimessa
@@ -1660,10 +1743,11 @@ $('#printBtn').addEventListener('click', () => openPrintDialog('lots'));
 $('#printBtnOther').addEventListener('click', () => openPrintDialog('other'));
 
 // ── Piirto ja käynnistys ──────────────────────────────────────────────
-function renderAll() { renderFilters(); renderLots(); renderPieces(); renderLengthItems(); renderItems(); renderGrades(); }
+function renderAll() { renderFilters(); renderLots(); renderPieceCatFilter(); renderPieces(); renderLengthItems(); renderItems(); renderGrades(); }
 (async function init() {
   syncKindUI();
   if (await loadAll()) renderAll();
+  syncCatField('', false);
   // Suora linkki ?nippu=<uuid> avaa nipun (tunniste tarkistetaan UUID-muotoon)
   const wanted = new URLSearchParams(location.search).get('nippu');
   if (wanted && UUID_RE.test(wanted)) openLot(wanted.toLowerCase());
